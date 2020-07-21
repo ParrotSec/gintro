@@ -1,3 +1,9 @@
+gintro (0.7.9-parrot1) stable; urgency=medium
+
+  * Fix full path after installation
+
+ -- Nong Hoang "dmknght" Tu <dmknght@parrotsec.org>  Mon, 20 Jul 2020 21:26:50 +0700
+
 gintro (0.7.9-parrot0) stable; urgency=medium
 
   * Initial release
