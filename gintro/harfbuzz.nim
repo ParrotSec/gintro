@@ -1104,8 +1104,8 @@ proc hb_buffer_serialize_glyphs(buffer: ptr bufferT00; start: uint32; `end`: uin
     importc, libprag.}
 
 proc bufferSerializeGlyphs*(buffer: bufferT; start: int; `end`: int;
-    buf: var seq[uint8]; bufSize: var int; bufConsumed: var int; font: fontT = nil;
-    format: bufferSerializeFormatT; flags: bufferSerializeFlagsT): int =
+    buf: var (seq[uint8] | string); bufSize: var int; bufConsumed: var int;
+    font: fontT = nil; format: bufferSerializeFormatT; flags: bufferSerializeFlagsT): int =
   var bufSize_00 = uint32(bufSize)
   var bufConsumed_00 = uint32(bufConsumed)
   var buf_00: pointer

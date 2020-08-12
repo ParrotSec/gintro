@@ -8444,10 +8444,10 @@ proc getEndPosition*(self: CssSection): int =
 proc endPosition*(self: CssSection): int =
   int(gtk_css_section_get_end_position(cast[ptr CssSection00](self.impl)))
 
-proc gtk_css_section_get_file(self: ptr CssSection00): ptr gio.File00 {.
+proc gtk_css_section_get_file(self: ptr CssSection00): ptr gio.GFile00 {.
     importc, libprag.}
 
-proc getFile*(self: CssSection): gio.File =
+proc getFile*(self: CssSection): gio.GFile =
   let gobj = gtk_css_section_get_file(cast[ptr CssSection00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -8463,7 +8463,7 @@ proc getFile*(self: CssSection): gio.File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc file*(self: CssSection): gio.File =
+proc file*(self: CssSection): gio.GFile =
   let gobj = gtk_css_section_get_file(cast[ptr CssSection00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -8874,13 +8874,13 @@ proc loadFromData*(self: CssProvider; data: seq[uint8] | string): bool =
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc gtk_css_provider_load_from_file(self: ptr CssProvider00; file: ptr gio.File00;
+proc gtk_css_provider_load_from_file(self: ptr CssProvider00; file: ptr gio.GFile00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc loadFromFile*(self: CssProvider; file: gio.File): bool =
+proc loadFromFile*(self: CssProvider; file: gio.GFile): bool =
   var gerror: ptr glib.Error
-  let resul0 = gtk_css_provider_load_from_file(cast[ptr CssProvider00](self.impl), cast[ptr gio.File00](file.impl), addr gerror)
+  let resul0 = gtk_css_provider_load_from_file(cast[ptr CssProvider00](self.impl), cast[ptr gio.GFile00](file.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -28548,12 +28548,12 @@ type
   DialogFlags* {.size: sizeof(cint).} = set[DialogFlag]
 
 proc gtk_app_chooser_dialog_new(parent: ptr Window00; flags: DialogFlags;
-    file: ptr gio.File00): ptr AppChooserDialog00 {.
+    file: ptr gio.GFile00): ptr AppChooserDialog00 {.
     importc, libprag.}
 
 proc newAppChooserDialog*(parent: Window = nil; flags: DialogFlags;
-    file: gio.File): AppChooserDialog =
-  let gobj = gtk_app_chooser_dialog_new(if parent.isNil: nil else: cast[ptr Window00](parent.impl), flags, cast[ptr gio.File00](file.impl))
+    file: gio.GFile): AppChooserDialog =
+  let gobj = gtk_app_chooser_dialog_new(if parent.isNil: nil else: cast[ptr Window00](parent.impl), flags, cast[ptr gio.GFile00](file.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -28569,9 +28569,9 @@ proc newAppChooserDialog*(parent: Window = nil; flags: DialogFlags;
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc newAppChooserDialog*(tdesc: typedesc; parent: Window = nil; flags: DialogFlags;
-    file: gio.File): tdesc =
+    file: gio.GFile): tdesc =
   assert(result is AppChooserDialog)
-  let gobj = gtk_app_chooser_dialog_new(if parent.isNil: nil else: cast[ptr Window00](parent.impl), flags, cast[ptr gio.File00](file.impl))
+  let gobj = gtk_app_chooser_dialog_new(if parent.isNil: nil else: cast[ptr Window00](parent.impl), flags, cast[ptr gio.GFile00](file.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -28587,9 +28587,9 @@ proc newAppChooserDialog*(tdesc: typedesc; parent: Window = nil; flags: DialogFl
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc initAppChooserDialog*[T](result: var T; parent: Window = nil; flags: DialogFlags;
-    file: gio.File) {.deprecated.} =
+    file: gio.GFile) {.deprecated.} =
   assert(result is AppChooserDialog)
-  let gobj = gtk_app_chooser_dialog_new(if parent.isNil: nil else: cast[ptr Window00](parent.impl), flags, cast[ptr gio.File00](file.impl))
+  let gobj = gtk_app_chooser_dialog_new(if parent.isNil: nil else: cast[ptr Window00](parent.impl), flags, cast[ptr gio.GFile00](file.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -37116,19 +37116,19 @@ when defined(gcDestructors):
 proc scDragActionAsk*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; actions: int32; xdata: pointer): int32 {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "drag-action-ask", cast[GCallback](p), xdata, nil, cf)
 
-proc scDragActionRequested*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; context: ptr gdk.DragContext00; destFile: ptr gio.File00; sourceFileList: ptr pointer; xdata: pointer): int32 {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scDragActionRequested*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; context: ptr gdk.DragContext00; destFile: ptr gio.GFile00; sourceFileList: ptr pointer; xdata: pointer): int32 {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "drag-action-requested", cast[GCallback](p), xdata, nil, cf)
 
-proc scDragPerformDrop*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; destFile: ptr gio.File00; sourceFileList: ptr pointer; action: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scDragPerformDrop*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; destFile: ptr gio.GFile00; sourceFileList: ptr pointer; action: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "drag-perform-drop", cast[GCallback](p), xdata, nil, cf)
 
 proc scMount*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; mountOperation: ptr gio.MountOperation00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "mount", cast[GCallback](p), xdata, nil, cf)
 
-proc scOpenLocation*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; location: ptr gio.File00; openFlags: PlacesOpenFlags; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scOpenLocation*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; location: ptr gio.GFile00; openFlags: PlacesOpenFlags; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "open-location", cast[GCallback](p), xdata, nil, cf)
 
-proc scPopulatePopup*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; container: ptr Widget00; selectedItem: ptr gio.File00; selectedVolume: ptr gio.Volume00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scPopulatePopup*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; container: ptr Widget00; selectedItem: ptr gio.GFile00; selectedVolume: ptr gio.Volume00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "populate-popup", cast[GCallback](p), xdata, nil, cf)
 
 proc scShowConnectToServer*(self: PlacesSidebar;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
@@ -37205,11 +37205,11 @@ proc initPlacesSidebar*[T](result: var T) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_places_sidebar_add_shortcut(self: ptr PlacesSidebar00; location: ptr gio.File00) {.
+proc gtk_places_sidebar_add_shortcut(self: ptr PlacesSidebar00; location: ptr gio.GFile00) {.
     importc, libprag.}
 
-proc addShortcut*(self: PlacesSidebar; location: gio.File) =
-  gtk_places_sidebar_add_shortcut(cast[ptr PlacesSidebar00](self.impl), cast[ptr gio.File00](location.impl))
+proc addShortcut*(self: PlacesSidebar; location: gio.GFile) =
+  gtk_places_sidebar_add_shortcut(cast[ptr PlacesSidebar00](self.impl), cast[ptr gio.GFile00](location.impl))
 
 proc gtk_places_sidebar_get_local_only(self: ptr PlacesSidebar00): gboolean {.
     importc, libprag.}
@@ -37220,10 +37220,10 @@ proc getLocalOnly*(self: PlacesSidebar): bool =
 proc localOnly*(self: PlacesSidebar): bool =
   toBool(gtk_places_sidebar_get_local_only(cast[ptr PlacesSidebar00](self.impl)))
 
-proc gtk_places_sidebar_get_location(self: ptr PlacesSidebar00): ptr gio.File00 {.
+proc gtk_places_sidebar_get_location(self: ptr PlacesSidebar00): ptr gio.GFile00 {.
     importc, libprag.}
 
-proc getLocation*(self: PlacesSidebar): gio.File =
+proc getLocation*(self: PlacesSidebar): gio.GFile =
   let gobj = gtk_places_sidebar_get_location(cast[ptr PlacesSidebar00](self.impl))
   if gobj.isNil:
     return nil
@@ -37242,7 +37242,7 @@ proc getLocation*(self: PlacesSidebar): gio.File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc location*(self: PlacesSidebar): gio.File =
+proc location*(self: PlacesSidebar): gio.GFile =
   let gobj = gtk_places_sidebar_get_location(cast[ptr PlacesSidebar00](self.impl))
   if gobj.isNil:
     return nil
@@ -37261,10 +37261,10 @@ proc location*(self: PlacesSidebar): gio.File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_places_sidebar_get_nth_bookmark(self: ptr PlacesSidebar00; n: int32): ptr gio.File00 {.
+proc gtk_places_sidebar_get_nth_bookmark(self: ptr PlacesSidebar00; n: int32): ptr gio.GFile00 {.
     importc, libprag.}
 
-proc getNthBookmark*(self: PlacesSidebar; n: int): gio.File =
+proc getNthBookmark*(self: PlacesSidebar; n: int): gio.GFile =
   let gobj = gtk_places_sidebar_get_nth_bookmark(cast[ptr PlacesSidebar00](self.impl), int32(n))
   if gobj.isNil:
     return nil
@@ -37283,7 +37283,7 @@ proc getNthBookmark*(self: PlacesSidebar; n: int): gio.File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc nthBookmark*(self: PlacesSidebar; n: int): gio.File =
+proc nthBookmark*(self: PlacesSidebar; n: int): gio.GFile =
   let gobj = gtk_places_sidebar_get_nth_bookmark(cast[ptr PlacesSidebar00](self.impl), int32(n))
   if gobj.isNil:
     return nil
@@ -37380,11 +37380,11 @@ proc gtk_places_sidebar_list_shortcuts(self: ptr PlacesSidebar00): ptr pointer {
 proc listShortcuts*(self: PlacesSidebar): ptr pointer =
   gtk_places_sidebar_list_shortcuts(cast[ptr PlacesSidebar00](self.impl))
 
-proc gtk_places_sidebar_remove_shortcut(self: ptr PlacesSidebar00; location: ptr gio.File00) {.
+proc gtk_places_sidebar_remove_shortcut(self: ptr PlacesSidebar00; location: ptr gio.GFile00) {.
     importc, libprag.}
 
-proc removeShortcut*(self: PlacesSidebar; location: gio.File) =
-  gtk_places_sidebar_remove_shortcut(cast[ptr PlacesSidebar00](self.impl), cast[ptr gio.File00](location.impl))
+proc removeShortcut*(self: PlacesSidebar; location: gio.GFile) =
+  gtk_places_sidebar_remove_shortcut(cast[ptr PlacesSidebar00](self.impl), cast[ptr gio.GFile00](location.impl))
 
 proc gtk_places_sidebar_set_drop_targets_visible(self: ptr PlacesSidebar00;
     visible: gboolean; context: ptr gdk.DragContext00) {.
@@ -37403,14 +37403,14 @@ proc setLocalOnly*(self: PlacesSidebar; localOnly: bool = true) =
 proc `localOnly=`*(self: PlacesSidebar; localOnly: bool) =
   gtk_places_sidebar_set_local_only(cast[ptr PlacesSidebar00](self.impl), gboolean(localOnly))
 
-proc gtk_places_sidebar_set_location(self: ptr PlacesSidebar00; location: ptr gio.File00) {.
+proc gtk_places_sidebar_set_location(self: ptr PlacesSidebar00; location: ptr gio.GFile00) {.
     importc, libprag.}
 
-proc setLocation*(self: PlacesSidebar; location: gio.File = nil) =
-  gtk_places_sidebar_set_location(cast[ptr PlacesSidebar00](self.impl), if location.isNil: nil else: cast[ptr gio.File00](location.impl))
+proc setLocation*(self: PlacesSidebar; location: gio.GFile = nil) =
+  gtk_places_sidebar_set_location(cast[ptr PlacesSidebar00](self.impl), if location.isNil: nil else: cast[ptr gio.GFile00](location.impl))
 
-proc `location=`*(self: PlacesSidebar; location: gio.File = nil) =
-  gtk_places_sidebar_set_location(cast[ptr PlacesSidebar00](self.impl), if location.isNil: nil else: cast[ptr gio.File00](location.impl))
+proc `location=`*(self: PlacesSidebar; location: gio.GFile = nil) =
+  gtk_places_sidebar_set_location(cast[ptr PlacesSidebar00](self.impl), if location.isNil: nil else: cast[ptr gio.GFile00](location.impl))
 
 proc gtk_places_sidebar_set_open_flags(self: ptr PlacesSidebar00; flags: PlacesOpenFlags) {.
     importc, libprag.}
@@ -50643,10 +50643,10 @@ proc currentFolder*(self: FileChooser | FileChooserButton | FileChooserNative | 
   result = $resul0
   cogfree(resul0)
 
-proc gtk_file_chooser_get_current_folder_file(self: ptr FileChooser00): ptr gio.File00 {.
+proc gtk_file_chooser_get_current_folder_file(self: ptr FileChooser00): ptr gio.GFile00 {.
     importc, libprag.}
 
-proc getCurrentFolderFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): gio.File =
+proc getCurrentFolderFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): gio.GFile =
   let gobj = gtk_file_chooser_get_current_folder_file(cast[ptr FileChooser00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -50663,7 +50663,7 @@ proc getCurrentFolderFile*(self: FileChooser | FileChooserButton | FileChooserNa
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc currentFolderFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): gio.File =
+proc currentFolderFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): gio.GFile =
   let gobj = gtk_file_chooser_get_current_folder_file(cast[ptr FileChooser00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -50758,10 +50758,10 @@ proc extraWidget*(self: FileChooser | FileChooserButton | FileChooserNative | Fi
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_file_chooser_get_file(self: ptr FileChooser00): ptr gio.File00 {.
+proc gtk_file_chooser_get_file(self: ptr FileChooser00): ptr gio.GFile00 {.
     importc, libprag.}
 
-proc getFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): gio.File =
+proc getFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): gio.GFile =
   let gobj = gtk_file_chooser_get_file(cast[ptr FileChooser00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -50778,7 +50778,7 @@ proc getFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileCh
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc file*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): gio.File =
+proc file*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): gio.GFile =
   let gobj = gtk_file_chooser_get_file(cast[ptr FileChooser00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -50878,10 +50878,10 @@ proc getLocalOnly*(self: FileChooser | FileChooserButton | FileChooserNative | F
 proc localOnly*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): bool =
   toBool(gtk_file_chooser_get_local_only(cast[ptr FileChooser00](self.impl)))
 
-proc gtk_file_chooser_get_preview_file(self: ptr FileChooser00): ptr gio.File00 {.
+proc gtk_file_chooser_get_preview_file(self: ptr FileChooser00): ptr gio.GFile00 {.
     importc, libprag.}
 
-proc getPreviewFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): gio.File =
+proc getPreviewFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): gio.GFile =
   let gobj = gtk_file_chooser_get_preview_file(cast[ptr FileChooser00](self.impl))
   if gobj.isNil:
     return nil
@@ -50900,7 +50900,7 @@ proc getPreviewFile*(self: FileChooser | FileChooserButton | FileChooserNative |
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc previewFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): gio.File =
+proc previewFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): gio.GFile =
   let gobj = gtk_file_chooser_get_preview_file(cast[ptr FileChooser00](self.impl))
   if gobj.isNil:
     return nil
@@ -51120,14 +51120,14 @@ proc gtk_file_chooser_select_all(self: ptr FileChooser00) {.
 proc selectAll*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog) =
   gtk_file_chooser_select_all(cast[ptr FileChooser00](self.impl))
 
-proc gtk_file_chooser_select_file(self: ptr FileChooser00; file: ptr gio.File00;
+proc gtk_file_chooser_select_file(self: ptr FileChooser00; file: ptr gio.GFile00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc selectFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    file: gio.File): bool =
+    file: gio.GFile): bool =
   var gerror: ptr glib.Error
-  let resul0 = gtk_file_chooser_select_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.File00](file.impl), addr gerror)
+  let resul0 = gtk_file_chooser_select_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.GFile00](file.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -51188,14 +51188,14 @@ proc `currentFolder=`*(self: FileChooser | FileChooserButton | FileChooserNative
     filename: cstring): bool =
   toBool(gtk_file_chooser_set_current_folder(cast[ptr FileChooser00](self.impl), filename))
 
-proc gtk_file_chooser_set_current_folder_file(self: ptr FileChooser00; file: ptr gio.File00;
+proc gtk_file_chooser_set_current_folder_file(self: ptr FileChooser00; file: ptr gio.GFile00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc setCurrentFolderFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    file: gio.File): bool =
+    file: gio.GFile): bool =
   var gerror: ptr glib.Error
-  let resul0 = gtk_file_chooser_set_current_folder_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.File00](file.impl), addr gerror)
+  let resul0 = gtk_file_chooser_set_current_folder_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.GFile00](file.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -51203,9 +51203,9 @@ proc setCurrentFolderFile*(self: FileChooser | FileChooserButton | FileChooserNa
   result = toBool(resul0)
 
 proc `currentFolderFile=`*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    file: gio.File): bool =
+    file: gio.GFile): bool =
   var gerror: ptr glib.Error
-  let resul0 = gtk_file_chooser_set_current_folder_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.File00](file.impl), addr gerror)
+  let resul0 = gtk_file_chooser_set_current_folder_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.GFile00](file.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -51257,14 +51257,14 @@ proc `extraWidget=`*(self: FileChooser | FileChooserButton | FileChooserNative |
     extraWidget: Widget) =
   gtk_file_chooser_set_extra_widget(cast[ptr FileChooser00](self.impl), cast[ptr Widget00](extraWidget.impl))
 
-proc gtk_file_chooser_set_file(self: ptr FileChooser00; file: ptr gio.File00;
+proc gtk_file_chooser_set_file(self: ptr FileChooser00; file: ptr gio.GFile00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc setFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    file: gio.File): bool =
+    file: gio.GFile): bool =
   var gerror: ptr glib.Error
-  let resul0 = gtk_file_chooser_set_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.File00](file.impl), addr gerror)
+  let resul0 = gtk_file_chooser_set_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.GFile00](file.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -51272,9 +51272,9 @@ proc setFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileCh
   result = toBool(resul0)
 
 proc `file=`*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    file: gio.File): bool =
+    file: gio.GFile): bool =
   var gerror: ptr glib.Error
-  let resul0 = gtk_file_chooser_set_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.File00](file.impl), addr gerror)
+  let resul0 = gtk_file_chooser_set_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.GFile00](file.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -51387,12 +51387,12 @@ proc gtk_file_chooser_unselect_all(self: ptr FileChooser00) {.
 proc unselectAll*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog) =
   gtk_file_chooser_unselect_all(cast[ptr FileChooser00](self.impl))
 
-proc gtk_file_chooser_unselect_file(self: ptr FileChooser00; file: ptr gio.File00) {.
+proc gtk_file_chooser_unselect_file(self: ptr FileChooser00; file: ptr gio.GFile00) {.
     importc, libprag.}
 
 proc unselectFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    file: gio.File) =
-  gtk_file_chooser_unselect_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.File00](file.impl))
+    file: gio.GFile) =
+  gtk_file_chooser_unselect_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.GFile00](file.impl))
 
 proc gtk_file_chooser_unselect_filename(self: ptr FileChooser00; filename: cstring) {.
     importc, libprag.}

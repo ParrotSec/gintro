@@ -413,14 +413,14 @@ proc rsvg_handle_render_cairo_sub(self: ptr Handle00; cr: ptr cairo.Context00;
 proc renderCairoSub*(self: Handle; cr: cairo.Context; id: cstring = ""): bool =
   toBool(rsvg_handle_render_cairo_sub(cast[ptr Handle00](self.impl), cast[ptr cairo.Context00](cr.impl), safeStringToCString(id)))
 
-proc rsvg_handle_set_base_gfile(self: ptr Handle00; baseFile: ptr gio.File00) {.
+proc rsvg_handle_set_base_gfile(self: ptr Handle00; baseFile: ptr gio.GFile00) {.
     importc, libprag.}
 
-proc setBaseGfile*(self: Handle; baseFile: gio.File) =
-  rsvg_handle_set_base_gfile(cast[ptr Handle00](self.impl), cast[ptr gio.File00](baseFile.impl))
+proc setBaseGfile*(self: Handle; baseFile: gio.GFile) =
+  rsvg_handle_set_base_gfile(cast[ptr Handle00](self.impl), cast[ptr gio.GFile00](baseFile.impl))
 
-proc `baseGfile=`*(self: Handle; baseFile: gio.File) =
-  rsvg_handle_set_base_gfile(cast[ptr Handle00](self.impl), cast[ptr gio.File00](baseFile.impl))
+proc `baseGfile=`*(self: Handle; baseFile: gio.GFile) =
+  rsvg_handle_set_base_gfile(cast[ptr Handle00](self.impl), cast[ptr gio.GFile00](baseFile.impl))
 
 proc rsvg_handle_set_base_uri(self: ptr Handle00; baseUri: cstring) {.
     importc, libprag.}
@@ -481,14 +481,14 @@ type
 
   HandleFlags* {.size: sizeof(cint).} = set[HandleFlag]
 
-proc rsvg_handle_new_from_gfile_sync(file: ptr gio.File00; flags: HandleFlags;
+proc rsvg_handle_new_from_gfile_sync(file: ptr gio.GFile00; flags: HandleFlags;
     cancellable: ptr gio.Cancellable00; error: ptr ptr glib.Error = nil): ptr Handle00 {.
     importc, libprag.}
 
-proc newHandleFromGfileSync*(file: gio.File; flags: HandleFlags;
+proc newHandleFromGfileSync*(file: gio.GFile; flags: HandleFlags;
     cancellable: gio.Cancellable = nil): Handle =
   var gerror: ptr glib.Error
-  let gobj = rsvg_handle_new_from_gfile_sync(cast[ptr gio.File00](file.impl), flags, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
+  let gobj = rsvg_handle_new_from_gfile_sync(cast[ptr gio.GFile00](file.impl), flags, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -508,11 +508,11 @@ proc newHandleFromGfileSync*(file: gio.File; flags: HandleFlags;
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newHandleFromGfileSync*(tdesc: typedesc; file: gio.File; flags: HandleFlags;
+proc newHandleFromGfileSync*(tdesc: typedesc; file: gio.GFile; flags: HandleFlags;
     cancellable: gio.Cancellable = nil): tdesc =
   var gerror: ptr glib.Error
   assert(result is Handle)
-  let gobj = rsvg_handle_new_from_gfile_sync(cast[ptr gio.File00](file.impl), flags, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
+  let gobj = rsvg_handle_new_from_gfile_sync(cast[ptr gio.GFile00](file.impl), flags, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -532,11 +532,11 @@ proc newHandleFromGfileSync*(tdesc: typedesc; file: gio.File; flags: HandleFlags
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initHandleFromGfileSync*[T](result: var T; file: gio.File; flags: HandleFlags;
+proc initHandleFromGfileSync*[T](result: var T; file: gio.GFile; flags: HandleFlags;
     cancellable: gio.Cancellable = nil) {.deprecated.} =
   var gerror: ptr glib.Error
   assert(result is Handle)
-  let gobj = rsvg_handle_new_from_gfile_sync(cast[ptr gio.File00](file.impl), flags, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
+  let gobj = rsvg_handle_new_from_gfile_sync(cast[ptr gio.GFile00](file.impl), flags, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -557,14 +557,14 @@ proc initHandleFromGfileSync*[T](result: var T; file: gio.File; flags: HandleFla
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc rsvg_handle_new_from_stream_sync(inputStream: ptr gio.InputStream00;
-    baseFile: ptr gio.File00; flags: HandleFlags; cancellable: ptr gio.Cancellable00;
+    baseFile: ptr gio.GFile00; flags: HandleFlags; cancellable: ptr gio.Cancellable00;
     error: ptr ptr glib.Error = nil): ptr Handle00 {.
     importc, libprag.}
 
-proc newHandleFromStreamSync*(inputStream: gio.InputStream; baseFile: gio.File = nil;
+proc newHandleFromStreamSync*(inputStream: gio.InputStream; baseFile: gio.GFile = nil;
     flags: HandleFlags; cancellable: gio.Cancellable = nil): Handle =
   var gerror: ptr glib.Error
-  let gobj = rsvg_handle_new_from_stream_sync(cast[ptr gio.InputStream00](inputStream.impl), if baseFile.isNil: nil else: cast[ptr gio.File00](baseFile.impl), flags, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
+  let gobj = rsvg_handle_new_from_stream_sync(cast[ptr gio.InputStream00](inputStream.impl), if baseFile.isNil: nil else: cast[ptr gio.GFile00](baseFile.impl), flags, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -584,11 +584,11 @@ proc newHandleFromStreamSync*(inputStream: gio.InputStream; baseFile: gio.File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newHandleFromStreamSync*(tdesc: typedesc; inputStream: gio.InputStream; baseFile: gio.File = nil;
+proc newHandleFromStreamSync*(tdesc: typedesc; inputStream: gio.InputStream; baseFile: gio.GFile = nil;
     flags: HandleFlags; cancellable: gio.Cancellable = nil): tdesc =
   var gerror: ptr glib.Error
   assert(result is Handle)
-  let gobj = rsvg_handle_new_from_stream_sync(cast[ptr gio.InputStream00](inputStream.impl), if baseFile.isNil: nil else: cast[ptr gio.File00](baseFile.impl), flags, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
+  let gobj = rsvg_handle_new_from_stream_sync(cast[ptr gio.InputStream00](inputStream.impl), if baseFile.isNil: nil else: cast[ptr gio.GFile00](baseFile.impl), flags, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -608,11 +608,11 @@ proc newHandleFromStreamSync*(tdesc: typedesc; inputStream: gio.InputStream; bas
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initHandleFromStreamSync*[T](result: var T; inputStream: gio.InputStream; baseFile: gio.File = nil;
+proc initHandleFromStreamSync*[T](result: var T; inputStream: gio.InputStream; baseFile: gio.GFile = nil;
     flags: HandleFlags; cancellable: gio.Cancellable = nil) {.deprecated.} =
   var gerror: ptr glib.Error
   assert(result is Handle)
-  let gobj = rsvg_handle_new_from_stream_sync(cast[ptr gio.InputStream00](inputStream.impl), if baseFile.isNil: nil else: cast[ptr gio.File00](baseFile.impl), flags, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
+  let gobj = rsvg_handle_new_from_stream_sync(cast[ptr gio.InputStream00](inputStream.impl), if baseFile.isNil: nil else: cast[ptr gio.GFile00](baseFile.impl), flags, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])

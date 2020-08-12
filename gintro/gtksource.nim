@@ -14,10 +14,10 @@
 # Gtk-3.0
 # Gdk-3.0
 # libraries:
-# libgtksourceview-3.0.so.1
+# libgtksourceview-4.so.0
 {.warning[UnusedImport]: off.}
 import xlib, glib, gdk, gdkpixbuf, gtk, cairo, gobject, pango, gio, gmodule, atk
-const Lib = "libgtksourceview-3.0.so.1"
+const Lib = "libgtksourceview-4.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
 
 
@@ -125,11 +125,11 @@ proc initBuffer*[T](result: var T; table: gtk.TextTagTable = nil) {.deprecated.}
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_buffer_backward_iter_to_source_mark(self: ptr Buffer00; iter: gtk.TextIter;
+proc gtk_source_buffer_backward_iter_to_source_mark(self: ptr Buffer00; iter: var gtk.TextIter;
     category: cstring): gboolean {.
     importc, libprag.}
 
-proc backwardIterToSourceMark*(self: Buffer; iter: gtk.TextIter;
+proc backwardIterToSourceMark*(self: Buffer; iter: var gtk.TextIter;
     category: cstring = ""): bool =
   toBool(gtk_source_buffer_backward_iter_to_source_mark(cast[ptr Buffer00](self.impl), iter, safeStringToCString(category)))
 
@@ -165,11 +165,11 @@ proc ensureHighlight*(self: Buffer; start: gtk.TextIter;
     `end`: gtk.TextIter) =
   gtk_source_buffer_ensure_highlight(cast[ptr Buffer00](self.impl), start, `end`)
 
-proc gtk_source_buffer_forward_iter_to_source_mark(self: ptr Buffer00; iter: gtk.TextIter;
+proc gtk_source_buffer_forward_iter_to_source_mark(self: ptr Buffer00; iter: var gtk.TextIter;
     category: cstring): gboolean {.
     importc, libprag.}
 
-proc forwardIterToSourceMark*(self: Buffer; iter: gtk.TextIter;
+proc forwardIterToSourceMark*(self: Buffer; iter: var gtk.TextIter;
     category: cstring = ""): bool =
   toBool(gtk_source_buffer_forward_iter_to_source_mark(cast[ptr Buffer00](self.impl), iter, safeStringToCString(category)))
 
@@ -247,19 +247,19 @@ proc sourceMarksAtLine*(self: Buffer; line: int;
   gtk_source_buffer_get_source_marks_at_line(cast[ptr Buffer00](self.impl), int32(line), safeStringToCString(category))
 
 proc gtk_source_buffer_iter_backward_to_context_class_toggle(self: ptr Buffer00;
-    iter: gtk.TextIter; contextClass: cstring): gboolean {.
+    iter: var gtk.TextIter; contextClass: cstring): gboolean {.
     importc, libprag.}
 
 proc iterBackwardToContextClassToggle*(self: Buffer;
-    iter: gtk.TextIter; contextClass: cstring): bool =
+    iter: var gtk.TextIter; contextClass: cstring): bool =
   toBool(gtk_source_buffer_iter_backward_to_context_class_toggle(cast[ptr Buffer00](self.impl), iter, contextClass))
 
 proc gtk_source_buffer_iter_forward_to_context_class_toggle(self: ptr Buffer00;
-    iter: gtk.TextIter; contextClass: cstring): gboolean {.
+    iter: var gtk.TextIter; contextClass: cstring): gboolean {.
     importc, libprag.}
 
 proc iterForwardToContextClassToggle*(self: Buffer;
-    iter: gtk.TextIter; contextClass: cstring): bool =
+    iter: var gtk.TextIter; contextClass: cstring): bool =
   toBool(gtk_source_buffer_iter_forward_to_context_class_toggle(cast[ptr Buffer00](self.impl), iter, contextClass))
 
 proc gtk_source_buffer_iter_has_context_class(self: ptr Buffer00; iter: gtk.TextIter;
@@ -1173,19 +1173,13 @@ proc gtk_source_completion_hide(self: ptr Completion00) {.
 proc hide*(self: Completion) =
   gtk_source_completion_hide(cast[ptr Completion00](self.impl))
 
-proc gtk_source_completion_move_window(self: ptr Completion00; iter: gtk.TextIter) {.
-    importc, libprag.}
-
-proc moveWindow*(self: Completion; iter: gtk.TextIter) =
-  gtk_source_completion_move_window(cast[ptr Completion00](self.impl), iter)
-
-proc gtk_source_completion_show(self: ptr Completion00; providers: ptr pointer;
+proc gtk_source_completion_start(self: ptr Completion00; providers: ptr pointer;
     context: ptr CompletionContext00): gboolean {.
     importc, libprag.}
 
-proc show*(self: Completion; providers: ptr pointer;
+proc start*(self: Completion; providers: ptr pointer;
     context: CompletionContext): bool =
-  toBool(gtk_source_completion_show(cast[ptr Completion00](self.impl), providers, cast[ptr CompletionContext00](context.impl)))
+  toBool(gtk_source_completion_start(cast[ptr Completion00](self.impl), providers, cast[ptr CompletionContext00](context.impl)))
 
 proc gtk_source_completion_unblock_interactive(self: ptr Completion00) {.
     importc, libprag.}
@@ -1222,9 +1216,6 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
-
-proc scBeforeShow*(self: CompletionInfo;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
-  g_signal_connect_data(self.impl, "before-show", cast[GCallback](p), xdata, nil, cf)
 
 proc gtk_source_completion_info_new(): ptr CompletionInfo00 {.
     importc, libprag.}
@@ -1279,41 +1270,6 @@ proc initCompletionInfo*[T](result: var T) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_completion_info_get_widget(self: ptr CompletionInfo00): ptr gtk.Widget00 {.
-    importc, libprag.}
-
-proc getWidget*(self: CompletionInfo): gtk.Widget =
-  let gobj = gtk_source_completion_info_get_widget(cast[ptr CompletionInfo00](self.impl))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc widget*(self: CompletionInfo): gtk.Widget =
-  let gobj = gtk_source_completion_info_get_widget(cast[ptr CompletionInfo00](self.impl))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_source_completion_info_move_to_iter(self: ptr CompletionInfo00;
     view: ptr gtk.TextView00; iter: gtk.TextIter) {.
     importc, libprag.}
@@ -1321,15 +1277,6 @@ proc gtk_source_completion_info_move_to_iter(self: ptr CompletionInfo00;
 proc moveToIter*(self: CompletionInfo; view: gtk.TextView;
     iter: gtk.TextIter = cast[ptr gtk.TextIter](nil)[]) =
   gtk_source_completion_info_move_to_iter(cast[ptr CompletionInfo00](self.impl), cast[ptr gtk.TextView00](view.impl), iter)
-
-proc gtk_source_completion_info_set_widget(self: ptr CompletionInfo00; widget: ptr gtk.Widget00) {.
-    importc, libprag.}
-
-proc setWidget*(self: CompletionInfo; widget: gtk.Widget = nil) =
-  gtk_source_completion_info_set_widget(cast[ptr CompletionInfo00](self.impl), if widget.isNil: nil else: cast[ptr gtk.Widget00](widget.impl))
-
-proc `widget=`*(self: CompletionInfo; widget: gtk.Widget = nil) =
-  gtk_source_completion_info_set_widget(cast[ptr CompletionInfo00](self.impl), if widget.isNil: nil else: cast[ptr gtk.Widget00](widget.impl))
 
 proc gtk_source_completion_get_info_window(self: ptr Completion00): ptr CompletionInfo00 {.
     importc, libprag.}
@@ -1393,7 +1340,7 @@ proc scJoinLines*(self: View;  p: proc (self: ptr gobject.Object00; xdata: point
 proc scLineMarkActivated*(self: View;  p: proc (self: ptr View00; iter: gtk.TextIter; event: ptr gdk.Event00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "line-mark-activated", cast[GCallback](p), xdata, nil, cf)
 
-proc scMoveLines*(self: View;  p: proc (self: ptr View00; copy: gboolean; count: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scMoveLines*(self: View;  p: proc (self: ptr View00; down: gboolean; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "move-lines", cast[GCallback](p), xdata, nil, cf)
 
 proc scMoveToMatchingBracket*(self: View;  p: proc (self: ptr View00; extendSelection: gboolean; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
@@ -1849,12 +1796,6 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_source_gutter_get_padding(self: ptr Gutter00; xpad: ptr int32; ypad: ptr int32) {.
-    importc, libprag.}
-
-proc getPadding*(self: Gutter; xpad: ptr int32; ypad: ptr int32) =
-  gtk_source_gutter_get_padding(cast[ptr Gutter00](self.impl), xpad, ypad)
-
 proc gtk_source_gutter_get_view(self: ptr Gutter00): ptr View00 {.
     importc, libprag.}
 
@@ -1890,41 +1831,6 @@ proc view*(self: Gutter): View =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_gutter_get_window(self: ptr Gutter00): ptr gdk.Window00 {.
-    importc, libprag.}
-
-proc getWindow*(self: Gutter): gdk.Window =
-  let gobj = gtk_source_gutter_get_window(cast[ptr Gutter00](self.impl))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc window*(self: Gutter): gdk.Window =
-  let gobj = gtk_source_gutter_get_window(cast[ptr Gutter00](self.impl))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_source_gutter_get_window_type(self: ptr Gutter00): gtk.TextWindowType {.
     importc, libprag.}
 
@@ -1939,12 +1845,6 @@ proc gtk_source_gutter_queue_draw(self: ptr Gutter00) {.
 
 proc queueDraw*(self: Gutter) =
   gtk_source_gutter_queue_draw(cast[ptr Gutter00](self.impl))
-
-proc gtk_source_gutter_set_padding(self: ptr Gutter00; xpad: int32; ypad: int32) {.
-    importc, libprag.}
-
-proc setPadding*(self: Gutter; xpad: int; ypad: int) =
-  gtk_source_gutter_set_padding(cast[ptr Gutter00](self.impl), int32(xpad), int32(ypad))
 
 proc gtk_source_view_get_gutter(self: ptr View00; windowType: gtk.TextWindowType): ptr Gutter00 {.
     importc, libprag.}
@@ -2493,35 +2393,6 @@ proc setTypesForLocations*(self: SpaceDrawer; locations: SpaceLocationFlags;
   gtk_source_space_drawer_set_types_for_locations(cast[ptr SpaceDrawer00](self.impl), locations, types)
 
 type
-  DrawSpacesFlags* {.size: sizeof(cint), pure.} = enum
-    space = 1
-    tab = 2
-    newline = 4
-    nbsp = 8
-    leading = 16
-    text = 32
-    trailing = 64
-    all = 127
-
-proc gtk_source_view_get_draw_spaces(self: ptr View00): DrawSpacesFlags {.
-    importc, libprag.}
-
-proc getDrawSpaces*(self: View): DrawSpacesFlags =
-  gtk_source_view_get_draw_spaces(cast[ptr View00](self.impl))
-
-proc drawSpaces*(self: View): DrawSpacesFlags =
-  gtk_source_view_get_draw_spaces(cast[ptr View00](self.impl))
-
-proc gtk_source_view_set_draw_spaces(self: ptr View00; flags: DrawSpacesFlags) {.
-    importc, libprag.}
-
-proc setDrawSpaces*(self: View; flags: DrawSpacesFlags) =
-  gtk_source_view_set_draw_spaces(cast[ptr View00](self.impl), flags)
-
-proc `drawSpaces=`*(self: View; flags: DrawSpacesFlags) =
-  gtk_source_view_set_draw_spaces(cast[ptr View00](self.impl), flags)
-
-type
   MarkAttributes* = ref object of gobject.Object
   MarkAttributes00* = object of gobject.Object00
 
@@ -2687,15 +2558,6 @@ proc pixbuf*(self: MarkAttributes): gdkpixbuf.Pixbuf =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_mark_attributes_get_stock_id(self: ptr MarkAttributes00): cstring {.
-    importc, libprag.}
-
-proc getStockId*(self: MarkAttributes): string =
-  result = $gtk_source_mark_attributes_get_stock_id(cast[ptr MarkAttributes00](self.impl))
-
-proc stockId*(self: MarkAttributes): string =
-  result = $gtk_source_mark_attributes_get_stock_id(cast[ptr MarkAttributes00](self.impl))
-
 proc gtk_source_mark_attributes_get_tooltip_markup(self: ptr MarkAttributes00;
     mark: ptr Mark00): cstring {.
     importc, libprag.}
@@ -2784,16 +2646,6 @@ proc setPixbuf*(self: MarkAttributes; pixbuf: gdkpixbuf.Pixbuf) =
 
 proc `pixbuf=`*(self: MarkAttributes; pixbuf: gdkpixbuf.Pixbuf) =
   gtk_source_mark_attributes_set_pixbuf(cast[ptr MarkAttributes00](self.impl), cast[ptr gdkpixbuf.Pixbuf00](pixbuf.impl))
-
-proc gtk_source_mark_attributes_set_stock_id(self: ptr MarkAttributes00;
-    stockId: cstring) {.
-    importc, libprag.}
-
-proc setStockId*(self: MarkAttributes; stockId: cstring) =
-  gtk_source_mark_attributes_set_stock_id(cast[ptr MarkAttributes00](self.impl), stockId)
-
-proc `stockId=`*(self: MarkAttributes; stockId: cstring) =
-  gtk_source_mark_attributes_set_stock_id(cast[ptr MarkAttributes00](self.impl), stockId)
 
 proc gtk_source_view_get_mark_attributes(self: ptr View00; category: cstring;
     priority: ptr int32): ptr MarkAttributes00 {.
@@ -3151,13 +3003,11 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_source_completion_item_new(label: cstring; text: cstring; icon: ptr gdkpixbuf.Pixbuf00;
-    info: cstring): ptr CompletionItem00 {.
+proc gtk_source_completion_item_new(): ptr CompletionItem00 {.
     importc, libprag.}
 
-proc newCompletionItem*(label: cstring; text: cstring; icon: gdkpixbuf.Pixbuf = nil;
-    info: cstring = ""): CompletionItem {.deprecated.}  =
-  let gobj = gtk_source_completion_item_new(label, text, if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl), safeStringToCString(info))
+proc newCompletionItem*(): CompletionItem =
+  let gobj = gtk_source_completion_item_new()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -3173,10 +3023,9 @@ proc newCompletionItem*(label: cstring; text: cstring; icon: gdkpixbuf.Pixbuf = 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newCompletionItem*(tdesc: typedesc; label: cstring; text: cstring; icon: gdkpixbuf.Pixbuf = nil;
-    info: cstring = ""): tdesc {.deprecated.}  =
+proc newCompletionItem*(tdesc: typedesc): tdesc =
   assert(result is CompletionItem)
-  let gobj = gtk_source_completion_item_new(label, text, if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl), safeStringToCString(info))
+  let gobj = gtk_source_completion_item_new()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -3192,150 +3041,9 @@ proc newCompletionItem*(tdesc: typedesc; label: cstring; text: cstring; icon: gd
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initCompletionItem*[T](result: var T; label: cstring; text: cstring; icon: gdkpixbuf.Pixbuf = nil;
-    info: cstring = "") {.deprecated.} =
+proc initCompletionItem*[T](result: var T) {.deprecated.} =
   assert(result is CompletionItem)
-  let gobj = gtk_source_completion_item_new(label, text, if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl), safeStringToCString(info))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_source_completion_item_new_from_stock(label: cstring; text: cstring;
-    stock: cstring; info: cstring): ptr CompletionItem00 {.
-    importc, libprag.}
-
-proc newCompletionItemFromStock*(label: cstring = ""; text: cstring;
-    stock: cstring; info: cstring = ""): CompletionItem {.deprecated.}  =
-  let gobj = gtk_source_completion_item_new_from_stock(safeStringToCString(label), text, stock, safeStringToCString(info))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc newCompletionItemFromStock*(tdesc: typedesc; label: cstring = ""; text: cstring;
-    stock: cstring; info: cstring = ""): tdesc {.deprecated.}  =
-  assert(result is CompletionItem)
-  let gobj = gtk_source_completion_item_new_from_stock(safeStringToCString(label), text, stock, safeStringToCString(info))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc initCompletionItemFromStock*[T](result: var T; label: cstring = ""; text: cstring;
-    stock: cstring; info: cstring = "") {.deprecated.} =
-  assert(result is CompletionItem)
-  let gobj = gtk_source_completion_item_new_from_stock(safeStringToCString(label), text, stock, safeStringToCString(info))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_source_completion_item_new_with_markup(markup: cstring; text: cstring;
-    icon: ptr gdkpixbuf.Pixbuf00; info: cstring): ptr CompletionItem00 {.
-    importc, libprag.}
-
-proc newCompletionItemWithMarkup*(markup: cstring; text: cstring;
-    icon: gdkpixbuf.Pixbuf = nil; info: cstring = ""): CompletionItem {.deprecated.}  =
-  let gobj = gtk_source_completion_item_new_with_markup(markup, text, if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl), safeStringToCString(info))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc newCompletionItemWithMarkup*(tdesc: typedesc; markup: cstring; text: cstring;
-    icon: gdkpixbuf.Pixbuf = nil; info: cstring = ""): tdesc {.deprecated.}  =
-  assert(result is CompletionItem)
-  let gobj = gtk_source_completion_item_new_with_markup(markup, text, if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl), safeStringToCString(info))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc initCompletionItemWithMarkup*[T](result: var T; markup: cstring; text: cstring;
-    icon: gdkpixbuf.Pixbuf = nil; info: cstring = "") {.deprecated.} =
-  assert(result is CompletionItem)
-  let gobj = gtk_source_completion_item_new_with_markup(markup, text, if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl), safeStringToCString(info))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_source_completion_item_new2(): ptr CompletionItem00 {.
-    importc, libprag.}
-
-proc newCompletionItem2*(): CompletionItem =
-  let gobj = gtk_source_completion_item_new2()
+  let gobj = gtk_source_completion_item_new()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -3890,10 +3598,10 @@ proc encoding*(self: File): Encoding =
   result.impl = gtk_source_file_get_encoding(cast[ptr File00](self.impl))
   result.ignoreFinalizer = true
 
-proc gtk_source_file_get_location(self: ptr File00): ptr gio.File00 {.
+proc gtk_source_file_get_location(self: ptr File00): ptr gio.GFile00 {.
     importc, libprag.}
 
-proc getLocation*(self: File): gio.File =
+proc getLocation*(self: File): gio.GFile =
   let gobj = gtk_source_file_get_location(cast[ptr File00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -3909,7 +3617,7 @@ proc getLocation*(self: File): gio.File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc location*(self: File): gio.File =
+proc location*(self: File): gio.GFile =
   let gobj = gtk_source_file_get_location(cast[ptr File00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -3949,14 +3657,14 @@ proc gtk_source_file_is_readonly(self: ptr File00): gboolean {.
 proc isReadonly*(self: File): bool =
   toBool(gtk_source_file_is_readonly(cast[ptr File00](self.impl)))
 
-proc gtk_source_file_set_location(self: ptr File00; location: ptr gio.File00) {.
+proc gtk_source_file_set_location(self: ptr File00; location: ptr gio.GFile00) {.
     importc, libprag.}
 
-proc setLocation*(self: File; location: gio.File = nil) =
-  gtk_source_file_set_location(cast[ptr File00](self.impl), if location.isNil: nil else: cast[ptr gio.File00](location.impl))
+proc setLocation*(self: File; location: gio.GFile = nil) =
+  gtk_source_file_set_location(cast[ptr File00](self.impl), if location.isNil: nil else: cast[ptr gio.GFile00](location.impl))
 
-proc `location=`*(self: File; location: gio.File = nil) =
-  gtk_source_file_set_location(cast[ptr File00](self.impl), if location.isNil: nil else: cast[ptr gio.File00](location.impl))
+proc `location=`*(self: File; location: gio.GFile = nil) =
+  gtk_source_file_set_location(cast[ptr File00](self.impl), if location.isNil: nil else: cast[ptr gio.GFile00](location.impl))
 
 type
   NewlineType* {.size: sizeof(cint), pure.} = enum
@@ -4232,10 +3940,10 @@ proc inputStream*(self: FileLoader): gio.InputStream =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_file_loader_get_location(self: ptr FileLoader00): ptr gio.File00 {.
+proc gtk_source_file_loader_get_location(self: ptr FileLoader00): ptr gio.GFile00 {.
     importc, libprag.}
 
-proc getLocation*(self: FileLoader): gio.File =
+proc getLocation*(self: FileLoader): gio.GFile =
   let gobj = gtk_source_file_loader_get_location(cast[ptr FileLoader00](self.impl))
   if gobj.isNil:
     return nil
@@ -4253,7 +3961,7 @@ proc getLocation*(self: FileLoader): gio.File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc location*(self: FileLoader): gio.File =
+proc location*(self: FileLoader): gio.GFile =
   let gobj = gtk_source_file_loader_get_location(cast[ptr FileLoader00](self.impl))
   if gobj.isNil:
     return nil
@@ -4393,11 +4101,11 @@ proc initFileSaver*[T](result: var T; buffer: Buffer; file: File) {.deprecated.}
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gtk_source_file_saver_new_with_target(buffer: ptr Buffer00; file: ptr File00;
-    targetLocation: ptr gio.File00): ptr FileSaver00 {.
+    targetLocation: ptr gio.GFile00): ptr FileSaver00 {.
     importc, libprag.}
 
-proc newFileSaverWithTarget*(buffer: Buffer; file: File; targetLocation: gio.File): FileSaver =
-  let gobj = gtk_source_file_saver_new_with_target(cast[ptr Buffer00](buffer.impl), cast[ptr File00](file.impl), cast[ptr gio.File00](targetLocation.impl))
+proc newFileSaverWithTarget*(buffer: Buffer; file: File; targetLocation: gio.GFile): FileSaver =
+  let gobj = gtk_source_file_saver_new_with_target(cast[ptr Buffer00](buffer.impl), cast[ptr File00](file.impl), cast[ptr gio.GFile00](targetLocation.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -4413,9 +4121,9 @@ proc newFileSaverWithTarget*(buffer: Buffer; file: File; targetLocation: gio.Fil
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newFileSaverWithTarget*(tdesc: typedesc; buffer: Buffer; file: File; targetLocation: gio.File): tdesc =
+proc newFileSaverWithTarget*(tdesc: typedesc; buffer: Buffer; file: File; targetLocation: gio.GFile): tdesc =
   assert(result is FileSaver)
-  let gobj = gtk_source_file_saver_new_with_target(cast[ptr Buffer00](buffer.impl), cast[ptr File00](file.impl), cast[ptr gio.File00](targetLocation.impl))
+  let gobj = gtk_source_file_saver_new_with_target(cast[ptr Buffer00](buffer.impl), cast[ptr File00](file.impl), cast[ptr gio.GFile00](targetLocation.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -4431,9 +4139,9 @@ proc newFileSaverWithTarget*(tdesc: typedesc; buffer: Buffer; file: File; target
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initFileSaverWithTarget*[T](result: var T; buffer: Buffer; file: File; targetLocation: gio.File) {.deprecated.} =
+proc initFileSaverWithTarget*[T](result: var T; buffer: Buffer; file: File; targetLocation: gio.GFile) {.deprecated.} =
   assert(result is FileSaver)
-  let gobj = gtk_source_file_saver_new_with_target(cast[ptr Buffer00](buffer.impl), cast[ptr File00](file.impl), cast[ptr gio.File00](targetLocation.impl))
+  let gobj = gtk_source_file_saver_new_with_target(cast[ptr Buffer00](buffer.impl), cast[ptr File00](file.impl), cast[ptr gio.GFile00](targetLocation.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -4541,10 +4249,10 @@ proc file*(self: FileSaver): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_file_saver_get_location(self: ptr FileSaver00): ptr gio.File00 {.
+proc gtk_source_file_saver_get_location(self: ptr FileSaver00): ptr gio.GFile00 {.
     importc, libprag.}
 
-proc getLocation*(self: FileSaver): gio.File =
+proc getLocation*(self: FileSaver): gio.GFile =
   let gobj = gtk_source_file_saver_get_location(cast[ptr FileSaver00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -4560,7 +4268,7 @@ proc getLocation*(self: FileSaver): gio.File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc location*(self: FileSaver): gio.File =
+proc location*(self: FileSaver): gio.GFile =
   let gobj = gtk_source_file_saver_get_location(cast[ptr FileSaver00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -4817,15 +4525,6 @@ proc pixbuf*(self: GutterRendererPixbuf): gdkpixbuf.Pixbuf =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_gutter_renderer_pixbuf_get_stock_id(self: ptr GutterRendererPixbuf00): cstring {.
-    importc, libprag.}
-
-proc getStockId*(self: GutterRendererPixbuf): string =
-  result = $gtk_source_gutter_renderer_pixbuf_get_stock_id(cast[ptr GutterRendererPixbuf00](self.impl))
-
-proc stockId*(self: GutterRendererPixbuf): string =
-  result = $gtk_source_gutter_renderer_pixbuf_get_stock_id(cast[ptr GutterRendererPixbuf00](self.impl))
-
 proc gtk_source_gutter_renderer_pixbuf_set_gicon(self: ptr GutterRendererPixbuf00;
     icon: ptr gio.Icon00) {.
     importc, libprag.}
@@ -4861,18 +4560,6 @@ proc setPixbuf*(self: GutterRendererPixbuf;
 proc `pixbuf=`*(self: GutterRendererPixbuf;
     pixbuf: gdkpixbuf.Pixbuf = nil) =
   gtk_source_gutter_renderer_pixbuf_set_pixbuf(cast[ptr GutterRendererPixbuf00](self.impl), if pixbuf.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](pixbuf.impl))
-
-proc gtk_source_gutter_renderer_pixbuf_set_stock_id(self: ptr GutterRendererPixbuf00;
-    stockId: cstring) {.
-    importc, libprag.}
-
-proc setStockId*(self: GutterRendererPixbuf;
-    stockId: cstring = "") =
-  gtk_source_gutter_renderer_pixbuf_set_stock_id(cast[ptr GutterRendererPixbuf00](self.impl), safeStringToCString(stockId))
-
-proc `stockId=`*(self: GutterRendererPixbuf;
-    stockId: cstring = "") =
-  gtk_source_gutter_renderer_pixbuf_set_stock_id(cast[ptr GutterRendererPixbuf00](self.impl), safeStringToCString(stockId))
 
 type
   GutterRendererText* = ref object of GutterRenderer
@@ -6079,21 +5766,13 @@ when defined(gcDestructors):
       self.impl = nil
 
 proc gtk_source_search_context_backward(self: ptr SearchContext00; iter: gtk.TextIter;
-    matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter): gboolean {.
-    importc, libprag.}
-
-proc backward*(self: SearchContext; iter: gtk.TextIter;
-    matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter): bool =
-  toBool(gtk_source_search_context_backward(cast[ptr SearchContext00](self.impl), iter, matchStart, matchEnd))
-
-proc gtk_source_search_context_backward2(self: ptr SearchContext00; iter: gtk.TextIter;
     matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter; hasWrappedAround: var gboolean): gboolean {.
     importc, libprag.}
 
-proc backward2*(self: SearchContext; iter: gtk.TextIter;
+proc backward*(self: SearchContext; iter: gtk.TextIter;
     matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter; hasWrappedAround: var bool): bool =
   var hasWrappedAround_00 = gboolean(hasWrappedAround)
-  result = toBool(gtk_source_search_context_backward2(cast[ptr SearchContext00](self.impl), iter, matchStart, matchEnd, hasWrappedAround_00))
+  result = toBool(gtk_source_search_context_backward(cast[ptr SearchContext00](self.impl), iter, matchStart, matchEnd, hasWrappedAround_00))
   hasWrappedAround = toBool(hasWrappedAround_00)
 
 proc gtk_source_search_context_backward_async(self: ptr SearchContext00;
@@ -6107,29 +5786,14 @@ proc backwardAsync*(self: SearchContext; iter: gtk.TextIter;
 
 proc gtk_source_search_context_backward_finish(self: ptr SearchContext00;
     resu: ptr gio.AsyncResult00; matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter;
-    error: ptr ptr glib.Error = nil): gboolean {.
-    importc, libprag.}
-
-proc backwardFinish*(self: SearchContext; resu: gio.AsyncResult;
-    matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter): bool =
-  var gerror: ptr glib.Error
-  let resul0 = gtk_source_search_context_backward_finish(cast[ptr SearchContext00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), matchStart, matchEnd, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc gtk_source_search_context_backward_finish2(self: ptr SearchContext00;
-    resu: ptr gio.AsyncResult00; matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter;
     hasWrappedAround: var gboolean; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc backwardFinish2*(self: SearchContext; resu: gio.AsyncResult;
+proc backwardFinish*(self: SearchContext; resu: gio.AsyncResult;
     matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter; hasWrappedAround: var bool): bool =
   var gerror: ptr glib.Error
   var hasWrappedAround_00 = gboolean(hasWrappedAround)
-  let resul0 = gtk_source_search_context_backward_finish2(cast[ptr SearchContext00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), matchStart, matchEnd, hasWrappedAround_00, addr gerror)
+  let resul0 = gtk_source_search_context_backward_finish(cast[ptr SearchContext00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), matchStart, matchEnd, hasWrappedAround_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6138,21 +5802,13 @@ proc backwardFinish2*(self: SearchContext; resu: gio.AsyncResult;
   hasWrappedAround = toBool(hasWrappedAround_00)
 
 proc gtk_source_search_context_forward(self: ptr SearchContext00; iter: gtk.TextIter;
-    matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter): gboolean {.
-    importc, libprag.}
-
-proc forward*(self: SearchContext; iter: gtk.TextIter;
-    matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter): bool =
-  toBool(gtk_source_search_context_forward(cast[ptr SearchContext00](self.impl), iter, matchStart, matchEnd))
-
-proc gtk_source_search_context_forward2(self: ptr SearchContext00; iter: gtk.TextIter;
     matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter; hasWrappedAround: var gboolean): gboolean {.
     importc, libprag.}
 
-proc forward2*(self: SearchContext; iter: gtk.TextIter;
+proc forward*(self: SearchContext; iter: gtk.TextIter;
     matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter; hasWrappedAround: var bool): bool =
   var hasWrappedAround_00 = gboolean(hasWrappedAround)
-  result = toBool(gtk_source_search_context_forward2(cast[ptr SearchContext00](self.impl), iter, matchStart, matchEnd, hasWrappedAround_00))
+  result = toBool(gtk_source_search_context_forward(cast[ptr SearchContext00](self.impl), iter, matchStart, matchEnd, hasWrappedAround_00))
   hasWrappedAround = toBool(hasWrappedAround_00)
 
 proc gtk_source_search_context_forward_async(self: ptr SearchContext00; iter: gtk.TextIter;
@@ -6165,29 +5821,14 @@ proc forwardAsync*(self: SearchContext; iter: gtk.TextIter;
 
 proc gtk_source_search_context_forward_finish(self: ptr SearchContext00;
     resu: ptr gio.AsyncResult00; matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter;
-    error: ptr ptr glib.Error = nil): gboolean {.
-    importc, libprag.}
-
-proc forwardFinish*(self: SearchContext; resu: gio.AsyncResult;
-    matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter): bool =
-  var gerror: ptr glib.Error
-  let resul0 = gtk_source_search_context_forward_finish(cast[ptr SearchContext00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), matchStart, matchEnd, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc gtk_source_search_context_forward_finish2(self: ptr SearchContext00;
-    resu: ptr gio.AsyncResult00; matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter;
     hasWrappedAround: var gboolean; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc forwardFinish2*(self: SearchContext; resu: gio.AsyncResult;
+proc forwardFinish*(self: SearchContext; resu: gio.AsyncResult;
     matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter; hasWrappedAround: var bool): bool =
   var gerror: ptr glib.Error
   var hasWrappedAround_00 = gboolean(hasWrappedAround)
-  let resul0 = gtk_source_search_context_forward_finish2(cast[ptr SearchContext00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), matchStart, matchEnd, hasWrappedAround_00, addr gerror)
+  let resul0 = gtk_source_search_context_forward_finish(cast[ptr SearchContext00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), matchStart, matchEnd, hasWrappedAround_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6312,20 +5953,6 @@ proc replace*(self: SearchContext; matchStart: gtk.TextIter;
     matchEnd: gtk.TextIter; replace: cstring; replaceLength: int): bool =
   var gerror: ptr glib.Error
   let resul0 = gtk_source_search_context_replace(cast[ptr SearchContext00](self.impl), matchStart, matchEnd, replace, int32(replaceLength), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc gtk_source_search_context_replace2(self: ptr SearchContext00; matchStart: gtk.TextIter;
-    matchEnd: gtk.TextIter; replace: cstring; replaceLength: int32; error: ptr ptr glib.Error = nil): gboolean {.
-    importc, libprag.}
-
-proc replace2*(self: SearchContext; matchStart: gtk.TextIter;
-    matchEnd: gtk.TextIter; replace: cstring; replaceLength: int): bool =
-  var gerror: ptr glib.Error
-  let resul0 = gtk_source_search_context_replace2(cast[ptr SearchContext00](self.impl), matchStart, matchEnd, replace, int32(replaceLength), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6615,15 +6242,6 @@ proc getSettings*(self: SearchContext): SearchSettings =
     g_object_unref(result.impl)
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_source_search_context_set_settings(self: ptr SearchContext00; settings: ptr SearchSettings00) {.
-    importc, libprag.}
-
-proc setSettings*(self: SearchContext; settings: SearchSettings = nil) =
-  gtk_source_search_context_set_settings(cast[ptr SearchContext00](self.impl), if settings.isNil: nil else: cast[ptr SearchSettings00](settings.impl))
-
-proc `settings=`*(self: SearchContext; settings: SearchSettings = nil) =
-  gtk_source_search_context_set_settings(cast[ptr SearchContext00](self.impl), if settings.isNil: nil else: cast[ptr SearchSettings00](settings.impl))
 
 type
   StyleSchemeChooser00* = object of gobject.Object00
@@ -6939,6 +6557,8 @@ proc gtk_source_style_scheme_manager_get_scheme(self: ptr StyleSchemeManager00;
 proc getScheme*(self: StyleSchemeManager;
     schemeId: cstring): StyleScheme =
   let gobj = gtk_source_style_scheme_manager_get_scheme(cast[ptr StyleSchemeManager00](self.impl), schemeId)
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -6956,6 +6576,8 @@ proc getScheme*(self: StyleSchemeManager;
 proc scheme*(self: StyleSchemeManager;
     schemeId: cstring): StyleScheme =
   let gobj = gtk_source_style_scheme_manager_get_scheme(cast[ptr StyleSchemeManager00](self.impl), schemeId)
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -7093,6 +6715,12 @@ type
   ViewGutterPosition* {.size: sizeof(cint), pure.} = enum
     lines = -30
     marks = -20
+
+proc finalize*() {.
+    importc: "gtk_source_finalize", libprag.}
+
+proc init*() {.
+    importc: "gtk_source_init", libprag.}
 
 proc gtk_source_utils_escape_search_text(text: cstring): cstring {.
     importc, libprag.}

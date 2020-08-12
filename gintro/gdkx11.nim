@@ -264,7 +264,8 @@ proc gdk_x11_display_string_to_compound_text(self: ptr X11Display00; str: cstrin
     importc, libprag.}
 
 proc stringToCompoundText*(self: X11Display; str: cstring;
-    encoding: var ptr gdk.Atom00; format: var int; ctext: var seq[uint8]; length: var int): int =
+    encoding: var ptr gdk.Atom00; format: var int; ctext: var (seq[uint8] | string);
+    length: var int): int =
   var length_00 = int32(length)
   var format_00 = int32(format)
   var ctext_00: pointer
@@ -295,7 +296,8 @@ proc gdk_x11_display_utf8_to_compound_text(self: ptr X11Display00; str: cstring;
     importc, libprag.}
 
 proc utf8ToCompoundText*(self: X11Display; str: cstring;
-    encoding: var ptr gdk.Atom00; format: var int; ctext: var seq[uint8]; length: var int): bool =
+    encoding: var ptr gdk.Atom00; format: var int; ctext: var (seq[uint8] | string);
+    length: var int): bool =
   var length_00 = int32(length)
   var format_00 = int32(format)
   var ctext_00: pointer

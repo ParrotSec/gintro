@@ -12,7 +12,7 @@ const Lib = "libgio-2.0.so.0"
 
 type
   uint8Array* = pointer
-  File00Array* = pointer
+  GFile00Array* = pointer
   cstringArrayArray* = pointer
   OutputVector00Array* = pointer
   OutputMessage00Array* = pointer
@@ -533,13 +533,13 @@ proc `exitStatus=`*(self: ApplicationCommandLine;
   g_application_command_line_set_exit_status(cast[ptr ApplicationCommandLine00](self.impl), int32(exitStatus))
 
 type
-  File00* = object of gobject.Object00
-  File* = ref object of gobject.Object
+  GFile00* = object of gobject.Object00
+  GFile* = ref object of gobject.Object
 
-proc g_file_new_for_commandline_arg(arg: cstring): ptr File00 {.
+proc g_file_new_for_commandline_arg(arg: cstring): ptr GFile00 {.
     importc, libprag.}
 
-proc newFileForCommandlineArg*(arg: cstring): File =
+proc newGFileForCommandlineArg*(arg: cstring): GFile =
   let gobj = g_file_new_for_commandline_arg(arg)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -556,10 +556,10 @@ proc newFileForCommandlineArg*(arg: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_new_for_commandline_arg_and_cwd(arg: cstring; cwd: cstring): ptr File00 {.
+proc g_file_new_for_commandline_arg_and_cwd(arg: cstring; cwd: cstring): ptr GFile00 {.
     importc, libprag.}
 
-proc newFileForCommandlineArgAndCwd*(arg: cstring; cwd: cstring): File =
+proc newGFileForCommandlineArgAndCwd*(arg: cstring; cwd: cstring): GFile =
   let gobj = g_file_new_for_commandline_arg_and_cwd(arg, cwd)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -576,10 +576,10 @@ proc newFileForCommandlineArgAndCwd*(arg: cstring; cwd: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_new_for_path(path: cstring): ptr File00 {.
+proc g_file_new_for_path(path: cstring): ptr GFile00 {.
     importc, libprag.}
 
-proc newFileForPath*(path: cstring): File =
+proc newGFileForPath*(path: cstring): GFile =
   let gobj = g_file_new_for_path(path)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -596,10 +596,10 @@ proc newFileForPath*(path: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_new_for_uri(uri: cstring): ptr File00 {.
+proc g_file_new_for_uri(uri: cstring): ptr GFile00 {.
     importc, libprag.}
 
-proc newFileForUri*(uri: cstring): File =
+proc newGFileForUri*(uri: cstring): GFile =
   let gobj = g_file_new_for_uri(uri)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -616,10 +616,10 @@ proc newFileForUri*(uri: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_parse_name(parseName: cstring): ptr File00 {.
+proc g_file_parse_name(parseName: cstring): ptr GFile00 {.
     importc, libprag.}
 
-proc parseName*(parseName: cstring): File =
+proc parseName*(parseName: cstring): GFile =
   let gobj = g_file_parse_name(parseName)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -636,11 +636,11 @@ proc parseName*(parseName: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_dup(self: ptr File00): ptr File00 {.
+proc g_file_dup(self: ptr GFile00): ptr GFile00 {.
     importc, libprag.}
 
-proc dup*(self: File): File =
-  let gobj = g_file_dup(cast[ptr File00](self.impl))
+proc dup*(self: GFile): GFile =
+  let gobj = g_file_dup(cast[ptr GFile00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -656,34 +656,34 @@ proc dup*(self: File): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_equal(self: ptr File00; file2: ptr File00): gboolean {.
+proc g_file_equal(self: ptr GFile00; file2: ptr GFile00): gboolean {.
     importc, libprag.}
 
-proc equal*(self: File; file2: File): bool =
-  toBool(g_file_equal(cast[ptr File00](self.impl), cast[ptr File00](file2.impl)))
+proc equal*(self: GFile; file2: GFile): bool =
+  toBool(g_file_equal(cast[ptr GFile00](self.impl), cast[ptr GFile00](file2.impl)))
 
-proc g_file_get_basename(self: ptr File00): cstring {.
+proc g_file_get_basename(self: ptr GFile00): cstring {.
     importc, libprag.}
 
-proc getBasename*(self: File): string =
-  let resul0 = g_file_get_basename(cast[ptr File00](self.impl))
+proc getBasename*(self: GFile): string =
+  let resul0 = g_file_get_basename(cast[ptr GFile00](self.impl))
   if resul0.isNil:
     return
   result = $resul0
   cogfree(resul0)
 
-proc basename*(self: File): string =
-  let resul0 = g_file_get_basename(cast[ptr File00](self.impl))
+proc basename*(self: GFile): string =
+  let resul0 = g_file_get_basename(cast[ptr GFile00](self.impl))
   if resul0.isNil:
     return
   result = $resul0
   cogfree(resul0)
 
-proc g_file_get_child(self: ptr File00; name: cstring): ptr File00 {.
+proc g_file_get_child(self: ptr GFile00; name: cstring): ptr GFile00 {.
     importc, libprag.}
 
-proc getChild*(self: File; name: cstring): File =
-  let gobj = g_file_get_child(cast[ptr File00](self.impl), name)
+proc getChild*(self: GFile; name: cstring): GFile =
+  let gobj = g_file_get_child(cast[ptr GFile00](self.impl), name)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -699,8 +699,8 @@ proc getChild*(self: File; name: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc child*(self: File; name: cstring): File =
-  let gobj = g_file_get_child(cast[ptr File00](self.impl), name)
+proc child*(self: GFile; name: cstring): GFile =
+  let gobj = g_file_get_child(cast[ptr GFile00](self.impl), name)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -716,13 +716,13 @@ proc child*(self: File; name: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_get_child_for_display_name(self: ptr File00; displayName: cstring;
-    error: ptr ptr glib.Error = nil): ptr File00 {.
+proc g_file_get_child_for_display_name(self: ptr GFile00; displayName: cstring;
+    error: ptr ptr glib.Error = nil): ptr GFile00 {.
     importc, libprag.}
 
-proc getChildForDisplayName*(self: File; displayName: cstring): File =
+proc getChildForDisplayName*(self: GFile; displayName: cstring): GFile =
   var gerror: ptr glib.Error
-  let gobj = g_file_get_child_for_display_name(cast[ptr File00](self.impl), displayName, addr gerror)
+  let gobj = g_file_get_child_for_display_name(cast[ptr GFile00](self.impl), displayName, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -742,9 +742,9 @@ proc getChildForDisplayName*(self: File; displayName: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc childForDisplayName*(self: File; displayName: cstring): File =
+proc childForDisplayName*(self: GFile; displayName: cstring): GFile =
   var gerror: ptr glib.Error
-  let gobj = g_file_get_child_for_display_name(cast[ptr File00](self.impl), displayName, addr gerror)
+  let gobj = g_file_get_child_for_display_name(cast[ptr GFile00](self.impl), displayName, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -764,11 +764,11 @@ proc childForDisplayName*(self: File; displayName: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_get_parent(self: ptr File00): ptr File00 {.
+proc g_file_get_parent(self: ptr GFile00): ptr GFile00 {.
     importc, libprag.}
 
-proc getParent*(self: File): File =
-  let gobj = g_file_get_parent(cast[ptr File00](self.impl))
+proc getParent*(self: GFile): GFile =
+  let gobj = g_file_get_parent(cast[ptr GFile00](self.impl))
   if gobj.isNil:
     return nil
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -786,8 +786,8 @@ proc getParent*(self: File): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc parent*(self: File): File =
-  let gobj = g_file_get_parent(cast[ptr File00](self.impl))
+proc parent*(self: GFile): GFile =
+  let gobj = g_file_get_parent(cast[ptr GFile00](self.impl))
   if gobj.isNil:
     return nil
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -805,123 +805,123 @@ proc parent*(self: File): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_get_parse_name(self: ptr File00): cstring {.
+proc g_file_get_parse_name(self: ptr GFile00): cstring {.
     importc, libprag.}
 
-proc getParseName*(self: File): string =
-  let resul0 = g_file_get_parse_name(cast[ptr File00](self.impl))
+proc getParseName*(self: GFile): string =
+  let resul0 = g_file_get_parse_name(cast[ptr GFile00](self.impl))
   result = $resul0
   cogfree(resul0)
 
-proc parseName*(self: File): string =
-  let resul0 = g_file_get_parse_name(cast[ptr File00](self.impl))
+proc parseName*(self: GFile): string =
+  let resul0 = g_file_get_parse_name(cast[ptr GFile00](self.impl))
   result = $resul0
   cogfree(resul0)
 
-proc g_file_get_path(self: ptr File00): cstring {.
+proc g_file_get_path(self: ptr GFile00): cstring {.
     importc, libprag.}
 
-proc getPath*(self: File): string =
-  let resul0 = g_file_get_path(cast[ptr File00](self.impl))
+proc getPath*(self: GFile): string =
+  let resul0 = g_file_get_path(cast[ptr GFile00](self.impl))
   if resul0.isNil:
     return
   result = $resul0
   cogfree(resul0)
 
-proc path*(self: File): string =
-  let resul0 = g_file_get_path(cast[ptr File00](self.impl))
+proc path*(self: GFile): string =
+  let resul0 = g_file_get_path(cast[ptr GFile00](self.impl))
   if resul0.isNil:
     return
   result = $resul0
   cogfree(resul0)
 
-proc g_file_get_relative_path(self: ptr File00; descendant: ptr File00): cstring {.
+proc g_file_get_relative_path(self: ptr GFile00; descendant: ptr GFile00): cstring {.
     importc, libprag.}
 
-proc getRelativePath*(self: File; descendant: File): string =
-  let resul0 = g_file_get_relative_path(cast[ptr File00](self.impl), cast[ptr File00](descendant.impl))
+proc getRelativePath*(self: GFile; descendant: GFile): string =
+  let resul0 = g_file_get_relative_path(cast[ptr GFile00](self.impl), cast[ptr GFile00](descendant.impl))
   if resul0.isNil:
     return
   result = $resul0
   cogfree(resul0)
 
-proc relativePath*(self: File; descendant: File): string =
-  let resul0 = g_file_get_relative_path(cast[ptr File00](self.impl), cast[ptr File00](descendant.impl))
+proc relativePath*(self: GFile; descendant: GFile): string =
+  let resul0 = g_file_get_relative_path(cast[ptr GFile00](self.impl), cast[ptr GFile00](descendant.impl))
   if resul0.isNil:
     return
   result = $resul0
   cogfree(resul0)
 
-proc g_file_get_uri(self: ptr File00): cstring {.
+proc g_file_get_uri(self: ptr GFile00): cstring {.
     importc, libprag.}
 
-proc getUri*(self: File): string =
-  let resul0 = g_file_get_uri(cast[ptr File00](self.impl))
+proc getUri*(self: GFile): string =
+  let resul0 = g_file_get_uri(cast[ptr GFile00](self.impl))
   result = $resul0
   cogfree(resul0)
 
-proc uri*(self: File): string =
-  let resul0 = g_file_get_uri(cast[ptr File00](self.impl))
+proc uri*(self: GFile): string =
+  let resul0 = g_file_get_uri(cast[ptr GFile00](self.impl))
   result = $resul0
   cogfree(resul0)
 
-proc g_file_get_uri_scheme(self: ptr File00): cstring {.
+proc g_file_get_uri_scheme(self: ptr GFile00): cstring {.
     importc, libprag.}
 
-proc getUriScheme*(self: File): string =
-  let resul0 = g_file_get_uri_scheme(cast[ptr File00](self.impl))
+proc getUriScheme*(self: GFile): string =
+  let resul0 = g_file_get_uri_scheme(cast[ptr GFile00](self.impl))
   result = $resul0
   cogfree(resul0)
 
-proc uriScheme*(self: File): string =
-  let resul0 = g_file_get_uri_scheme(cast[ptr File00](self.impl))
+proc uriScheme*(self: GFile): string =
+  let resul0 = g_file_get_uri_scheme(cast[ptr GFile00](self.impl))
   result = $resul0
   cogfree(resul0)
 
-proc g_file_has_parent(self: ptr File00; parent: ptr File00): gboolean {.
+proc g_file_has_parent(self: ptr GFile00; parent: ptr GFile00): gboolean {.
     importc, libprag.}
 
-proc hasParent*(self: File; parent: File = nil): bool =
-  toBool(g_file_has_parent(cast[ptr File00](self.impl), if parent.isNil: nil else: cast[ptr File00](parent.impl)))
+proc hasParent*(self: GFile; parent: GFile = nil): bool =
+  toBool(g_file_has_parent(cast[ptr GFile00](self.impl), if parent.isNil: nil else: cast[ptr GFile00](parent.impl)))
 
-proc g_file_has_prefix(self: ptr File00; prefix: ptr File00): gboolean {.
+proc g_file_has_prefix(self: ptr GFile00; prefix: ptr GFile00): gboolean {.
     importc, libprag.}
 
-proc hasPrefix*(self: File; prefix: File): bool =
-  toBool(g_file_has_prefix(cast[ptr File00](self.impl), cast[ptr File00](prefix.impl)))
+proc hasPrefix*(self: GFile; prefix: GFile): bool =
+  toBool(g_file_has_prefix(cast[ptr GFile00](self.impl), cast[ptr GFile00](prefix.impl)))
 
-proc g_file_has_uri_scheme(self: ptr File00; uriScheme: cstring): gboolean {.
+proc g_file_has_uri_scheme(self: ptr GFile00; uriScheme: cstring): gboolean {.
     importc, libprag.}
 
-proc hasUriScheme*(self: File; uriScheme: cstring): bool =
-  toBool(g_file_has_uri_scheme(cast[ptr File00](self.impl), uriScheme))
+proc hasUriScheme*(self: GFile; uriScheme: cstring): bool =
+  toBool(g_file_has_uri_scheme(cast[ptr GFile00](self.impl), uriScheme))
 
-proc g_file_hash(self: ptr File00): uint32 {.
+proc g_file_hash(self: ptr GFile00): uint32 {.
     importc, libprag.}
 
-proc hash*(self: File): int =
-  int(g_file_hash(cast[ptr File00](self.impl)))
+proc hash*(self: GFile): int =
+  int(g_file_hash(cast[ptr GFile00](self.impl)))
 
-proc g_file_is_native(self: ptr File00): gboolean {.
+proc g_file_is_native(self: ptr GFile00): gboolean {.
     importc, libprag.}
 
-proc isNative*(self: File): bool =
-  toBool(g_file_is_native(cast[ptr File00](self.impl)))
+proc isNative*(self: GFile): bool =
+  toBool(g_file_is_native(cast[ptr GFile00](self.impl)))
 
-proc g_file_peek_path(self: ptr File00): cstring {.
+proc g_file_peek_path(self: ptr GFile00): cstring {.
     importc, libprag.}
 
-proc peekPath*(self: File): string =
-  let resul0 = g_file_peek_path(cast[ptr File00](self.impl))
+proc peekPath*(self: GFile): string =
+  let resul0 = g_file_peek_path(cast[ptr GFile00](self.impl))
   if resul0.isNil:
     return
   result = $resul0
 
-proc g_file_resolve_relative_path(self: ptr File00; relativePath: cstring): ptr File00 {.
+proc g_file_resolve_relative_path(self: ptr GFile00; relativePath: cstring): ptr GFile00 {.
     importc, libprag.}
 
-proc resolveRelativePath*(self: File; relativePath: cstring): File =
-  let gobj = g_file_resolve_relative_path(cast[ptr File00](self.impl), relativePath)
+proc resolveRelativePath*(self: GFile; relativePath: cstring): GFile =
+  let gobj = g_file_resolve_relative_path(cast[ptr GFile00](self.impl), relativePath)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -937,11 +937,11 @@ proc resolveRelativePath*(self: File; relativePath: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_supports_thread_contexts(self: ptr File00): gboolean {.
+proc g_file_supports_thread_contexts(self: ptr GFile00): gboolean {.
     importc, libprag.}
 
-proc supportsThreadContexts*(self: File): bool =
-  toBool(g_file_supports_thread_contexts(cast[ptr File00](self.impl)))
+proc supportsThreadContexts*(self: GFile): bool =
+  toBool(g_file_supports_thread_contexts(cast[ptr GFile00](self.impl)))
 
 type
   GApplication* = ref object of gobject.Object
@@ -970,7 +970,7 @@ proc scHandleLocalOptions*(self: GApplication;  p: proc (self: ptr GApplication0
 proc scNameLost*(self: GApplication;  p: proc (self: ptr GApplication00; xdata: pointer): gboolean {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "name-lost", cast[GCallback](p), xdata, nil, cf)
 
-proc scOpen*(self: GApplication;  p: proc (self: ptr GApplication00; files: File00Array; nFiles: int32; hint: cstring; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scOpen*(self: GApplication;  p: proc (self: ptr GApplication00; files: GFile00Array; nFiles: int32; hint: cstring; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "open", cast[GCallback](p), xdata, nil, cf)
 
 proc scShutdown*(self: GApplication;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
@@ -1137,11 +1137,11 @@ proc g_application_mark_busy(self: ptr GApplication00) {.
 proc markBusy*(self: GApplication) =
   g_application_mark_busy(cast[ptr GApplication00](self.impl))
 
-proc g_application_open(self: ptr GApplication00; files: ptr File00Array;
+proc g_application_open(self: ptr GApplication00; files: ptr GFile00Array;
     nFiles: int32; hint: cstring) {.
     importc, libprag.}
 
-proc open*(self: GApplication; files: ptr File00Array; nFiles: int;
+proc open*(self: GApplication; files: ptr GFile00Array; nFiles: int;
     hint: cstring) =
   g_application_open(cast[ptr GApplication00](self.impl), files, int32(nFiles), hint)
 
@@ -1253,11 +1253,11 @@ proc withdrawNotification*(self: GApplication; id: cstring) =
   g_application_withdraw_notification(cast[ptr GApplication00](self.impl), id)
 
 proc g_application_command_line_create_file_for_arg(self: ptr ApplicationCommandLine00;
-    arg: cstring): ptr File00 {.
+    arg: cstring): ptr GFile00 {.
     importc, libprag.}
 
 proc createFileForArg*(self: ApplicationCommandLine;
-    arg: cstring): File =
+    arg: cstring): GFile =
   let gobj = g_application_command_line_create_file_for_arg(cast[ptr ApplicationCommandLine00](self.impl), arg)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -1674,10 +1674,10 @@ proc etag*(self: FileIOStream): string =
   result = $resul0
   cogfree(resul0)
 
-proc g_file_new_tmp(tmpl: cstring; iostream: var ptr FileIOStream00; error: ptr ptr glib.Error = nil): ptr File00 {.
+proc g_file_new_tmp(tmpl: cstring; iostream: var ptr FileIOStream00; error: ptr ptr glib.Error = nil): ptr GFile00 {.
     importc, libprag.}
 
-proc newFileTmp*(tmpl: cstring = ""; iostream: var FileIOStream): File =
+proc newGFileTmp*(tmpl: cstring = ""; iostream: var FileIOStream): GFile =
   var gerror: ptr glib.Error
   let gobj = g_file_new_tmp(safeStringToCString(tmpl), cast[var ptr FileIOStream00](addr iostream.impl), addr gerror)
   if gerror != nil:
@@ -3169,11 +3169,11 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc g_file_icon_new(file: ptr File00): ptr FileIcon00 {.
+proc g_file_icon_new(file: ptr GFile00): ptr FileIcon00 {.
     importc, libprag.}
 
-proc newFileIcon*(file: File): FileIcon =
-  let gobj = g_file_icon_new(cast[ptr File00](file.impl))
+proc newFileIcon*(file: GFile): FileIcon =
+  let gobj = g_file_icon_new(cast[ptr GFile00](file.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -3189,9 +3189,9 @@ proc newFileIcon*(file: File): FileIcon =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newFileIcon*(tdesc: typedesc; file: File): tdesc =
+proc newFileIcon*(tdesc: typedesc; file: GFile): tdesc =
   assert(result is FileIcon)
-  let gobj = g_file_icon_new(cast[ptr File00](file.impl))
+  let gobj = g_file_icon_new(cast[ptr GFile00](file.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -3207,9 +3207,9 @@ proc newFileIcon*(tdesc: typedesc; file: File): tdesc =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initFileIcon*[T](result: var T; file: File) {.deprecated.} =
+proc initFileIcon*[T](result: var T; file: GFile) {.deprecated.} =
   assert(result is FileIcon)
-  let gobj = g_file_icon_new(cast[ptr File00](file.impl))
+  let gobj = g_file_icon_new(cast[ptr GFile00](file.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -3225,10 +3225,10 @@ proc initFileIcon*[T](result: var T; file: File) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_icon_get_file(self: ptr FileIcon00): ptr File00 {.
+proc g_file_icon_get_file(self: ptr FileIcon00): ptr GFile00 {.
     importc, libprag.}
 
-proc getFile*(self: FileIcon): File =
+proc getFile*(self: FileIcon): GFile =
   let gobj = g_file_icon_get_file(cast[ptr FileIcon00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -3244,7 +3244,7 @@ proc getFile*(self: FileIcon): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc file*(self: FileIcon): File =
+proc file*(self: FileIcon): GFile =
   let gobj = g_file_icon_get_file(cast[ptr FileIcon00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -3802,10 +3802,10 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc g_file_enumerator_get_child(self: ptr FileEnumerator00; info: ptr FileInfo00): ptr File00 {.
+proc g_file_enumerator_get_child(self: ptr FileEnumerator00; info: ptr FileInfo00): ptr GFile00 {.
     importc, libprag.}
 
-proc getChild*(self: FileEnumerator; info: FileInfo): File =
+proc getChild*(self: FileEnumerator; info: FileInfo): GFile =
   let gobj = g_file_enumerator_get_child(cast[ptr FileEnumerator00](self.impl), cast[ptr FileInfo00](info.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -3822,7 +3822,7 @@ proc getChild*(self: FileEnumerator; info: FileInfo): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc child*(self: FileEnumerator; info: FileInfo): File =
+proc child*(self: FileEnumerator; info: FileInfo): GFile =
   let gobj = g_file_enumerator_get_child(cast[ptr FileEnumerator00](self.impl), cast[ptr FileInfo00](info.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -3839,10 +3839,10 @@ proc child*(self: FileEnumerator; info: FileInfo): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_enumerator_get_container(self: ptr FileEnumerator00): ptr File00 {.
+proc g_file_enumerator_get_container(self: ptr FileEnumerator00): ptr GFile00 {.
     importc, libprag.}
 
-proc getContainer*(self: FileEnumerator): File =
+proc getContainer*(self: FileEnumerator): GFile =
   let gobj = g_file_enumerator_get_container(cast[ptr FileEnumerator00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -3858,7 +3858,7 @@ proc getContainer*(self: FileEnumerator): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc container*(self: FileEnumerator): File =
+proc container*(self: FileEnumerator): GFile =
   let gobj = g_file_enumerator_get_container(cast[ptr FileEnumerator00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -3920,10 +3920,10 @@ proc g_mount_can_unmount(self: ptr Mount00): gboolean {.
 proc canUnmount*(self: Mount): bool =
   toBool(g_mount_can_unmount(cast[ptr Mount00](self.impl)))
 
-proc g_mount_get_default_location(self: ptr Mount00): ptr File00 {.
+proc g_mount_get_default_location(self: ptr Mount00): ptr GFile00 {.
     importc, libprag.}
 
-proc getDefaultLocation*(self: Mount): File =
+proc getDefaultLocation*(self: Mount): GFile =
   let gobj = g_mount_get_default_location(cast[ptr Mount00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -3940,7 +3940,7 @@ proc getDefaultLocation*(self: Mount): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc defaultLocation*(self: Mount): File =
+proc defaultLocation*(self: Mount): GFile =
   let gobj = g_mount_get_default_location(cast[ptr Mount00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -4007,10 +4007,10 @@ proc name*(self: Mount): string =
   result = $resul0
   cogfree(resul0)
 
-proc g_mount_get_root(self: ptr Mount00): ptr File00 {.
+proc g_mount_get_root(self: ptr Mount00): ptr GFile00 {.
     importc, libprag.}
 
-proc getRoot*(self: Mount): File =
+proc getRoot*(self: Mount): GFile =
   let gobj = g_mount_get_root(cast[ptr Mount00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -4027,7 +4027,7 @@ proc getRoot*(self: Mount): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc root*(self: Mount): File =
+proc root*(self: Mount): GFile =
   let gobj = g_mount_get_root(cast[ptr Mount00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -4431,10 +4431,10 @@ proc enumerateIdentifiers*(self: Volume): seq[string] =
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
-proc g_volume_get_activation_root(self: ptr Volume00): ptr File00 {.
+proc g_volume_get_activation_root(self: ptr Volume00): ptr GFile00 {.
     importc, libprag.}
 
-proc getActivationRoot*(self: Volume): File =
+proc getActivationRoot*(self: Volume): GFile =
   let gobj = g_volume_get_activation_root(cast[ptr Volume00](self.impl))
   if gobj.isNil:
     return nil
@@ -4453,7 +4453,7 @@ proc getActivationRoot*(self: Volume): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc activationRoot*(self: Volume): File =
+proc activationRoot*(self: Volume): GFile =
   let gobj = g_volume_get_activation_root(cast[ptr Volume00](self.impl))
   if gobj.isNil:
     return nil
@@ -6094,12 +6094,12 @@ proc g_task_set_task_data(self: ptr Task00; taskData: pointer; taskDataDestroy: 
 proc setTaskData*(self: Task; taskData: pointer; taskDataDestroy: DestroyNotify) =
   g_task_set_task_data(cast[ptr Task00](self.impl), taskData, taskDataDestroy)
 
-proc g_file_append_to_finish(self: ptr File00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr FileOutputStream00 {.
+proc g_file_append_to_finish(self: ptr GFile00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr FileOutputStream00 {.
     importc, libprag.}
 
-proc appendToFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): FileOutputStream =
+proc appendToFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): FileOutputStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_append_to_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_append_to_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6119,24 +6119,24 @@ proc appendToFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): F
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_copy_finish(self: ptr File00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): gboolean {.
+proc g_file_copy_finish(self: ptr GFile00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc copyFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): bool =
+proc copyFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_copy_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let resul0 = g_file_copy_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_create_finish(self: ptr File00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr FileOutputStream00 {.
+proc g_file_create_finish(self: ptr GFile00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr FileOutputStream00 {.
     importc, libprag.}
 
-proc createFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): FileOutputStream =
+proc createFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): FileOutputStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_create_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_create_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6156,13 +6156,13 @@ proc createFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): Fil
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_create_readwrite_finish(self: ptr File00; res: ptr AsyncResult00;
+proc g_file_create_readwrite_finish(self: ptr GFile00; res: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): ptr FileIOStream00 {.
     importc, libprag.}
 
-proc createReadwriteFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): FileIOStream =
+proc createReadwriteFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): FileIOStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_create_readwrite_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_create_readwrite_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6182,51 +6182,51 @@ proc createReadwriteFinish*(self: File; res: AsyncResult | SimpleAsyncResult | T
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_delete_finish(self: ptr File00; resu: ptr AsyncResult00; error: ptr ptr glib.Error = nil): gboolean {.
+proc g_file_delete_finish(self: ptr GFile00; resu: ptr AsyncResult00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc deleteFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): bool =
+proc deleteFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_delete_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let resul0 = g_file_delete_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_eject_mountable_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_eject_mountable_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc ejectMountableFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): bool =
+proc ejectMountableFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_eject_mountable_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let resul0 = g_file_eject_mountable_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_eject_mountable_with_operation_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_eject_mountable_with_operation_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc ejectMountableWithOperationFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): bool =
+proc ejectMountableWithOperationFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_eject_mountable_with_operation_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let resul0 = g_file_eject_mountable_with_operation_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_enumerate_children_finish(self: ptr File00; res: ptr AsyncResult00;
+proc g_file_enumerate_children_finish(self: ptr GFile00; res: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): ptr FileEnumerator00 {.
     importc, libprag.}
 
-proc enumerateChildrenFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): FileEnumerator =
+proc enumerateChildrenFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): FileEnumerator =
   var gerror: ptr glib.Error
-  let gobj = g_file_enumerate_children_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_enumerate_children_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6246,13 +6246,13 @@ proc enumerateChildrenFinish*(self: File; res: AsyncResult | SimpleAsyncResult |
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_find_enclosing_mount_finish(self: ptr File00; res: ptr AsyncResult00;
+proc g_file_find_enclosing_mount_finish(self: ptr GFile00; res: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): ptr Mount00 {.
     importc, libprag.}
 
-proc findEnclosingMountFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): Mount =
+proc findEnclosingMountFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): Mount =
   var gerror: ptr glib.Error
-  let gobj = g_file_find_enclosing_mount_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_find_enclosing_mount_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6272,15 +6272,15 @@ proc findEnclosingMountFinish*(self: File; res: AsyncResult | SimpleAsyncResult 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_load_bytes_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_load_bytes_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     etagOut: var cstring; error: ptr ptr glib.Error = nil): ptr glib.Bytes00 {.
     importc, libprag.}
 
-proc loadBytesFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task;
+proc loadBytesFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task;
     etagOut: var string): glib.Bytes =
   var gerror: ptr glib.Error
   var etagOut_00 = cstring(etagOut)
-  let impl0 = g_file_load_bytes_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), etagOut_00, addr gerror)
+  let impl0 = g_file_load_bytes_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), etagOut_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6289,16 +6289,16 @@ proc loadBytesFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task;
   result.impl = impl0
   etagOut = $(etagOut_00)
 
-proc g_file_load_contents_finish(self: ptr File00; res: ptr AsyncResult00;
+proc g_file_load_contents_finish(self: ptr GFile00; res: ptr AsyncResult00;
     contents: var uint8Array; length: var uint64; etagOut: var cstring; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc loadContentsFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task;
-    contents: var seq[uint8]; length: var uint64; etagOut: var string): bool =
+proc loadContentsFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task;
+    contents: var (seq[uint8] | string); length: var uint64; etagOut: var string): bool =
   var gerror: ptr glib.Error
   var etagOut_00 = cstring(etagOut)
   var contents_00: pointer
-  let resul0 = g_file_load_contents_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), contents_00, length, etagOut_00, addr gerror)
+  let resul0 = g_file_load_contents_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), contents_00, length, etagOut_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6309,53 +6309,53 @@ proc loadContentsFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task
   copyMem(unsafeaddr contents[0], contents_00, length.int * sizeof(contents[0]))
   cogfree(contents_00)
 
-proc g_file_make_directory_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_make_directory_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc makeDirectoryFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): bool =
+proc makeDirectoryFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_make_directory_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let resul0 = g_file_make_directory_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_measure_disk_usage_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_measure_disk_usage_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     diskUsage: var uint64; numDirs: var uint64; numFiles: var uint64; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc measureDiskUsageFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task;
+proc measureDiskUsageFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task;
     diskUsage: var uint64; numDirs: var uint64; numFiles: var uint64): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_measure_disk_usage_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), diskUsage, numDirs, numFiles, addr gerror)
+  let resul0 = g_file_measure_disk_usage_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), diskUsage, numDirs, numFiles, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_mount_enclosing_volume_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_mount_enclosing_volume_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc mountEnclosingVolumeFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): bool =
+proc mountEnclosingVolumeFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_mount_enclosing_volume_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let resul0 = g_file_mount_enclosing_volume_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_mount_mountable_finish(self: ptr File00; resu: ptr AsyncResult00;
-    error: ptr ptr glib.Error = nil): ptr File00 {.
+proc g_file_mount_mountable_finish(self: ptr GFile00; resu: ptr AsyncResult00;
+    error: ptr ptr glib.Error = nil): ptr GFile00 {.
     importc, libprag.}
 
-proc mountMountableFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): File =
+proc mountMountableFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): GFile =
   var gerror: ptr glib.Error
-  let gobj = g_file_mount_mountable_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let gobj = g_file_mount_mountable_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6375,13 +6375,13 @@ proc mountMountableFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | T
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_open_readwrite_finish(self: ptr File00; res: ptr AsyncResult00;
+proc g_file_open_readwrite_finish(self: ptr GFile00; res: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): ptr FileIOStream00 {.
     importc, libprag.}
 
-proc openReadwriteFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): FileIOStream =
+proc openReadwriteFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): FileIOStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_open_readwrite_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_open_readwrite_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6401,26 +6401,26 @@ proc openReadwriteFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Tas
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_poll_mountable_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_poll_mountable_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc pollMountableFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): bool =
+proc pollMountableFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_poll_mountable_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let resul0 = g_file_poll_mountable_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_query_default_handler_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_query_default_handler_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): ptr AppInfo00 {.
     importc, libprag.}
 
-proc queryDefaultHandlerFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): AppInfo =
+proc queryDefaultHandlerFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): AppInfo =
   var gerror: ptr glib.Error
-  let gobj = g_file_query_default_handler_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let gobj = g_file_query_default_handler_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6440,13 +6440,13 @@ proc queryDefaultHandlerFinish*(self: File; resu: AsyncResult | SimpleAsyncResul
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_query_filesystem_info_finish(self: ptr File00; res: ptr AsyncResult00;
+proc g_file_query_filesystem_info_finish(self: ptr GFile00; res: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): ptr FileInfo00 {.
     importc, libprag.}
 
-proc queryFilesystemInfoFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): FileInfo =
+proc queryFilesystemInfoFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): FileInfo =
   var gerror: ptr glib.Error
-  let gobj = g_file_query_filesystem_info_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_query_filesystem_info_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6466,12 +6466,13 @@ proc queryFilesystemInfoFinish*(self: File; res: AsyncResult | SimpleAsyncResult
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_query_info_finish(self: ptr File00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr FileInfo00 {.
+proc g_file_query_info_finish(self: ptr GFile00; res: ptr AsyncResult00;
+    error: ptr ptr glib.Error = nil): ptr FileInfo00 {.
     importc, libprag.}
 
-proc queryInfoFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): FileInfo =
+proc queryInfoFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): FileInfo =
   var gerror: ptr glib.Error
-  let gobj = g_file_query_info_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_query_info_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6491,15 +6492,15 @@ proc queryInfoFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_replace_contents_finish(self: ptr File00; res: ptr AsyncResult00;
+proc g_file_replace_contents_finish(self: ptr GFile00; res: ptr AsyncResult00;
     newEtag: var cstring; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc replaceContentsFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task;
+proc replaceContentsFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task;
     newEtag: var string): bool =
   var gerror: ptr glib.Error
   var newEtag_00 = cstring(newEtag)
-  let resul0 = g_file_replace_contents_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), newEtag_00, addr gerror)
+  let resul0 = g_file_replace_contents_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), newEtag_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6507,12 +6508,12 @@ proc replaceContentsFinish*(self: File; res: AsyncResult | SimpleAsyncResult | T
   result = toBool(resul0)
   newEtag = $(newEtag_00)
 
-proc g_file_replace_finish(self: ptr File00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr FileOutputStream00 {.
+proc g_file_replace_finish(self: ptr GFile00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr FileOutputStream00 {.
     importc, libprag.}
 
-proc replaceFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): FileOutputStream =
+proc replaceFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): FileOutputStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_replace_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_replace_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6532,13 +6533,13 @@ proc replaceFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): Fi
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_replace_readwrite_finish(self: ptr File00; res: ptr AsyncResult00;
+proc g_file_replace_readwrite_finish(self: ptr GFile00; res: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): ptr FileIOStream00 {.
     importc, libprag.}
 
-proc replaceReadwriteFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): FileIOStream =
+proc replaceReadwriteFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): FileIOStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_replace_readwrite_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_replace_readwrite_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6558,28 +6559,28 @@ proc replaceReadwriteFinish*(self: File; res: AsyncResult | SimpleAsyncResult | 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_set_attributes_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_set_attributes_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     info: var ptr FileInfo00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc setAttributesFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task;
+proc setAttributesFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task;
     info: var FileInfo): bool =
   fnew(info, gio.finalizeGObject)
   var gerror: ptr glib.Error
-  let resul0 = g_file_set_attributes_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), cast[var ptr FileInfo00](addr info.impl), addr gerror)
+  let resul0 = g_file_set_attributes_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), cast[var ptr FileInfo00](addr info.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_set_display_name_finish(self: ptr File00; res: ptr AsyncResult00;
-    error: ptr ptr glib.Error = nil): ptr File00 {.
+proc g_file_set_display_name_finish(self: ptr GFile00; res: ptr AsyncResult00;
+    error: ptr ptr glib.Error = nil): ptr GFile00 {.
     importc, libprag.}
 
-proc setDisplayNameFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): File =
+proc setDisplayNameFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): GFile =
   var gerror: ptr glib.Error
-  let gobj = g_file_set_display_name_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_set_display_name_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6599,9 +6600,9 @@ proc setDisplayNameFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Ta
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc `displayNameFinish=`*(self: File; res: AsyncResult | SimpleAsyncResult | Task): File =
+proc `displayNameFinish=`*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): GFile =
   var gerror: ptr glib.Error
-  let gobj = g_file_set_display_name_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_set_display_name_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6621,64 +6622,64 @@ proc `displayNameFinish=`*(self: File; res: AsyncResult | SimpleAsyncResult | Ta
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_start_mountable_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_start_mountable_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc startMountableFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): bool =
+proc startMountableFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_start_mountable_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let resul0 = g_file_start_mountable_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_stop_mountable_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_stop_mountable_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc stopMountableFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): bool =
+proc stopMountableFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_stop_mountable_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let resul0 = g_file_stop_mountable_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_trash_finish(self: ptr File00; resu: ptr AsyncResult00; error: ptr ptr glib.Error = nil): gboolean {.
+proc g_file_trash_finish(self: ptr GFile00; resu: ptr AsyncResult00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc trashFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): bool =
+proc trashFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_trash_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let resul0 = g_file_trash_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_unmount_mountable_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_unmount_mountable_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc unmountMountableFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): bool =
+proc unmountMountableFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_unmount_mountable_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let resul0 = g_file_unmount_mountable_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_unmount_mountable_with_operation_finish(self: ptr File00; resu: ptr AsyncResult00;
+proc g_file_unmount_mountable_with_operation_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc unmountMountableWithOperationFinish*(self: File; resu: AsyncResult | SimpleAsyncResult | Task): bool =
+proc unmountMountableWithOperationFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_unmount_mountable_with_operation_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  let resul0 = g_file_unmount_mountable_with_operation_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -9704,13 +9705,13 @@ proc sourceNew*(self: Cancellable): glib.Source =
   fnew(result, gBoxedFreeGSource)
   result.impl = g_cancellable_source_new(cast[ptr Cancellable00](self.impl))
 
-proc g_file_append_to(self: ptr File00; flags: FileCreateFlags; cancellable: ptr Cancellable00;
+proc g_file_append_to(self: ptr GFile00; flags: FileCreateFlags; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): ptr FileOutputStream00 {.
     importc, libprag.}
 
-proc appendTo*(self: File; flags: FileCreateFlags; cancellable: Cancellable = nil): FileOutputStream =
+proc appendTo*(self: GFile; flags: FileCreateFlags; cancellable: Cancellable = nil): FileOutputStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_append_to(cast[ptr File00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_append_to(cast[ptr GFile00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -9730,27 +9731,27 @@ proc appendTo*(self: File; flags: FileCreateFlags; cancellable: Cancellable = ni
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_copy_attributes(self: ptr File00; destination: ptr File00; flags: FileCopyFlags;
-    cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
+proc g_file_copy_attributes(self: ptr GFile00; destination: ptr GFile00;
+    flags: FileCopyFlags; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc copyAttributes*(self: File; destination: File; flags: FileCopyFlags;
+proc copyAttributes*(self: GFile; destination: GFile; flags: FileCopyFlags;
     cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_copy_attributes(cast[ptr File00](self.impl), cast[ptr File00](destination.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_copy_attributes(cast[ptr GFile00](self.impl), cast[ptr GFile00](destination.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_create(self: ptr File00; flags: FileCreateFlags; cancellable: ptr Cancellable00;
+proc g_file_create(self: ptr GFile00; flags: FileCreateFlags; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): ptr FileOutputStream00 {.
     importc, libprag.}
 
-proc create*(self: File; flags: FileCreateFlags; cancellable: Cancellable = nil): FileOutputStream =
+proc create*(self: GFile; flags: FileCreateFlags; cancellable: Cancellable = nil): FileOutputStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_create(cast[ptr File00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_create(cast[ptr GFile00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -9770,13 +9771,13 @@ proc create*(self: File; flags: FileCreateFlags; cancellable: Cancellable = nil)
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_create_readwrite(self: ptr File00; flags: FileCreateFlags; cancellable: ptr Cancellable00;
+proc g_file_create_readwrite(self: ptr GFile00; flags: FileCreateFlags; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): ptr FileIOStream00 {.
     importc, libprag.}
 
-proc createReadwrite*(self: File; flags: FileCreateFlags; cancellable: Cancellable = nil): FileIOStream =
+proc createReadwrite*(self: GFile; flags: FileCreateFlags; cancellable: Cancellable = nil): FileIOStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_create_readwrite(cast[ptr File00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_create_readwrite(cast[ptr GFile00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -9796,26 +9797,26 @@ proc createReadwrite*(self: File; flags: FileCreateFlags; cancellable: Cancellab
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_delete(self: ptr File00; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
+proc g_file_delete(self: ptr GFile00; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc delete*(self: File; cancellable: Cancellable = nil): bool =
+proc delete*(self: GFile; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_delete(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_delete(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_enumerate_children(self: ptr File00; attributes: cstring; flags: FileQueryInfoFlags;
+proc g_file_enumerate_children(self: ptr GFile00; attributes: cstring; flags: FileQueryInfoFlags;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr FileEnumerator00 {.
     importc, libprag.}
 
-proc enumerateChildren*(self: File; attributes: cstring; flags: FileQueryInfoFlags;
+proc enumerateChildren*(self: GFile; attributes: cstring; flags: FileQueryInfoFlags;
     cancellable: Cancellable = nil): FileEnumerator =
   var gerror: ptr glib.Error
-  let gobj = g_file_enumerate_children(cast[ptr File00](self.impl), attributes, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_enumerate_children(cast[ptr GFile00](self.impl), attributes, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -9835,13 +9836,13 @@ proc enumerateChildren*(self: File; attributes: cstring; flags: FileQueryInfoFla
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_find_enclosing_mount(self: ptr File00; cancellable: ptr Cancellable00;
+proc g_file_find_enclosing_mount(self: ptr GFile00; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): ptr Mount00 {.
     importc, libprag.}
 
-proc findEnclosingMount*(self: File; cancellable: Cancellable = nil): Mount =
+proc findEnclosingMount*(self: GFile; cancellable: Cancellable = nil): Mount =
   var gerror: ptr glib.Error
-  let gobj = g_file_find_enclosing_mount(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_find_enclosing_mount(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -9861,14 +9862,14 @@ proc findEnclosingMount*(self: File; cancellable: Cancellable = nil): Mount =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_load_bytes(self: ptr File00; cancellable: ptr Cancellable00;
+proc g_file_load_bytes(self: ptr GFile00; cancellable: ptr Cancellable00;
     etagOut: var cstring; error: ptr ptr glib.Error = nil): ptr glib.Bytes00 {.
     importc, libprag.}
 
-proc loadBytes*(self: File; cancellable: Cancellable = nil; etagOut: var string): glib.Bytes =
+proc loadBytes*(self: GFile; cancellable: Cancellable = nil; etagOut: var string): glib.Bytes =
   var gerror: ptr glib.Error
   var etagOut_00 = cstring(etagOut)
-  let impl0 = g_file_load_bytes(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), etagOut_00, addr gerror)
+  let impl0 = g_file_load_bytes(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), etagOut_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -9877,52 +9878,72 @@ proc loadBytes*(self: File; cancellable: Cancellable = nil; etagOut: var string)
   result.impl = impl0
   etagOut = $(etagOut_00)
 
-proc g_file_make_directory(self: ptr File00; cancellable: ptr Cancellable00;
+proc g_file_load_contents(self: ptr GFile00; cancellable: ptr Cancellable00;
+    contents: var uint8Array; length: var uint64; etagOut: var cstring; error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc loadContents*(self: GFile; cancellable: Cancellable = nil; contents: var (seq[uint8] | string);
+    length: var uint64; etagOut: var string): bool =
+  var gerror: ptr glib.Error
+  var etagOut_00 = cstring(etagOut)
+  var contents_00: pointer
+  let resul0 = g_file_load_contents(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), contents_00, length, etagOut_00, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+  etagOut = $(etagOut_00)
+  contents.setLen(length)
+  copyMem(unsafeaddr contents[0], contents_00, length.int * sizeof(contents[0]))
+  cogfree(contents_00)
+
+proc g_file_make_directory(self: ptr GFile00; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc makeDirectory*(self: File; cancellable: Cancellable = nil): bool =
+proc makeDirectory*(self: GFile; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_make_directory(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_make_directory(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_make_directory_with_parents(self: ptr File00; cancellable: ptr Cancellable00;
+proc g_file_make_directory_with_parents(self: ptr GFile00; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc makeDirectoryWithParents*(self: File; cancellable: Cancellable = nil): bool =
+proc makeDirectoryWithParents*(self: GFile; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_make_directory_with_parents(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_make_directory_with_parents(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_make_symbolic_link(self: ptr File00; symlinkValue: cstring; cancellable: ptr Cancellable00;
-    error: ptr ptr glib.Error = nil): gboolean {.
+proc g_file_make_symbolic_link(self: ptr GFile00; symlinkValue: cstring;
+    cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc makeSymbolicLink*(self: File; symlinkValue: cstring; cancellable: Cancellable = nil): bool =
+proc makeSymbolicLink*(self: GFile; symlinkValue: cstring; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_make_symbolic_link(cast[ptr File00](self.impl), symlinkValue, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_make_symbolic_link(cast[ptr GFile00](self.impl), symlinkValue, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_open_readwrite(self: ptr File00; cancellable: ptr Cancellable00;
+proc g_file_open_readwrite(self: ptr GFile00; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): ptr FileIOStream00 {.
     importc, libprag.}
 
-proc openReadwrite*(self: File; cancellable: Cancellable = nil): FileIOStream =
+proc openReadwrite*(self: GFile; cancellable: Cancellable = nil): FileIOStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_open_readwrite(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_open_readwrite(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -9942,13 +9963,13 @@ proc openReadwrite*(self: File; cancellable: Cancellable = nil): FileIOStream =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_query_default_handler(self: ptr File00; cancellable: ptr Cancellable00;
+proc g_file_query_default_handler(self: ptr GFile00; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): ptr AppInfo00 {.
     importc, libprag.}
 
-proc queryDefaultHandler*(self: File; cancellable: Cancellable = nil): AppInfo =
+proc queryDefaultHandler*(self: GFile; cancellable: Cancellable = nil): AppInfo =
   var gerror: ptr glib.Error
-  let gobj = g_file_query_default_handler(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_query_default_handler(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -9968,26 +9989,26 @@ proc queryDefaultHandler*(self: File; cancellable: Cancellable = nil): AppInfo =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_query_exists(self: ptr File00; cancellable: ptr Cancellable00): gboolean {.
+proc g_file_query_exists(self: ptr GFile00; cancellable: ptr Cancellable00): gboolean {.
     importc, libprag.}
 
-proc queryExists*(self: File; cancellable: Cancellable = nil): bool =
-  toBool(g_file_query_exists(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl)))
+proc queryExists*(self: GFile; cancellable: Cancellable = nil): bool =
+  toBool(g_file_query_exists(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl)))
 
-proc g_file_query_file_type(self: ptr File00; flags: FileQueryInfoFlags;
+proc g_file_query_file_type(self: ptr GFile00; flags: FileQueryInfoFlags;
     cancellable: ptr Cancellable00): FileType {.
     importc, libprag.}
 
-proc queryFileType*(self: File; flags: FileQueryInfoFlags; cancellable: Cancellable = nil): FileType =
-  g_file_query_file_type(cast[ptr File00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl))
+proc queryFileType*(self: GFile; flags: FileQueryInfoFlags; cancellable: Cancellable = nil): FileType =
+  g_file_query_file_type(cast[ptr GFile00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl))
 
-proc g_file_query_filesystem_info(self: ptr File00; attributes: cstring;
+proc g_file_query_filesystem_info(self: ptr GFile00; attributes: cstring;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr FileInfo00 {.
     importc, libprag.}
 
-proc queryFilesystemInfo*(self: File; attributes: cstring; cancellable: Cancellable = nil): FileInfo =
+proc queryFilesystemInfo*(self: GFile; attributes: cstring; cancellable: Cancellable = nil): FileInfo =
   var gerror: ptr glib.Error
-  let gobj = g_file_query_filesystem_info(cast[ptr File00](self.impl), attributes, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_query_filesystem_info(cast[ptr GFile00](self.impl), attributes, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10007,14 +10028,14 @@ proc queryFilesystemInfo*(self: File; attributes: cstring; cancellable: Cancella
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_query_info(self: ptr File00; attributes: cstring; flags: FileQueryInfoFlags;
+proc g_file_query_info(self: ptr GFile00; attributes: cstring; flags: FileQueryInfoFlags;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr FileInfo00 {.
     importc, libprag.}
 
-proc queryInfo*(self: File; attributes: cstring; flags: FileQueryInfoFlags;
+proc queryInfo*(self: GFile; attributes: cstring; flags: FileQueryInfoFlags;
     cancellable: Cancellable = nil): FileInfo =
   var gerror: ptr glib.Error
-  let gobj = g_file_query_info(cast[ptr File00](self.impl), attributes, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_query_info(cast[ptr GFile00](self.impl), attributes, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10034,14 +10055,14 @@ proc queryInfo*(self: File; attributes: cstring; flags: FileQueryInfoFlags;
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_replace(self: ptr File00; etag: cstring; makeBackup: gboolean;
+proc g_file_replace(self: ptr GFile00; etag: cstring; makeBackup: gboolean;
     flags: FileCreateFlags; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr FileOutputStream00 {.
     importc, libprag.}
 
-proc replace*(self: File; etag: cstring = ""; makeBackup: bool; flags: FileCreateFlags;
+proc replace*(self: GFile; etag: cstring = ""; makeBackup: bool; flags: FileCreateFlags;
     cancellable: Cancellable = nil): FileOutputStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_replace(cast[ptr File00](self.impl), safeStringToCString(etag), gboolean(makeBackup), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_replace(cast[ptr GFile00](self.impl), safeStringToCString(etag), gboolean(makeBackup), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10061,17 +10082,18 @@ proc replace*(self: File; etag: cstring = ""; makeBackup: bool; flags: FileCreat
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_replace_contents(self: ptr File00; contents: uint8Array; length: uint64;
+proc g_file_replace_contents(self: ptr GFile00; contents: uint8Array; length: uint64;
     etag: cstring; makeBackup: gboolean; flags: FileCreateFlags; newEtag: var cstring;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc replaceContents*(self: File; contents: seq[uint8] | string; etag: cstring = "";
-    makeBackup: bool; flags: FileCreateFlags; newEtag: var string; cancellable: Cancellable = nil): bool =
+proc replaceContents*(self: GFile; contents: seq[uint8] | string;
+    etag: cstring = ""; makeBackup: bool; flags: FileCreateFlags; newEtag: var string;
+    cancellable: Cancellable = nil): bool =
   let length = uint64(contents.len)
   var gerror: ptr glib.Error
   var newEtag_00 = cstring(newEtag)
-  let resul0 = g_file_replace_contents(cast[ptr File00](self.impl), unsafeaddr(contents[0]), length, safeStringToCString(etag), gboolean(makeBackup), flags, newEtag_00, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_replace_contents(cast[ptr GFile00](self.impl), unsafeaddr(contents[0]), length, safeStringToCString(etag), gboolean(makeBackup), flags, newEtag_00, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10079,14 +10101,14 @@ proc replaceContents*(self: File; contents: seq[uint8] | string; etag: cstring =
   result = toBool(resul0)
   newEtag = $(newEtag_00)
 
-proc g_file_replace_readwrite(self: ptr File00; etag: cstring; makeBackup: gboolean;
+proc g_file_replace_readwrite(self: ptr GFile00; etag: cstring; makeBackup: gboolean;
     flags: FileCreateFlags; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr FileIOStream00 {.
     importc, libprag.}
 
-proc replaceReadwrite*(self: File; etag: cstring = ""; makeBackup: bool;
+proc replaceReadwrite*(self: GFile; etag: cstring = ""; makeBackup: bool;
     flags: FileCreateFlags; cancellable: Cancellable = nil): FileIOStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_replace_readwrite(cast[ptr File00](self.impl), safeStringToCString(etag), gboolean(makeBackup), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_replace_readwrite(cast[ptr GFile00](self.impl), safeStringToCString(etag), gboolean(makeBackup), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10106,127 +10128,127 @@ proc replaceReadwrite*(self: File; etag: cstring = ""; makeBackup: bool;
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_set_attribute(self: ptr File00; attribute: cstring; `type`: FileAttributeType;
+proc g_file_set_attribute(self: ptr GFile00; attribute: cstring; `type`: FileAttributeType;
     valueP: pointer; flags: FileQueryInfoFlags; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc setAttribute*(self: File; attribute: cstring; `type`: FileAttributeType;
+proc setAttribute*(self: GFile; attribute: cstring; `type`: FileAttributeType;
     valueP: pointer; flags: FileQueryInfoFlags; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_set_attribute(cast[ptr File00](self.impl), attribute, `type`, valueP, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_set_attribute(cast[ptr GFile00](self.impl), attribute, `type`, valueP, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_set_attribute_byte_string(self: ptr File00; attribute: cstring;
+proc g_file_set_attribute_byte_string(self: ptr GFile00; attribute: cstring;
     value: cstring; flags: FileQueryInfoFlags; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc setAttributeByteString*(self: File; attribute: cstring; value: cstring;
+proc setAttributeByteString*(self: GFile; attribute: cstring; value: cstring;
     flags: FileQueryInfoFlags; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_set_attribute_byte_string(cast[ptr File00](self.impl), attribute, value, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_set_attribute_byte_string(cast[ptr GFile00](self.impl), attribute, value, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_set_attribute_int32(self: ptr File00; attribute: cstring; value: int32;
+proc g_file_set_attribute_int32(self: ptr GFile00; attribute: cstring; value: int32;
     flags: FileQueryInfoFlags; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc setAttributeInt32*(self: File; attribute: cstring; value: int;
+proc setAttributeInt32*(self: GFile; attribute: cstring; value: int;
     flags: FileQueryInfoFlags; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_set_attribute_int32(cast[ptr File00](self.impl), attribute, int32(value), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_set_attribute_int32(cast[ptr GFile00](self.impl), attribute, int32(value), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_set_attribute_int64(self: ptr File00; attribute: cstring; value: int64;
+proc g_file_set_attribute_int64(self: ptr GFile00; attribute: cstring; value: int64;
     flags: FileQueryInfoFlags; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc setAttributeInt64*(self: File; attribute: cstring; value: int64;
+proc setAttributeInt64*(self: GFile; attribute: cstring; value: int64;
     flags: FileQueryInfoFlags; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_set_attribute_int64(cast[ptr File00](self.impl), attribute, value, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_set_attribute_int64(cast[ptr GFile00](self.impl), attribute, value, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_set_attribute_string(self: ptr File00; attribute: cstring; value: cstring;
+proc g_file_set_attribute_string(self: ptr GFile00; attribute: cstring; value: cstring;
     flags: FileQueryInfoFlags; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc setAttributeString*(self: File; attribute: cstring; value: cstring;
+proc setAttributeString*(self: GFile; attribute: cstring; value: cstring;
     flags: FileQueryInfoFlags; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_set_attribute_string(cast[ptr File00](self.impl), attribute, value, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_set_attribute_string(cast[ptr GFile00](self.impl), attribute, value, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_set_attribute_uint32(self: ptr File00; attribute: cstring; value: uint32;
+proc g_file_set_attribute_uint32(self: ptr GFile00; attribute: cstring; value: uint32;
     flags: FileQueryInfoFlags; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc setAttributeUint32*(self: File; attribute: cstring; value: int;
+proc setAttributeUint32*(self: GFile; attribute: cstring; value: int;
     flags: FileQueryInfoFlags; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_set_attribute_uint32(cast[ptr File00](self.impl), attribute, uint32(value), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_set_attribute_uint32(cast[ptr GFile00](self.impl), attribute, uint32(value), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_set_attribute_uint64(self: ptr File00; attribute: cstring; value: uint64;
+proc g_file_set_attribute_uint64(self: ptr GFile00; attribute: cstring; value: uint64;
     flags: FileQueryInfoFlags; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc setAttributeUint64*(self: File; attribute: cstring; value: uint64;
+proc setAttributeUint64*(self: GFile; attribute: cstring; value: uint64;
     flags: FileQueryInfoFlags; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_set_attribute_uint64(cast[ptr File00](self.impl), attribute, value, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_set_attribute_uint64(cast[ptr GFile00](self.impl), attribute, value, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_set_attributes_from_info(self: ptr File00; info: ptr FileInfo00;
+proc g_file_set_attributes_from_info(self: ptr GFile00; info: ptr FileInfo00;
     flags: FileQueryInfoFlags; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc setAttributesFromInfo*(self: File; info: FileInfo; flags: FileQueryInfoFlags;
+proc setAttributesFromInfo*(self: GFile; info: FileInfo; flags: FileQueryInfoFlags;
     cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_set_attributes_from_info(cast[ptr File00](self.impl), cast[ptr FileInfo00](info.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_set_attributes_from_info(cast[ptr GFile00](self.impl), cast[ptr FileInfo00](info.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_set_display_name(self: ptr File00; displayName: cstring; cancellable: ptr Cancellable00;
-    error: ptr ptr glib.Error = nil): ptr File00 {.
+proc g_file_set_display_name(self: ptr GFile00; displayName: cstring; cancellable: ptr Cancellable00;
+    error: ptr ptr glib.Error = nil): ptr GFile00 {.
     importc, libprag.}
 
-proc setDisplayName*(self: File; displayName: cstring; cancellable: Cancellable = nil): File =
+proc setDisplayName*(self: GFile; displayName: cstring; cancellable: Cancellable = nil): GFile =
   var gerror: ptr glib.Error
-  let gobj = g_file_set_display_name(cast[ptr File00](self.impl), displayName, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_set_display_name(cast[ptr GFile00](self.impl), displayName, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10246,12 +10268,12 @@ proc setDisplayName*(self: File; displayName: cstring; cancellable: Cancellable 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_trash(self: ptr File00; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
+proc g_file_trash(self: ptr GFile00; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc trash*(self: File; cancellable: Cancellable = nil): bool =
+proc trash*(self: GFile; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_trash(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_trash(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10425,17 +10447,17 @@ proc close*(self: FileEnumerator; cancellable: Cancellable = nil): bool =
   result = toBool(resul0)
 
 proc g_file_enumerator_iterate(self: ptr FileEnumerator00; outInfo: var ptr FileInfo00;
-    outChild: var ptr File00; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
+    outChild: var ptr GFile00; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc iterate*(self: FileEnumerator; outInfo: var FileInfo;
-    outChild: var File; cancellable: Cancellable = nil): bool =
+    outChild: var GFile; cancellable: Cancellable = nil): bool =
   fnew(outInfo, gio.finalizeGObject)
   outInfo.ignoreFinalizer = true
   new(outChild)
   outChild.ignoreFinalizer = true
   var gerror: ptr glib.Error
-  let resul0 = g_file_enumerator_iterate(cast[ptr FileEnumerator00](self.impl), cast[var ptr FileInfo00](addr outInfo.impl), cast[var ptr File00](addr outChild.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_enumerator_iterate(cast[ptr FileEnumerator00](self.impl), cast[var ptr FileInfo00](addr outInfo.impl), cast[var ptr GFile00](addr outChild.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10833,7 +10855,7 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc scChanged*(self: FileMonitor;  p: proc (self: ptr FileMonitor00; file: ptr File00; otherFile: ptr File00; eventType: FileMonitorEvent; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scChanged*(self: FileMonitor;  p: proc (self: ptr FileMonitor00; file: ptr GFile00; otherFile: ptr GFile00; eventType: FileMonitorEvent; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "changed", cast[GCallback](p), xdata, nil, cf)
 
 proc g_file_monitor_cancel(self: ptr FileMonitor00): gboolean {.
@@ -10842,13 +10864,13 @@ proc g_file_monitor_cancel(self: ptr FileMonitor00): gboolean {.
 proc cancel*(self: FileMonitor): bool =
   toBool(g_file_monitor_cancel(cast[ptr FileMonitor00](self.impl)))
 
-proc g_file_monitor_emit_event(self: ptr FileMonitor00; child: ptr File00;
-    otherFile: ptr File00; eventType: FileMonitorEvent) {.
+proc g_file_monitor_emit_event(self: ptr FileMonitor00; child: ptr GFile00;
+    otherFile: ptr GFile00; eventType: FileMonitorEvent) {.
     importc, libprag.}
 
-proc emitEvent*(self: FileMonitor; child: File; otherFile: File;
+proc emitEvent*(self: FileMonitor; child: GFile; otherFile: GFile;
     eventType: FileMonitorEvent) =
-  g_file_monitor_emit_event(cast[ptr FileMonitor00](self.impl), cast[ptr File00](child.impl), cast[ptr File00](otherFile.impl), eventType)
+  g_file_monitor_emit_event(cast[ptr FileMonitor00](self.impl), cast[ptr GFile00](child.impl), cast[ptr GFile00](otherFile.impl), eventType)
 
 proc g_file_monitor_is_cancelled(self: ptr FileMonitor00): gboolean {.
     importc, libprag.}
@@ -10865,13 +10887,13 @@ proc setRateLimit*(self: FileMonitor; limitMsecs: int) =
 proc `rateLimit=`*(self: FileMonitor; limitMsecs: int) =
   g_file_monitor_set_rate_limit(cast[ptr FileMonitor00](self.impl), int32(limitMsecs))
 
-proc g_file_monitor(self: ptr File00; flags: FileMonitorFlags; cancellable: ptr Cancellable00;
+proc g_file_monitor(self: ptr GFile00; flags: FileMonitorFlags; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): ptr FileMonitor00 {.
     importc, libprag.}
 
-proc monitor*(self: File; flags: FileMonitorFlags; cancellable: Cancellable = nil): FileMonitor =
+proc monitor*(self: GFile; flags: FileMonitorFlags; cancellable: Cancellable = nil): FileMonitor =
   var gerror: ptr glib.Error
-  let gobj = g_file_monitor(cast[ptr File00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_monitor(cast[ptr GFile00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10891,13 +10913,13 @@ proc monitor*(self: File; flags: FileMonitorFlags; cancellable: Cancellable = ni
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_monitor_directory(self: ptr File00; flags: FileMonitorFlags;
+proc g_file_monitor_directory(self: ptr GFile00; flags: FileMonitorFlags;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr FileMonitor00 {.
     importc, libprag.}
 
-proc monitorDirectory*(self: File; flags: FileMonitorFlags; cancellable: Cancellable = nil): FileMonitor =
+proc monitorDirectory*(self: GFile; flags: FileMonitorFlags; cancellable: Cancellable = nil): FileMonitor =
   var gerror: ptr glib.Error
-  let gobj = g_file_monitor_directory(cast[ptr File00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_monitor_directory(cast[ptr GFile00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10917,13 +10939,13 @@ proc monitorDirectory*(self: File; flags: FileMonitorFlags; cancellable: Cancell
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_monitor_file(self: ptr File00; flags: FileMonitorFlags; cancellable: ptr Cancellable00;
+proc g_file_monitor_file(self: ptr GFile00; flags: FileMonitorFlags; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): ptr FileMonitor00 {.
     importc, libprag.}
 
-proc monitorFile*(self: File; flags: FileMonitorFlags; cancellable: Cancellable = nil): FileMonitor =
+proc monitorFile*(self: GFile; flags: FileMonitorFlags; cancellable: Cancellable = nil): FileMonitor =
   var gerror: ptr glib.Error
-  let gobj = g_file_monitor_file(cast[ptr File00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_monitor_file(cast[ptr GFile00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -11002,13 +11024,13 @@ proc initFileAttributeInfoList*[T](result: var T) {.deprecated.} =
   fnew(result, gBoxedFreeGFileAttributeInfoList)
   result.impl = g_file_attribute_info_list_new()
 
-proc g_file_query_settable_attributes(self: ptr File00; cancellable: ptr Cancellable00;
+proc g_file_query_settable_attributes(self: ptr GFile00; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): ptr FileAttributeInfoList00 {.
     importc, libprag.}
 
-proc querySettableAttributes*(self: File; cancellable: Cancellable = nil): FileAttributeInfoList =
+proc querySettableAttributes*(self: GFile; cancellable: Cancellable = nil): FileAttributeInfoList =
   var gerror: ptr glib.Error
-  let impl0 = g_file_query_settable_attributes(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let impl0 = g_file_query_settable_attributes(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -11016,13 +11038,13 @@ proc querySettableAttributes*(self: File; cancellable: Cancellable = nil): FileA
   fnew(result, gBoxedFreeGFileAttributeInfoList)
   result.impl = impl0
 
-proc g_file_query_writable_namespaces(self: ptr File00; cancellable: ptr Cancellable00;
+proc g_file_query_writable_namespaces(self: ptr GFile00; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): ptr FileAttributeInfoList00 {.
     importc, libprag.}
 
-proc queryWritableNamespaces*(self: File; cancellable: Cancellable = nil): FileAttributeInfoList =
+proc queryWritableNamespaces*(self: GFile; cancellable: Cancellable = nil): FileAttributeInfoList =
   var gerror: ptr glib.Error
-  let impl0 = g_file_query_writable_namespaces(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let impl0 = g_file_query_writable_namespaces(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -11374,8 +11396,8 @@ proc g_input_stream_read(self: ptr InputStream00; buffer: uint8Array; count: var
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
-proc read*(self: InputStream; buffer: var seq[uint8]; count: var uint64;
-    cancellable: Cancellable = nil): int64 =
+proc read*(self: InputStream; buffer: var (seq[uint8] | string);
+    count: var uint64; cancellable: Cancellable = nil): int64 =
   var gerror: ptr glib.Error
   let resul0 = g_input_stream_read(cast[ptr InputStream00](self.impl), unsafeaddr(buffer[0]), count, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
@@ -11389,8 +11411,8 @@ proc g_input_stream_read_all(self: ptr InputStream00; buffer: uint8Array;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc readAll*(self: InputStream; buffer: var seq[uint8]; count: var uint64;
-    bytesRead: var uint64; cancellable: Cancellable = nil): bool =
+proc readAll*(self: InputStream; buffer: var (seq[uint8] | string);
+    count: var uint64; bytesRead: var uint64; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
   let resul0 = g_input_stream_read_all(cast[ptr InputStream00](self.impl), unsafeaddr(buffer[0]), count, bytesRead, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
@@ -11606,12 +11628,12 @@ proc stdin*(self: ApplicationCommandLine): InputStream =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_read(self: ptr File00; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr FileInputStream00 {.
+proc g_file_read(self: ptr GFile00; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr FileInputStream00 {.
     importc, libprag.}
 
-proc read*(self: File; cancellable: Cancellable = nil): FileInputStream =
+proc read*(self: GFile; cancellable: Cancellable = nil): FileInputStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_read(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_file_read(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -11631,12 +11653,12 @@ proc read*(self: File; cancellable: Cancellable = nil): FileInputStream =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_read_finish(self: ptr File00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr FileInputStream00 {.
+proc g_file_read_finish(self: ptr GFile00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr FileInputStream00 {.
     importc, libprag.}
 
-proc readFinish*(self: File; res: AsyncResult | SimpleAsyncResult | Task): FileInputStream =
+proc readFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): FileInputStream =
   var gerror: ptr glib.Error
-  let gobj = g_file_read_finish(cast[ptr File00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let gobj = g_file_read_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -12786,269 +12808,269 @@ proc flags*(self: DBusProxy): DBusProxyFlags =
 type
   AsyncReadyCallback* = proc (sourceObject: ptr gobject.Object00; res: ptr AsyncResult00; userData: pointer) {.cdecl.}
 
-proc g_file_append_to_async(self: ptr File00; flags: FileCreateFlags; ioPriority: int32;
+proc g_file_append_to_async(self: ptr GFile00; flags: FileCreateFlags; ioPriority: int32;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc appendToAsync*(self: File; flags: FileCreateFlags; ioPriority: int;
+proc appendToAsync*(self: GFile; flags: FileCreateFlags; ioPriority: int;
     cancellable: Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
-  g_file_append_to_async(cast[ptr File00](self.impl), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_append_to_async(cast[ptr GFile00](self.impl), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_create_async(self: ptr File00; flags: FileCreateFlags; ioPriority: int32;
+proc g_file_create_async(self: ptr GFile00; flags: FileCreateFlags; ioPriority: int32;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc createAsync*(self: File; flags: FileCreateFlags; ioPriority: int;
+proc createAsync*(self: GFile; flags: FileCreateFlags; ioPriority: int;
     cancellable: Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
-  g_file_create_async(cast[ptr File00](self.impl), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_create_async(cast[ptr GFile00](self.impl), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_create_readwrite_async(self: ptr File00; flags: FileCreateFlags;
+proc g_file_create_readwrite_async(self: ptr GFile00; flags: FileCreateFlags;
     ioPriority: int32; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
 
-proc createReadwriteAsync*(self: File; flags: FileCreateFlags; ioPriority: int;
+proc createReadwriteAsync*(self: GFile; flags: FileCreateFlags; ioPriority: int;
     cancellable: Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
-  g_file_create_readwrite_async(cast[ptr File00](self.impl), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_create_readwrite_async(cast[ptr GFile00](self.impl), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_delete_async(self: ptr File00; ioPriority: int32; cancellable: ptr Cancellable00;
+proc g_file_delete_async(self: ptr GFile00; ioPriority: int32; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc deleteAsync*(self: File; ioPriority: int; cancellable: Cancellable = nil;
+proc deleteAsync*(self: GFile; ioPriority: int; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_delete_async(cast[ptr File00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_delete_async(cast[ptr GFile00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_eject_mountable(self: ptr File00; flags: MountUnmountFlags; cancellable: ptr Cancellable00;
-    callback: AsyncReadyCallback; userData: pointer) {.
+proc g_file_eject_mountable(self: ptr GFile00; flags: MountUnmountFlags;
+    cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc ejectMountable*(self: File; flags: MountUnmountFlags; cancellable: Cancellable = nil;
+proc ejectMountable*(self: GFile; flags: MountUnmountFlags; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_eject_mountable(cast[ptr File00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_eject_mountable(cast[ptr GFile00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_eject_mountable_with_operation(self: ptr File00; flags: MountUnmountFlags;
+proc g_file_eject_mountable_with_operation(self: ptr GFile00; flags: MountUnmountFlags;
     mountOperation: ptr MountOperation00; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
 
-proc ejectMountableWithOperation*(self: File; flags: MountUnmountFlags;
+proc ejectMountableWithOperation*(self: GFile; flags: MountUnmountFlags;
     mountOperation: MountOperation = nil; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
-  g_file_eject_mountable_with_operation(cast[ptr File00](self.impl), flags, if mountOperation.isNil: nil else: cast[ptr MountOperation00](mountOperation.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_eject_mountable_with_operation(cast[ptr GFile00](self.impl), flags, if mountOperation.isNil: nil else: cast[ptr MountOperation00](mountOperation.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_enumerate_children_async(self: ptr File00; attributes: cstring;
+proc g_file_enumerate_children_async(self: ptr GFile00; attributes: cstring;
     flags: FileQueryInfoFlags; ioPriority: int32; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc enumerateChildrenAsync*(self: File; attributes: cstring; flags: FileQueryInfoFlags;
+proc enumerateChildrenAsync*(self: GFile; attributes: cstring; flags: FileQueryInfoFlags;
     ioPriority: int; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
-  g_file_enumerate_children_async(cast[ptr File00](self.impl), attributes, flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_enumerate_children_async(cast[ptr GFile00](self.impl), attributes, flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_find_enclosing_mount_async(self: ptr File00; ioPriority: int32;
+proc g_file_find_enclosing_mount_async(self: ptr GFile00; ioPriority: int32;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc findEnclosingMountAsync*(self: File; ioPriority: int; cancellable: Cancellable = nil;
+proc findEnclosingMountAsync*(self: GFile; ioPriority: int; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_find_enclosing_mount_async(cast[ptr File00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_find_enclosing_mount_async(cast[ptr GFile00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_load_bytes_async(self: ptr File00; cancellable: ptr Cancellable00;
+proc g_file_load_bytes_async(self: ptr GFile00; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc loadBytesAsync*(self: File; cancellable: Cancellable = nil;
+proc loadBytesAsync*(self: GFile; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_load_bytes_async(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_load_bytes_async(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_load_contents_async(self: ptr File00; cancellable: ptr Cancellable00;
+proc g_file_load_contents_async(self: ptr GFile00; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc loadContentsAsync*(self: File; cancellable: Cancellable = nil;
+proc loadContentsAsync*(self: GFile; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_load_contents_async(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_load_contents_async(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_make_directory_async(self: ptr File00; ioPriority: int32; cancellable: ptr Cancellable00;
+proc g_file_make_directory_async(self: ptr GFile00; ioPriority: int32; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc makeDirectoryAsync*(self: File; ioPriority: int; cancellable: Cancellable = nil;
+proc makeDirectoryAsync*(self: GFile; ioPriority: int; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_make_directory_async(cast[ptr File00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_make_directory_async(cast[ptr GFile00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_mount_enclosing_volume(self: ptr File00; flags: MountMountFlags;
+proc g_file_mount_enclosing_volume(self: ptr GFile00; flags: MountMountFlags;
     mountOperation: ptr MountOperation00; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
 
-proc mountEnclosingVolume*(self: File; flags: MountMountFlags; mountOperation: MountOperation = nil;
+proc mountEnclosingVolume*(self: GFile; flags: MountMountFlags; mountOperation: MountOperation = nil;
     cancellable: Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
-  g_file_mount_enclosing_volume(cast[ptr File00](self.impl), flags, if mountOperation.isNil: nil else: cast[ptr MountOperation00](mountOperation.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_mount_enclosing_volume(cast[ptr GFile00](self.impl), flags, if mountOperation.isNil: nil else: cast[ptr MountOperation00](mountOperation.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_mount_mountable(self: ptr File00; flags: MountMountFlags; mountOperation: ptr MountOperation00;
+proc g_file_mount_mountable(self: ptr GFile00; flags: MountMountFlags; mountOperation: ptr MountOperation00;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc mountMountable*(self: File; flags: MountMountFlags; mountOperation: MountOperation = nil;
+proc mountMountable*(self: GFile; flags: MountMountFlags; mountOperation: MountOperation = nil;
     cancellable: Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
-  g_file_mount_mountable(cast[ptr File00](self.impl), flags, if mountOperation.isNil: nil else: cast[ptr MountOperation00](mountOperation.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_mount_mountable(cast[ptr GFile00](self.impl), flags, if mountOperation.isNil: nil else: cast[ptr MountOperation00](mountOperation.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_open_readwrite_async(self: ptr File00; ioPriority: int32; cancellable: ptr Cancellable00;
+proc g_file_open_readwrite_async(self: ptr GFile00; ioPriority: int32; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc openReadwriteAsync*(self: File; ioPriority: int; cancellable: Cancellable = nil;
+proc openReadwriteAsync*(self: GFile; ioPriority: int; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_open_readwrite_async(cast[ptr File00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_open_readwrite_async(cast[ptr GFile00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_poll_mountable(self: ptr File00; cancellable: ptr Cancellable00;
+proc g_file_poll_mountable(self: ptr GFile00; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc pollMountable*(self: File; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
+proc pollMountable*(self: GFile; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
-  g_file_poll_mountable(cast[ptr File00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_poll_mountable(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_query_default_handler_async(self: ptr File00; ioPriority: int32;
+proc g_file_query_default_handler_async(self: ptr GFile00; ioPriority: int32;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc queryDefaultHandlerAsync*(self: File; ioPriority: int; cancellable: Cancellable = nil;
+proc queryDefaultHandlerAsync*(self: GFile; ioPriority: int; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_query_default_handler_async(cast[ptr File00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_query_default_handler_async(cast[ptr GFile00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_query_filesystem_info_async(self: ptr File00; attributes: cstring;
+proc g_file_query_filesystem_info_async(self: ptr GFile00; attributes: cstring;
     ioPriority: int32; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
 
-proc queryFilesystemInfoAsync*(self: File; attributes: cstring;
+proc queryFilesystemInfoAsync*(self: GFile; attributes: cstring;
     ioPriority: int; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
-  g_file_query_filesystem_info_async(cast[ptr File00](self.impl), attributes, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_query_filesystem_info_async(cast[ptr GFile00](self.impl), attributes, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_query_info_async(self: ptr File00; attributes: cstring; flags: FileQueryInfoFlags;
+proc g_file_query_info_async(self: ptr GFile00; attributes: cstring; flags: FileQueryInfoFlags;
     ioPriority: int32; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
 
-proc queryInfoAsync*(self: File; attributes: cstring; flags: FileQueryInfoFlags;
+proc queryInfoAsync*(self: GFile; attributes: cstring; flags: FileQueryInfoFlags;
     ioPriority: int; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
-  g_file_query_info_async(cast[ptr File00](self.impl), attributes, flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_query_info_async(cast[ptr GFile00](self.impl), attributes, flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_read_async(self: ptr File00; ioPriority: int32; cancellable: ptr Cancellable00;
+proc g_file_read_async(self: ptr GFile00; ioPriority: int32; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc readAsync*(self: File; ioPriority: int; cancellable: Cancellable = nil;
+proc readAsync*(self: GFile; ioPriority: int; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_read_async(cast[ptr File00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_read_async(cast[ptr GFile00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_replace_async(self: ptr File00; etag: cstring; makeBackup: gboolean;
+proc g_file_replace_async(self: ptr GFile00; etag: cstring; makeBackup: gboolean;
     flags: FileCreateFlags; ioPriority: int32; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc replaceAsync*(self: File; etag: cstring = ""; makeBackup: bool;
+proc replaceAsync*(self: GFile; etag: cstring = ""; makeBackup: bool;
     flags: FileCreateFlags; ioPriority: int; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_replace_async(cast[ptr File00](self.impl), safeStringToCString(etag), gboolean(makeBackup), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_replace_async(cast[ptr GFile00](self.impl), safeStringToCString(etag), gboolean(makeBackup), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_replace_contents_async(self: ptr File00; contents: uint8Array;
+proc g_file_replace_contents_async(self: ptr GFile00; contents: uint8Array;
     length: uint64; etag: cstring; makeBackup: gboolean; flags: FileCreateFlags;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc replaceContentsAsync*(self: File; contents: seq[uint8] | string;
+proc replaceContentsAsync*(self: GFile; contents: seq[uint8] | string;
     etag: cstring = ""; makeBackup: bool; flags: FileCreateFlags; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
   let length = uint64(contents.len)
-  g_file_replace_contents_async(cast[ptr File00](self.impl), unsafeaddr(contents[0]), length, safeStringToCString(etag), gboolean(makeBackup), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_replace_contents_async(cast[ptr GFile00](self.impl), unsafeaddr(contents[0]), length, safeStringToCString(etag), gboolean(makeBackup), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_replace_contents_bytes_async(self: ptr File00; contents: ptr glib.Bytes00;
+proc g_file_replace_contents_bytes_async(self: ptr GFile00; contents: ptr glib.Bytes00;
     etag: cstring; makeBackup: gboolean; flags: FileCreateFlags; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc replaceContentsBytesAsync*(self: File; contents: glib.Bytes;
+proc replaceContentsBytesAsync*(self: GFile; contents: glib.Bytes;
     etag: cstring = ""; makeBackup: bool; flags: FileCreateFlags; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_replace_contents_bytes_async(cast[ptr File00](self.impl), cast[ptr glib.Bytes00](contents.impl), safeStringToCString(etag), gboolean(makeBackup), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_replace_contents_bytes_async(cast[ptr GFile00](self.impl), cast[ptr glib.Bytes00](contents.impl), safeStringToCString(etag), gboolean(makeBackup), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_replace_readwrite_async(self: ptr File00; etag: cstring; makeBackup: gboolean;
+proc g_file_replace_readwrite_async(self: ptr GFile00; etag: cstring; makeBackup: gboolean;
     flags: FileCreateFlags; ioPriority: int32; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc replaceReadwriteAsync*(self: File; etag: cstring = ""; makeBackup: bool;
+proc replaceReadwriteAsync*(self: GFile; etag: cstring = ""; makeBackup: bool;
     flags: FileCreateFlags; ioPriority: int; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_replace_readwrite_async(cast[ptr File00](self.impl), safeStringToCString(etag), gboolean(makeBackup), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_replace_readwrite_async(cast[ptr GFile00](self.impl), safeStringToCString(etag), gboolean(makeBackup), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_set_attributes_async(self: ptr File00; info: ptr FileInfo00;
+proc g_file_set_attributes_async(self: ptr GFile00; info: ptr FileInfo00;
     flags: FileQueryInfoFlags; ioPriority: int32; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc setAttributesAsync*(self: File; info: FileInfo; flags: FileQueryInfoFlags;
+proc setAttributesAsync*(self: GFile; info: FileInfo; flags: FileQueryInfoFlags;
     ioPriority: int; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
-  g_file_set_attributes_async(cast[ptr File00](self.impl), cast[ptr FileInfo00](info.impl), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_set_attributes_async(cast[ptr GFile00](self.impl), cast[ptr FileInfo00](info.impl), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_set_display_name_async(self: ptr File00; displayName: cstring;
+proc g_file_set_display_name_async(self: ptr GFile00; displayName: cstring;
     ioPriority: int32; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
 
-proc setDisplayNameAsync*(self: File; displayName: cstring; ioPriority: int;
+proc setDisplayNameAsync*(self: GFile; displayName: cstring; ioPriority: int;
     cancellable: Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
-  g_file_set_display_name_async(cast[ptr File00](self.impl), displayName, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_set_display_name_async(cast[ptr GFile00](self.impl), displayName, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_start_mountable(self: ptr File00; flags: DriveStartFlags; startOperation: ptr MountOperation00;
+proc g_file_start_mountable(self: ptr GFile00; flags: DriveStartFlags; startOperation: ptr MountOperation00;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc startMountable*(self: File; flags: DriveStartFlags; startOperation: MountOperation = nil;
+proc startMountable*(self: GFile; flags: DriveStartFlags; startOperation: MountOperation = nil;
     cancellable: Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
-  g_file_start_mountable(cast[ptr File00](self.impl), flags, if startOperation.isNil: nil else: cast[ptr MountOperation00](startOperation.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_start_mountable(cast[ptr GFile00](self.impl), flags, if startOperation.isNil: nil else: cast[ptr MountOperation00](startOperation.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_stop_mountable(self: ptr File00; flags: MountUnmountFlags; mountOperation: ptr MountOperation00;
+proc g_file_stop_mountable(self: ptr GFile00; flags: MountUnmountFlags; mountOperation: ptr MountOperation00;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc stopMountable*(self: File; flags: MountUnmountFlags; mountOperation: MountOperation = nil;
+proc stopMountable*(self: GFile; flags: MountUnmountFlags; mountOperation: MountOperation = nil;
     cancellable: Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
-  g_file_stop_mountable(cast[ptr File00](self.impl), flags, if mountOperation.isNil: nil else: cast[ptr MountOperation00](mountOperation.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_stop_mountable(cast[ptr GFile00](self.impl), flags, if mountOperation.isNil: nil else: cast[ptr MountOperation00](mountOperation.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_trash_async(self: ptr File00; ioPriority: int32; cancellable: ptr Cancellable00;
+proc g_file_trash_async(self: ptr GFile00; ioPriority: int32; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc trashAsync*(self: File; ioPriority: int; cancellable: Cancellable = nil;
+proc trashAsync*(self: GFile; ioPriority: int; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_trash_async(cast[ptr File00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_trash_async(cast[ptr GFile00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_unmount_mountable(self: ptr File00; flags: MountUnmountFlags;
+proc g_file_unmount_mountable(self: ptr GFile00; flags: MountUnmountFlags;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc unmountMountable*(self: File; flags: MountUnmountFlags; cancellable: Cancellable = nil;
+proc unmountMountable*(self: GFile; flags: MountUnmountFlags; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
-  g_file_unmount_mountable(cast[ptr File00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_unmount_mountable(cast[ptr GFile00](self.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_unmount_mountable_with_operation(self: ptr File00; flags: MountUnmountFlags;
+proc g_file_unmount_mountable_with_operation(self: ptr GFile00; flags: MountUnmountFlags;
     mountOperation: ptr MountOperation00; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
 
-proc unmountMountableWithOperation*(self: File; flags: MountUnmountFlags;
+proc unmountMountableWithOperation*(self: GFile; flags: MountUnmountFlags;
     mountOperation: MountOperation = nil; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
-  g_file_unmount_mountable_with_operation(cast[ptr File00](self.impl), flags, if mountOperation.isNil: nil else: cast[ptr MountOperation00](mountOperation.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_unmount_mountable_with_operation(cast[ptr GFile00](self.impl), flags, if mountOperation.isNil: nil else: cast[ptr MountOperation00](mountOperation.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
 proc g_io_stream_close_async(self: ptr IOStream00; ioPriority: int32; cancellable: ptr Cancellable00;
     callback: AsyncReadyCallback; userData: pointer) {.
@@ -13598,7 +13620,7 @@ proc g_input_stream_read_all_async(self: ptr InputStream00; buffer: uint8Array;
     userData: pointer) {.
     importc, libprag.}
 
-proc readAllAsync*(self: InputStream; buffer: var seq[uint8];
+proc readAllAsync*(self: InputStream; buffer: var (seq[uint8] | string);
     count: var uint64; ioPriority: int; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
   g_input_stream_read_all_async(cast[ptr InputStream00](self.impl), unsafeaddr(buffer[0]), count, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
@@ -13608,7 +13630,7 @@ proc g_input_stream_read_async(self: ptr InputStream00; buffer: uint8Array;
     userData: pointer) {.
     importc, libprag.}
 
-proc readAsync*(self: InputStream; buffer: var seq[uint8];
+proc readAsync*(self: InputStream; buffer: var (seq[uint8] | string);
     count: var uint64; ioPriority: int; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
   g_input_stream_read_async(cast[ptr InputStream00](self.impl), unsafeaddr(buffer[0]), count, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
@@ -21886,40 +21908,40 @@ type
 type
   FileProgressCallback* = proc (currentNumBytes: int64; totalNumBytes: int64; userData: pointer) {.cdecl.}
 
-proc g_file_copy(self: ptr File00; destination: ptr File00; flags: FileCopyFlags;
+proc g_file_copy(self: ptr GFile00; destination: ptr GFile00; flags: FileCopyFlags;
     cancellable: ptr Cancellable00; progressCallback: FileProgressCallback;
     progressCallbackData: pointer; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc copy*(self: File; destination: File; flags: FileCopyFlags; cancellable: Cancellable = nil;
+proc copy*(self: GFile; destination: GFile; flags: FileCopyFlags; cancellable: Cancellable = nil;
     progressCallback: FileProgressCallback; progressCallbackData: pointer): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_copy(cast[ptr File00](self.impl), cast[ptr File00](destination.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), progressCallback, progressCallbackData, addr gerror)
+  let resul0 = g_file_copy(cast[ptr GFile00](self.impl), cast[ptr GFile00](destination.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), progressCallback, progressCallbackData, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_file_copy_async(self: ptr File00; destination: ptr File00; flags: FileCopyFlags;
+proc g_file_copy_async(self: ptr GFile00; destination: ptr GFile00; flags: FileCopyFlags;
     ioPriority: int32; cancellable: ptr Cancellable00; progressCallback: FileProgressCallback;
     progressCallbackData: pointer; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc copyAsync*(self: File; destination: File; flags: FileCopyFlags;
+proc copyAsync*(self: GFile; destination: GFile; flags: FileCopyFlags;
     ioPriority: int; cancellable: Cancellable = nil; progressCallback: FileProgressCallback;
     progressCallbackData: pointer; callback: AsyncReadyCallback; userData: pointer) =
-  g_file_copy_async(cast[ptr File00](self.impl), cast[ptr File00](destination.impl), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), progressCallback, progressCallbackData, callback, userData)
+  g_file_copy_async(cast[ptr GFile00](self.impl), cast[ptr GFile00](destination.impl), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), progressCallback, progressCallbackData, callback, userData)
 
-proc g_file_move(self: ptr File00; destination: ptr File00; flags: FileCopyFlags;
+proc g_file_move(self: ptr GFile00; destination: ptr GFile00; flags: FileCopyFlags;
     cancellable: ptr Cancellable00; progressCallback: FileProgressCallback;
     progressCallbackData: pointer; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc move*(self: File; destination: File; flags: FileCopyFlags; cancellable: Cancellable = nil;
+proc move*(self: GFile; destination: GFile; flags: FileCopyFlags; cancellable: Cancellable = nil;
     progressCallback: FileProgressCallback; progressCallbackData: pointer): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_file_move(cast[ptr File00](self.impl), cast[ptr File00](destination.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), progressCallback, progressCallbackData, addr gerror)
+  let resul0 = g_file_move(cast[ptr GFile00](self.impl), cast[ptr GFile00](destination.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), progressCallback, progressCallbackData, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -29750,10 +29772,10 @@ proc local*(): Vfs =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_vfs_get_file_for_path(self: ptr Vfs00; path: cstring): ptr File00 {.
+proc g_vfs_get_file_for_path(self: ptr Vfs00; path: cstring): ptr GFile00 {.
     importc, libprag.}
 
-proc getFileForPath*(self: Vfs; path: cstring): File =
+proc getFileForPath*(self: Vfs; path: cstring): GFile =
   let gobj = g_vfs_get_file_for_path(cast[ptr Vfs00](self.impl), path)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -29770,7 +29792,7 @@ proc getFileForPath*(self: Vfs; path: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc fileForPath*(self: Vfs; path: cstring): File =
+proc fileForPath*(self: Vfs; path: cstring): GFile =
   let gobj = g_vfs_get_file_for_path(cast[ptr Vfs00](self.impl), path)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -29787,10 +29809,10 @@ proc fileForPath*(self: Vfs; path: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_vfs_get_file_for_uri(self: ptr Vfs00; uri: cstring): ptr File00 {.
+proc g_vfs_get_file_for_uri(self: ptr Vfs00; uri: cstring): ptr GFile00 {.
     importc, libprag.}
 
-proc getFileForUri*(self: Vfs; uri: cstring): File =
+proc getFileForUri*(self: Vfs; uri: cstring): GFile =
   let gobj = g_vfs_get_file_for_uri(cast[ptr Vfs00](self.impl), uri)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -29807,7 +29829,7 @@ proc getFileForUri*(self: Vfs; uri: cstring): File =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc fileForUri*(self: Vfs; uri: cstring): File =
+proc fileForUri*(self: Vfs; uri: cstring): GFile =
   let gobj = g_vfs_get_file_for_uri(cast[ptr Vfs00](self.impl), uri)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -29839,10 +29861,10 @@ proc g_vfs_is_active(self: ptr Vfs00): gboolean {.
 proc isActive*(self: Vfs): bool =
   toBool(g_vfs_is_active(cast[ptr Vfs00](self.impl)))
 
-proc g_vfs_parse_name(self: ptr Vfs00; parseName: cstring): ptr File00 {.
+proc g_vfs_parse_name(self: ptr Vfs00; parseName: cstring): ptr GFile00 {.
     importc, libprag.}
 
-proc parseName*(self: Vfs; parseName: cstring): File =
+proc parseName*(self: Vfs; parseName: cstring): GFile =
   let gobj = g_vfs_parse_name(cast[ptr Vfs00](self.impl), parseName)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -29866,7 +29888,7 @@ proc unregisterUriScheme*(self: Vfs; scheme: cstring): bool =
   toBool(g_vfs_unregister_uri_scheme(cast[ptr Vfs00](self.impl), scheme))
 
 type
-  VfsFileLookupFunc* = proc (vfs: ptr Vfs00; identifier: cstring; userData: pointer): ptr File00 {.cdecl.}
+  VfsFileLookupFunc* = proc (vfs: ptr Vfs00; identifier: cstring; userData: pointer): ptr GFile00 {.cdecl.}
 
 proc g_vfs_register_uri_scheme(self: ptr Vfs00; scheme: cstring; uriFunc: VfsFileLookupFunc;
     uriData: pointer; uriDestroy: DestroyNotify; parseNameFunc: VfsFileLookupFunc;
@@ -30095,11 +30117,11 @@ proc contentTypeGuess*(filename: cstring = ""; data: seq[uint8] | string;
   cogfree(resul0)
   resultUncertain = toBool(resultUncertain_00)
 
-proc g_content_type_guess_for_tree(root: ptr File00): cstringArray {.
+proc g_content_type_guess_for_tree(root: ptr GFile00): cstringArray {.
     importc, libprag.}
 
-proc contentTypeGuessForTree*(root: File): seq[string] =
-  let resul0 = g_content_type_guess_for_tree(cast[ptr File00](root.impl))
+proc contentTypeGuessForTree*(root: GFile): seq[string] =
+  let resul0 = g_content_type_guess_for_tree(cast[ptr GFile00](root.impl))
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -30718,4 +30740,15 @@ proc typePlugin*(x: gio.IOModule): gobject.TypePlugin = cast[gobject.TypePlugin]
 
 proc run*(self: GApplication): int =
   int(g_application_run(cast[ptr GApplication00](self.impl), 0, nil))
+
+proc gFile00Array2seq*(p: GFile00Array; l: int32): seq[gio.GFile] =
+  let a = cast[ptr UncheckedArray[ptr GFile00]](p)
+  result = newSeq[gio.GFile]()
+  var i: int
+  while i < l:
+    let f = new gio.GFile
+    f.impl = a[i]
+    f.ignoreFinalizer = true
+    result.add(f)
+    inc(i)
 

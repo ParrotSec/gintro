@@ -3323,7 +3323,8 @@ proc g_io_channel_read_chars(self: ptr IOChannel00; buf: uint8Array; count: uint
     bytesRead: var uint64; error: ptr ptr glib.Error = nil): IOStatus {.
     importc, libprag.}
 
-proc readChars*(self: IOChannel; buf: var seq[uint8]; bytesRead: var uint64): IOStatus =
+proc readChars*(self: IOChannel; buf: var (seq[uint8] | string);
+    bytesRead: var uint64): IOStatus =
   let count = uint64(buf.len)
   var gerror: ptr glib.Error
   let resul0 = g_io_channel_read_chars(cast[ptr IOChannel00](self.impl), unsafeaddr(buf[0]), count, bytesRead, addr gerror)
@@ -3366,7 +3367,7 @@ proc g_io_channel_read_to_end(self: ptr IOChannel00; strReturn: var uint8Array;
     length: var uint64; error: ptr ptr glib.Error = nil): IOStatus {.
     importc, libprag.}
 
-proc readToEnd*(self: IOChannel; strReturn: var seq[uint8];
+proc readToEnd*(self: IOChannel; strReturn: var (seq[uint8] | string);
     length: var uint64): IOStatus =
   var gerror: ptr glib.Error
   var strReturn_00: pointer
