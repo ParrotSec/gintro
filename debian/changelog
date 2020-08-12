@@ -1,3 +1,9 @@
+gintro (0.8.0+parrot1) rolling-testing; urgency=medium
+
+  * Convert package from quilt to native (broken upstream tarball).
+
+ -- Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>  Wed, 12 Aug 2020 13:53:39 +0200
+
 gintro (0.8.0-parrot0) rolling-testing; urgency=medium
 
   * Upgrade version to 8.0
