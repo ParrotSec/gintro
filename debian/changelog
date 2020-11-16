@@ -1,3 +1,9 @@
+gintro (0.8.0+parrot2) rolling-testing; urgency=medium
+
+  * Rebuild package
+
+ -- Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>  Mon, 16 Nov 2020 12:52:29 +0100
+
 gintro (0.8.0+parrot1) rolling-testing; urgency=medium
 
   * Convert package from quilt to native (broken upstream tarball).
