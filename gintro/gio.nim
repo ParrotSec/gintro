@@ -10,23 +10,6 @@ import gobject, glib
 const Lib = "libgio-2.0.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
 
-type
-  uint8Array* = pointer
-  GFile00Array* = pointer
-  cstringArrayArray* = pointer
-  OutputVector00Array* = pointer
-  OutputMessage00Array* = pointer
-  DBusErrorEntry00Array* = pointer
-  int8Array* = pointer
-  uint32Array* = pointer
-  ActionEntry00Array* = pointer
-  InputVector00Array* = pointer
-  int32Array* = pointer
-  DBusAnnotationInfo00Array* = pointer
-  InputMessage00Array* = pointer
-  SocketControlMessage00Array* = pointer
-
-
 proc finalizeGObject*[T](o: ref T) =
   if not o.ignoreFinalizer:
     gobject.g_object_remove_toggle_ref(o.impl, gobject.toggleNotify, addr(o[]))
@@ -49,14 +32,15 @@ proc parseDetailedName*(detailedName: cstring; actionName: var string;
     targetValue: var glib.Variant): bool =
   fnew(targetValue, finalizerunref)
   var gerror: ptr glib.Error
-  var actionName_00 = cstring(actionName)
+  var actionName_00: cstring
   let resul0 = g_action_parse_detailed_name(detailedName, actionName_00, cast[var ptr glib.Variant00](addr targetValue.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  actionName = $(actionName_00)
+  if actionName.addr != nil:
+    actionName = $(actionName_00)
 
 proc g_action_print_detailed_name(actionName: cstring; targetValue: ptr glib.Variant00): cstring {.
     importc, libprag.}
@@ -421,22 +405,16 @@ when defined(gcDestructors):
       self.impl = nil
 
 proc g_application_command_line_get_arguments(self: ptr ApplicationCommandLine00;
-    argc: var int32): cstringArray {.
+    argc: var int32): ptr cstring {.
     importc, libprag.}
 
 proc getArguments*(self: ApplicationCommandLine;
-    argc: var int): seq[string] =
-  var argc_00 = int32(argc)
+    argc: var int = cast[var int](nil)): seq[string] =
+  var argc_00: int32
   let resul0 = g_application_command_line_get_arguments(cast[ptr ApplicationCommandLine00](self.impl), argc_00)
   result = cstringArrayToSeq(resul0)
-  argc = int(argc_00)
-
-proc arguments*(self: ApplicationCommandLine;
-    argc: var int): seq[string] =
-  var argc_00 = int32(argc)
-  let resul0 = g_application_command_line_get_arguments(cast[ptr ApplicationCommandLine00](self.impl), argc_00)
-  result = cstringArrayToSeq(resul0)
-  argc = int(argc_00)
+  if argc.addr != nil:
+    argc = int(argc_00)
 
 proc g_application_command_line_get_cwd(self: ptr ApplicationCommandLine00): cstring {.
     importc, libprag.}
@@ -453,7 +431,7 @@ proc cwd*(self: ApplicationCommandLine): string =
     return
   result = $resul0
 
-proc g_application_command_line_get_environ(self: ptr ApplicationCommandLine00): cstringArray {.
+proc g_application_command_line_get_environ(self: ptr ApplicationCommandLine00): ptr cstring {.
     importc, libprag.}
 
 proc getEnviron*(self: ApplicationCommandLine): seq[string] =
@@ -515,9 +493,6 @@ proc g_application_command_line_getenv(self: ptr ApplicationCommandLine00;
     importc, libprag.}
 
 proc getenv*(self: ApplicationCommandLine; name: cstring): string =
-  result = $g_application_command_line_getenv(cast[ptr ApplicationCommandLine00](self.impl), name)
-
-proc env*(self: ApplicationCommandLine; name: cstring): string =
   result = $g_application_command_line_getenv(cast[ptr ApplicationCommandLine00](self.impl), name)
 
 proc g_application_command_line_set_exit_status(self: ptr ApplicationCommandLine00;
@@ -699,50 +674,11 @@ proc getChild*(self: GFile; name: cstring): GFile =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc child*(self: GFile; name: cstring): GFile =
-  let gobj = g_file_get_child(cast[ptr GFile00](self.impl), name)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc g_file_get_child_for_display_name(self: ptr GFile00; displayName: cstring;
     error: ptr ptr glib.Error = nil): ptr GFile00 {.
     importc, libprag.}
 
 proc getChildForDisplayName*(self: GFile; displayName: cstring): GFile =
-  var gerror: ptr glib.Error
-  let gobj = g_file_get_child_for_display_name(cast[ptr GFile00](self.impl), displayName, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc childForDisplayName*(self: GFile; displayName: cstring): GFile =
   var gerror: ptr glib.Error
   let gobj = g_file_get_child_for_display_name(cast[ptr GFile00](self.impl), displayName, addr gerror)
   if gerror != nil:
@@ -839,13 +775,6 @@ proc g_file_get_relative_path(self: ptr GFile00; descendant: ptr GFile00): cstri
     importc, libprag.}
 
 proc getRelativePath*(self: GFile; descendant: GFile): string =
-  let resul0 = g_file_get_relative_path(cast[ptr GFile00](self.impl), cast[ptr GFile00](descendant.impl))
-  if resul0.isNil:
-    return
-  result = $resul0
-  cogfree(resul0)
-
-proc relativePath*(self: GFile; descendant: GFile): string =
   let resul0 = g_file_get_relative_path(cast[ptr GFile00](self.impl), cast[ptr GFile00](descendant.impl))
   if resul0.isNil:
     return
@@ -970,7 +899,7 @@ proc scHandleLocalOptions*(self: GApplication;  p: proc (self: ptr GApplication0
 proc scNameLost*(self: GApplication;  p: proc (self: ptr GApplication00; xdata: pointer): gboolean {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "name-lost", cast[GCallback](p), xdata, nil, cf)
 
-proc scOpen*(self: GApplication;  p: proc (self: ptr GApplication00; files: GFile00Array; nFiles: int32; hint: cstring; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scOpen*(self: GApplication;  p: proc (self: ptr GApplication00; files: ptr GFile00; nFiles: int32; hint: cstring; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "open", cast[GCallback](p), xdata, nil, cf)
 
 proc scShutdown*(self: GApplication;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
@@ -983,22 +912,6 @@ proc g_application_get_default(): ptr GApplication00 {.
     importc, libprag.}
 
 proc getDefaultGApplication*(): GApplication =
-  let gobj = g_application_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultGApplication*(): GApplication =
   let gobj = g_application_get_default()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -1036,16 +949,17 @@ proc addMainOption*(self: GApplication; longName: cstring;
     argDescription: cstring = "") =
   g_application_add_main_option(cast[ptr GApplication00](self.impl), longName, shortName, flags, arg, description, safeStringToCString(argDescription))
 
-proc g_application_add_main_option_entries(self: ptr GApplication00; entries: glib.OptionEntry00Array) {.
+proc g_application_add_main_option_entries(self: ptr GApplication00; entries: ptr glib.OptionEntry) {.
     importc, libprag.}
 
-proc addMainOptionEntries*(self: GApplication; entries: glib.OptionEntry00Array) =
+proc addMainOptionEntries*(self: GApplication; entries: ptr glib.OptionEntry) =
   g_application_add_main_option_entries(cast[ptr GApplication00](self.impl), entries)
 
 proc g_application_add_option_group(self: ptr GApplication00; group: ptr glib.OptionGroup00) {.
     importc, libprag.}
 
 proc addOptionGroup*(self: GApplication; group: glib.OptionGroup) =
+  group.ignoreFinalizer = true
   g_application_add_option_group(cast[ptr GApplication00](self.impl), cast[ptr glib.OptionGroup00](group.impl))
 
 proc g_application_bind_busy_property(self: ptr GApplication00; `object`: ptr gobject.Object00;
@@ -1137,11 +1051,11 @@ proc g_application_mark_busy(self: ptr GApplication00) {.
 proc markBusy*(self: GApplication) =
   g_application_mark_busy(cast[ptr GApplication00](self.impl))
 
-proc g_application_open(self: ptr GApplication00; files: ptr GFile00Array;
+proc g_application_open(self: ptr GApplication00; files: ptr ptr GFile00;
     nFiles: int32; hint: cstring) {.
     importc, libprag.}
 
-proc open*(self: GApplication; files: ptr GFile00Array; nFiles: int;
+proc open*(self: GApplication; files: ptr ptr GFile00; nFiles: int;
     hint: cstring) =
   g_application_open(cast[ptr GApplication00](self.impl), files, int32(nFiles), hint)
 
@@ -1157,7 +1071,7 @@ proc g_application_release(self: ptr GApplication00) {.
 proc release*(self: GApplication) =
   g_application_release(cast[ptr GApplication00](self.impl))
 
-proc g_application_run(self: ptr GApplication00; argc: int32; argv: cstringArray): int32 {.
+proc g_application_run(self: ptr GApplication00; argc: int32; argv: ptr cstring): int32 {.
     importc, libprag.}
 
 proc run*(self: GApplication; argc: int; argv: varargs[string, `$`]): int =
@@ -1178,9 +1092,6 @@ proc g_application_set_default(self: ptr GApplication00) {.
     importc, libprag.}
 
 proc setDefault*(self: GApplication) =
-  g_application_set_default(cast[ptr GApplication00](self.impl))
-
-proc `default=`*(self: GApplication) =
   g_application_set_default(cast[ptr GApplication00](self.impl))
 
 proc g_application_set_inactivity_timeout(self: ptr GApplication00; inactivityTimeout: uint32) {.
@@ -1360,11 +1271,11 @@ proc initSimpleActionGroup*[T](result: var T) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_simple_action_group_add_entries(self: ptr SimpleActionGroup00; entries: ActionEntry00Array;
+proc g_simple_action_group_add_entries(self: ptr SimpleActionGroup00; entries: ptr ActionEntry00;
     nEntries: int32; userData: pointer) {.
     importc, libprag.}
 
-proc addEntries*(self: SimpleActionGroup; entries: ActionEntry00Array;
+proc addEntries*(self: SimpleActionGroup; entries: ptr ActionEntry00;
     nEntries: int; userData: pointer) =
   g_simple_action_group_add_entries(cast[ptr SimpleActionGroup00](self.impl), entries, int32(nEntries), userData)
 
@@ -1468,23 +1379,10 @@ proc getActionEnabled*(self: ActionGroup | GApplication | DBusActionGroup | Simp
     actionName: cstring): bool =
   toBool(g_action_group_get_action_enabled(cast[ptr ActionGroup00](self.impl), actionName))
 
-proc actionEnabled*(self: ActionGroup | GApplication | DBusActionGroup | SimpleActionGroup;
-    actionName: cstring): bool =
-  toBool(g_action_group_get_action_enabled(cast[ptr ActionGroup00](self.impl), actionName))
-
 proc g_action_group_get_action_parameter_type(self: ptr ActionGroup00; actionName: cstring): ptr glib.VariantType00 {.
     importc, libprag.}
 
 proc getActionParameterType*(self: ActionGroup | GApplication | DBusActionGroup | SimpleActionGroup;
-    actionName: cstring): glib.VariantType =
-  let impl0 = g_action_group_get_action_parameter_type(cast[ptr ActionGroup00](self.impl), actionName)
-  if impl0.isNil:
-    return nil
-  fnew(result, finalizerfree)
-  result.impl = impl0
-  result.ignoreFinalizer = true
-
-proc actionParameterType*(self: ActionGroup | GApplication | DBusActionGroup | SimpleActionGroup;
     actionName: cstring): glib.VariantType =
   let impl0 = g_action_group_get_action_parameter_type(cast[ptr ActionGroup00](self.impl), actionName)
   if impl0.isNil:
@@ -1504,26 +1402,10 @@ proc getActionState*(self: ActionGroup | GApplication | DBusActionGroup | Simple
   fnew(result, finalizerunref)
   result.impl = impl0
 
-proc actionState*(self: ActionGroup | GApplication | DBusActionGroup | SimpleActionGroup;
-    actionName: cstring): glib.Variant =
-  let impl0 = g_action_group_get_action_state(cast[ptr ActionGroup00](self.impl), actionName)
-  if impl0.isNil:
-    return nil
-  fnew(result, finalizerunref)
-  result.impl = impl0
-
 proc g_action_group_get_action_state_hint(self: ptr ActionGroup00; actionName: cstring): ptr glib.Variant00 {.
     importc, libprag.}
 
 proc getActionStateHint*(self: ActionGroup | GApplication | DBusActionGroup | SimpleActionGroup;
-    actionName: cstring): glib.Variant =
-  let impl0 = g_action_group_get_action_state_hint(cast[ptr ActionGroup00](self.impl), actionName)
-  if impl0.isNil:
-    return nil
-  fnew(result, finalizerunref)
-  result.impl = impl0
-
-proc actionStateHint*(self: ActionGroup | GApplication | DBusActionGroup | SimpleActionGroup;
     actionName: cstring): glib.Variant =
   let impl0 = g_action_group_get_action_state_hint(cast[ptr ActionGroup00](self.impl), actionName)
   if impl0.isNil:
@@ -1543,15 +1425,6 @@ proc getActionStateType*(self: ActionGroup | GApplication | DBusActionGroup | Si
   result.impl = impl0
   result.ignoreFinalizer = true
 
-proc actionStateType*(self: ActionGroup | GApplication | DBusActionGroup | SimpleActionGroup;
-    actionName: cstring): glib.VariantType =
-  let impl0 = g_action_group_get_action_state_type(cast[ptr ActionGroup00](self.impl), actionName)
-  if impl0.isNil:
-    return nil
-  fnew(result, finalizerfree)
-  result.impl = impl0
-  result.ignoreFinalizer = true
-
 proc g_action_group_has_action(self: ptr ActionGroup00; actionName: cstring): gboolean {.
     importc, libprag.}
 
@@ -1559,7 +1432,7 @@ proc hasAction*(self: ActionGroup | GApplication | DBusActionGroup | SimpleActio
     actionName: cstring): bool =
   toBool(g_action_group_has_action(cast[ptr ActionGroup00](self.impl), actionName))
 
-proc g_action_group_list_actions(self: ptr ActionGroup00): cstringArray {.
+proc g_action_group_list_actions(self: ptr ActionGroup00): ptr cstring {.
     importc, libprag.}
 
 proc listActions*(self: ActionGroup | GApplication | DBusActionGroup | SimpleActionGroup): seq[string] =
@@ -1573,15 +1446,21 @@ proc g_action_group_query_action(self: ptr ActionGroup00; actionName: cstring;
     importc, libprag.}
 
 proc queryAction*(self: ActionGroup | GApplication | DBusActionGroup | SimpleActionGroup;
-    actionName: cstring; enabled: var bool; parameterType: var glib.VariantType;
-    stateType: var glib.VariantType; stateHint: var glib.Variant; state: var glib.Variant): bool =
-  fnew(parameterType, finalizerfree)
-  fnew(stateType, finalizerfree)
-  fnew(stateHint, finalizerunref)
-  fnew(state, finalizerunref)
-  var enabled_00 = gboolean(enabled)
-  result = toBool(g_action_group_query_action(cast[ptr ActionGroup00](self.impl), actionName, enabled_00, cast[var ptr glib.VariantType00](addr parameterType.impl), cast[var ptr glib.VariantType00](addr stateType.impl), cast[var ptr glib.Variant00](addr stateHint.impl), cast[var ptr glib.Variant00](addr state.impl)))
-  enabled = toBool(enabled_00)
+    actionName: cstring; enabled: var bool; parameterType: var glib.VariantType = cast[var glib.VariantType](nil);
+    stateType: var glib.VariantType = cast[var glib.VariantType](nil); stateHint: var glib.Variant = cast[var glib.Variant](nil);
+    state: var glib.Variant = cast[var glib.Variant](nil)): bool =
+  if addr(parameterType) != nil:
+    fnew(parameterType, finalizerfree)
+  if addr(stateType) != nil:
+    fnew(stateType, finalizerfree)
+  if addr(stateHint) != nil:
+    fnew(stateHint, finalizerunref)
+  if addr(state) != nil:
+    fnew(state, finalizerunref)
+  var enabled_00: gboolean
+  result = toBool(g_action_group_query_action(cast[ptr ActionGroup00](self.impl), actionName, enabled_00, cast[var ptr glib.VariantType00](if addr(parameterType) == nil: nil else: addr parameterType.impl), cast[var ptr glib.VariantType00](if addr(stateType) == nil: nil else: addr stateType.impl), cast[var ptr glib.Variant00](if addr(stateHint) == nil: nil else: addr stateHint.impl), cast[var ptr glib.Variant00](if addr(state) == nil: nil else: addr state.impl)))
+  if enabled.addr != nil:
+    enabled = toBool(enabled_00)
 
 proc g_application_set_action_group(self: ptr GApplication00; actionGroup: ptr ActionGroup00) {.
     importc, libprag.}
@@ -1629,15 +1508,6 @@ proc g_io_stream_set_pending(self: ptr IOStream00; error: ptr ptr glib.Error = n
     importc, libprag.}
 
 proc setPending*(self: IOStream): bool =
-  var gerror: ptr glib.Error
-  let resul0 = g_io_stream_set_pending(cast[ptr IOStream00](self.impl), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc `pending=`*(self: IOStream): bool =
   var gerror: ptr glib.Error
   let resul0 = g_io_stream_set_pending(cast[ptr IOStream00](self.impl), addr gerror)
   if gerror != nil:
@@ -1750,15 +1620,6 @@ proc setPending*(self: OutputStream): bool =
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc `pending=`*(self: OutputStream): bool =
-  var gerror: ptr glib.Error
-  let resul0 = g_output_stream_set_pending(cast[ptr OutputStream00](self.impl), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
 proc g_io_stream_get_output_stream(self: ptr IOStream00): ptr OutputStream00 {.
     importc, libprag.}
 
@@ -1795,10 +1656,9 @@ proc outputStream*(self: IOStream): OutputStream =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 type
-  OutputVector00* {.pure.} = object
-  OutputVector* = ref object
-    impl*: ptr OutputVector00
-    ignoreFinalizer*: bool
+  OutputVector* {.pure, byRef.} = object
+    buffer*: pointer
+    size*: uint64
 
 type
   IOStreamSpliceFlag* {.size: sizeof(cint), pure.} = enum
@@ -1859,13 +1719,13 @@ proc scAborted*(self: MountOperation;  p: proc (self: ptr gobject.Object00; xdat
 proc scAskPassword*(self: MountOperation;  p: proc (self: ptr MountOperation00; message: cstring; defaultUser: cstring; defaultDomain: cstring; flags: AskPasswordFlags; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "ask-password", cast[GCallback](p), xdata, nil, cf)
 
-proc scAskQuestion*(self: MountOperation;  p: proc (self: ptr MountOperation00; message: cstring; choices: cstringArray; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scAskQuestion*(self: MountOperation;  p: proc (self: ptr MountOperation00; message: cstring; choices: ptr cstring; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "ask-question", cast[GCallback](p), xdata, nil, cf)
 
 proc scReply*(self: MountOperation;  p: proc (self: ptr MountOperation00; resu: MountOperationResult; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "reply", cast[GCallback](p), xdata, nil, cf)
 
-proc scShowProcesses*(self: MountOperation;  p: proc (self: ptr MountOperation00; message: cstring; processes: ptr GArray00; choices: cstringArray; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scShowProcesses*(self: MountOperation;  p: proc (self: ptr MountOperation00; message: cstring; processes: ptr GArray00; choices: ptr cstring; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "show-processes", cast[GCallback](p), xdata, nil, cf)
 
 proc scShowUnmountProgress*(self: MountOperation;  p: proc (self: ptr MountOperation00; message: cstring; timeLeft: int64; bytesLeft: int64; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
@@ -2257,38 +2117,25 @@ proc getAttributeAsString*(self: FileInfo; attribute: cstring): string =
   result = $resul0
   cogfree(resul0)
 
-proc attributeAsString*(self: FileInfo; attribute: cstring): string =
-  let resul0 = g_file_info_get_attribute_as_string(cast[ptr FileInfo00](self.impl), attribute)
-  if resul0.isNil:
-    return
-  result = $resul0
-  cogfree(resul0)
-
 proc g_file_info_get_attribute_boolean(self: ptr FileInfo00; attribute: cstring): gboolean {.
     importc, libprag.}
 
 proc getAttributeBoolean*(self: FileInfo; attribute: cstring): bool =
   toBool(g_file_info_get_attribute_boolean(cast[ptr FileInfo00](self.impl), attribute))
 
-proc attributeBoolean*(self: FileInfo; attribute: cstring): bool =
-  toBool(g_file_info_get_attribute_boolean(cast[ptr FileInfo00](self.impl), attribute))
-
 proc g_file_info_get_attribute_byte_string(self: ptr FileInfo00; attribute: cstring): cstring {.
     importc, libprag.}
 
 proc getAttributeByteString*(self: FileInfo; attribute: cstring): string =
-  result = $g_file_info_get_attribute_byte_string(cast[ptr FileInfo00](self.impl), attribute)
-
-proc attributeByteString*(self: FileInfo; attribute: cstring): string =
-  result = $g_file_info_get_attribute_byte_string(cast[ptr FileInfo00](self.impl), attribute)
+  let resul0 = g_file_info_get_attribute_byte_string(cast[ptr FileInfo00](self.impl), attribute)
+  if resul0.isNil:
+    return
+  result = $resul0
 
 proc g_file_info_get_attribute_int32(self: ptr FileInfo00; attribute: cstring): int32 {.
     importc, libprag.}
 
 proc getAttributeInt32*(self: FileInfo; attribute: cstring): int =
-  int(g_file_info_get_attribute_int32(cast[ptr FileInfo00](self.impl), attribute))
-
-proc attributeInt32*(self: FileInfo; attribute: cstring): int =
   int(g_file_info_get_attribute_int32(cast[ptr FileInfo00](self.impl), attribute))
 
 proc g_file_info_get_attribute_int64(self: ptr FileInfo00; attribute: cstring): int64 {.
@@ -2297,30 +2144,13 @@ proc g_file_info_get_attribute_int64(self: ptr FileInfo00; attribute: cstring): 
 proc getAttributeInt64*(self: FileInfo; attribute: cstring): int64 =
   g_file_info_get_attribute_int64(cast[ptr FileInfo00](self.impl), attribute)
 
-proc attributeInt64*(self: FileInfo; attribute: cstring): int64 =
-  g_file_info_get_attribute_int64(cast[ptr FileInfo00](self.impl), attribute)
-
 proc g_file_info_get_attribute_object(self: ptr FileInfo00; attribute: cstring): ptr gobject.Object00 {.
     importc, libprag.}
 
 proc getAttributeObject*(self: FileInfo; attribute: cstring): gobject.Object =
   let gobj = g_file_info_get_attribute_object(cast[ptr FileInfo00](self.impl), attribute)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gobject.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc attributeObject*(self: FileInfo; attribute: cstring): gobject.Object =
-  let gobj = g_file_info_get_attribute_object(cast[ptr FileInfo00](self.impl), attribute)
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -2339,27 +2169,24 @@ proc g_file_info_get_attribute_string(self: ptr FileInfo00; attribute: cstring):
     importc, libprag.}
 
 proc getAttributeString*(self: FileInfo; attribute: cstring): string =
-  result = $g_file_info_get_attribute_string(cast[ptr FileInfo00](self.impl), attribute)
+  let resul0 = g_file_info_get_attribute_string(cast[ptr FileInfo00](self.impl), attribute)
+  if resul0.isNil:
+    return
+  result = $resul0
 
-proc attributeString*(self: FileInfo; attribute: cstring): string =
-  result = $g_file_info_get_attribute_string(cast[ptr FileInfo00](self.impl), attribute)
-
-proc g_file_info_get_attribute_stringv(self: ptr FileInfo00; attribute: cstring): cstringArray {.
+proc g_file_info_get_attribute_stringv(self: ptr FileInfo00; attribute: cstring): ptr cstring {.
     importc, libprag.}
 
 proc getAttributeStringv*(self: FileInfo; attribute: cstring): seq[string] =
-  cstringArrayToSeq(g_file_info_get_attribute_stringv(cast[ptr FileInfo00](self.impl), attribute))
-
-proc attributeStringv*(self: FileInfo; attribute: cstring): seq[string] =
-  cstringArrayToSeq(g_file_info_get_attribute_stringv(cast[ptr FileInfo00](self.impl), attribute))
+  let resul0 = g_file_info_get_attribute_stringv(cast[ptr FileInfo00](self.impl), attribute)
+  if resul0.isNil:
+    return
+  cstringArrayToSeq(resul0)
 
 proc g_file_info_get_attribute_type(self: ptr FileInfo00; attribute: cstring): FileAttributeType {.
     importc, libprag.}
 
 proc getAttributeType*(self: FileInfo; attribute: cstring): FileAttributeType =
-  g_file_info_get_attribute_type(cast[ptr FileInfo00](self.impl), attribute)
-
-proc attributeType*(self: FileInfo; attribute: cstring): FileAttributeType =
   g_file_info_get_attribute_type(cast[ptr FileInfo00](self.impl), attribute)
 
 proc g_file_info_get_attribute_uint32(self: ptr FileInfo00; attribute: cstring): uint32 {.
@@ -2368,37 +2195,43 @@ proc g_file_info_get_attribute_uint32(self: ptr FileInfo00; attribute: cstring):
 proc getAttributeUint32*(self: FileInfo; attribute: cstring): int =
   int(g_file_info_get_attribute_uint32(cast[ptr FileInfo00](self.impl), attribute))
 
-proc attributeUint32*(self: FileInfo; attribute: cstring): int =
-  int(g_file_info_get_attribute_uint32(cast[ptr FileInfo00](self.impl), attribute))
-
 proc g_file_info_get_attribute_uint64(self: ptr FileInfo00; attribute: cstring): uint64 {.
     importc, libprag.}
 
 proc getAttributeUint64*(self: FileInfo; attribute: cstring): uint64 =
   g_file_info_get_attribute_uint64(cast[ptr FileInfo00](self.impl), attribute)
 
-proc attributeUint64*(self: FileInfo; attribute: cstring): uint64 =
-  g_file_info_get_attribute_uint64(cast[ptr FileInfo00](self.impl), attribute)
-
 proc g_file_info_get_content_type(self: ptr FileInfo00): cstring {.
     importc, libprag.}
 
 proc getContentType*(self: FileInfo): string =
-  result = $g_file_info_get_content_type(cast[ptr FileInfo00](self.impl))
+  let resul0 = g_file_info_get_content_type(cast[ptr FileInfo00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
 
 proc contentType*(self: FileInfo): string =
-  result = $g_file_info_get_content_type(cast[ptr FileInfo00](self.impl))
+  let resul0 = g_file_info_get_content_type(cast[ptr FileInfo00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
 
 proc g_file_info_get_deletion_date(self: ptr FileInfo00): ptr glib.DateTime00 {.
     importc, libprag.}
 
 proc getDeletionDate*(self: FileInfo): glib.DateTime =
+  let impl0 = g_file_info_get_deletion_date(cast[ptr FileInfo00](self.impl))
+  if impl0.isNil:
+    return nil
   fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_file_info_get_deletion_date(cast[ptr FileInfo00](self.impl))
+  result.impl = impl0
 
 proc deletionDate*(self: FileInfo): glib.DateTime =
+  let impl0 = g_file_info_get_deletion_date(cast[ptr FileInfo00](self.impl))
+  if impl0.isNil:
+    return nil
   fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_file_info_get_deletion_date(cast[ptr FileInfo00](self.impl))
+  result.impl = impl0
 
 proc g_file_info_get_display_name(self: ptr FileInfo00): cstring {.
     importc, libprag.}
@@ -2525,7 +2358,7 @@ proc g_file_info_has_namespace(self: ptr FileInfo00; nameSpace: cstring): gboole
 proc hasNamespace*(self: FileInfo; nameSpace: cstring): bool =
   toBool(g_file_info_has_namespace(cast[ptr FileInfo00](self.impl), nameSpace))
 
-proc g_file_info_list_attributes(self: ptr FileInfo00; nameSpace: cstring): cstringArray {.
+proc g_file_info_list_attributes(self: ptr FileInfo00; nameSpace: cstring): ptr cstring {.
     importc, libprag.}
 
 proc listAttributes*(self: FileInfo; nameSpace: cstring = ""): seq[string] =
@@ -2598,7 +2431,7 @@ proc setAttributeString*(self: FileInfo; attribute: cstring;
   g_file_info_set_attribute_string(cast[ptr FileInfo00](self.impl), attribute, attrValue)
 
 proc g_file_info_set_attribute_stringv(self: ptr FileInfo00; attribute: cstring;
-    attrValue: cstringArray) {.
+    attrValue: ptr cstring) {.
     importc, libprag.}
 
 proc setAttributeStringv*(self: FileInfo; attribute: cstring;
@@ -2746,6 +2579,12 @@ when defined(gcDestructors):
       boxedFree(g_file_attribute_matcher_get_type(), cast[ptr FileAttributeMatcher00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var FileAttributeMatcher) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGFileAttributeMatcher)
+
 proc g_file_attribute_matcher_unref(self: ptr FileAttributeMatcher00) {.
     importc, libprag.}
 
@@ -2768,7 +2607,10 @@ proc g_file_attribute_matcher_enumerate_next(self: ptr FileAttributeMatcher00): 
     importc, libprag.}
 
 proc enumerateNext*(self: FileAttributeMatcher): string =
-  result = $g_file_attribute_matcher_enumerate_next(cast[ptr FileAttributeMatcher00](self.impl))
+  let resul0 = g_file_attribute_matcher_enumerate_next(cast[ptr FileAttributeMatcher00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
 
 proc g_file_attribute_matcher_matches(self: ptr FileAttributeMatcher00; attribute: cstring): gboolean {.
     importc, libprag.}
@@ -2842,21 +2684,14 @@ proc g_file_info_get_attribute_data(self: ptr FileInfo00; attribute: cstring;
     `type`: var FileAttributeType; valuePp: var pointer; status: var FileAttributeStatus): gboolean {.
     importc, libprag.}
 
-proc getAttributeData*(self: FileInfo; attribute: cstring; `type`: var FileAttributeType;
-    valuePp: var pointer; status: var FileAttributeStatus): bool =
-  toBool(g_file_info_get_attribute_data(cast[ptr FileInfo00](self.impl), attribute, `type`, valuePp, status))
-
-proc attributeData*(self: FileInfo; attribute: cstring; `type`: var FileAttributeType;
-    valuePp: var pointer; status: var FileAttributeStatus): bool =
+proc getAttributeData*(self: FileInfo; attribute: cstring; `type`: var FileAttributeType = cast[var FileAttributeType](nil);
+    valuePp: var pointer = cast[var pointer](nil); status: var FileAttributeStatus = cast[var FileAttributeStatus](nil)): bool =
   toBool(g_file_info_get_attribute_data(cast[ptr FileInfo00](self.impl), attribute, `type`, valuePp, status))
 
 proc g_file_info_get_attribute_status(self: ptr FileInfo00; attribute: cstring): FileAttributeStatus {.
     importc, libprag.}
 
 proc getAttributeStatus*(self: FileInfo; attribute: cstring): FileAttributeStatus =
-  g_file_info_get_attribute_status(cast[ptr FileInfo00](self.impl), attribute)
-
-proc attributeStatus*(self: FileInfo; attribute: cstring): FileAttributeStatus =
   g_file_info_get_attribute_status(cast[ptr FileInfo00](self.impl), attribute)
 
 proc g_file_info_set_attribute_status(self: ptr FileInfo00; attribute: cstring;
@@ -3287,14 +3122,14 @@ proc g_emblemed_icon_clear_emblems(self: ptr EmblemedIcon00) {.
 proc clearEmblems*(self: EmblemedIcon) =
   g_emblemed_icon_clear_emblems(cast[ptr EmblemedIcon00](self.impl))
 
-proc g_emblemed_icon_get_emblems(self: ptr EmblemedIcon00): ptr pointer {.
+proc g_emblemed_icon_get_emblems(self: ptr EmblemedIcon00): ptr glib.List {.
     importc, libprag.}
 
-proc getEmblems*(self: EmblemedIcon): ptr pointer =
-  g_emblemed_icon_get_emblems(cast[ptr EmblemedIcon00](self.impl))
+proc getEmblems*(self: EmblemedIcon): seq[Emblem] =
+  result = glistObjects2seq(Emblem, g_emblemed_icon_get_emblems(cast[ptr EmblemedIcon00](self.impl)), false)
 
-proc emblems*(self: EmblemedIcon): ptr pointer =
-  g_emblemed_icon_get_emblems(cast[ptr EmblemedIcon00](self.impl))
+proc emblems*(self: EmblemedIcon): seq[Emblem] =
+  result = glistObjects2seq(Emblem, g_emblemed_icon_get_emblems(cast[ptr EmblemedIcon00](self.impl)), false)
 
 proc g_emblemed_icon_get_icon(self: ptr EmblemedIcon00): ptr Icon00 {.
     importc, libprag.}
@@ -3402,7 +3237,7 @@ proc initThemedIcon*[T](result: var T; iconname: cstring) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_themed_icon_new_from_names(iconnames: cstringArray; len: int32): ptr ThemedIcon00 {.
+proc g_themed_icon_new_from_names(iconnames: ptr cstring; len: int32): ptr ThemedIcon00 {.
     importc, libprag.}
 
 proc newThemedIconFromNames*(iconnames: openArray[string]; len: int): ThemedIcon =
@@ -3526,7 +3361,7 @@ proc g_themed_icon_append_name(self: ptr ThemedIcon00; iconname: cstring) {.
 proc appendName*(self: ThemedIcon; iconname: cstring) =
   g_themed_icon_append_name(cast[ptr ThemedIcon00](self.impl), iconname)
 
-proc g_themed_icon_get_names(self: ptr ThemedIcon00): cstringArray {.
+proc g_themed_icon_get_names(self: ptr ThemedIcon00): ptr cstring {.
     importc, libprag.}
 
 proc getNames*(self: ThemedIcon): seq[string] =
@@ -3806,23 +3641,6 @@ proc g_file_enumerator_get_child(self: ptr FileEnumerator00; info: ptr FileInfo0
     importc, libprag.}
 
 proc getChild*(self: FileEnumerator; info: FileInfo): GFile =
-  let gobj = g_file_enumerator_get_child(cast[ptr FileEnumerator00](self.impl), cast[ptr FileInfo00](info.impl))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc child*(self: FileEnumerator; info: FileInfo): GFile =
   let gobj = g_file_enumerator_get_child(cast[ptr FileEnumerator00](self.impl), cast[ptr FileInfo00](info.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -4177,7 +3995,7 @@ proc g_drive_can_stop(self: ptr Drive00): gboolean {.
 proc canStop*(self: Drive): bool =
   toBool(g_drive_can_stop(cast[ptr Drive00](self.impl)))
 
-proc g_drive_enumerate_identifiers(self: ptr Drive00): cstringArray {.
+proc g_drive_enumerate_identifiers(self: ptr Drive00): ptr cstring {.
     importc, libprag.}
 
 proc enumerateIdentifiers*(self: Drive): seq[string] =
@@ -4226,13 +4044,6 @@ proc g_drive_get_identifier(self: ptr Drive00; kind: cstring): cstring {.
     importc, libprag.}
 
 proc getIdentifier*(self: Drive; kind: cstring): string =
-  let resul0 = g_drive_get_identifier(cast[ptr Drive00](self.impl), kind)
-  if resul0.isNil:
-    return
-  result = $resul0
-  cogfree(resul0)
-
-proc identifier*(self: Drive; kind: cstring): string =
   let resul0 = g_drive_get_identifier(cast[ptr Drive00](self.impl), kind)
   if resul0.isNil:
     return
@@ -4303,15 +4114,6 @@ proc symbolicIcon*(self: Drive): Icon =
     g_object_unref(result.impl)
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc g_drive_get_volumes(self: ptr Drive00): ptr pointer {.
-    importc, libprag.}
-
-proc getVolumes*(self: Drive): ptr pointer =
-  g_drive_get_volumes(cast[ptr Drive00](self.impl))
-
-proc volumes*(self: Drive): ptr pointer =
-  g_drive_get_volumes(cast[ptr Drive00](self.impl))
 
 proc g_drive_has_media(self: ptr Drive00): gboolean {.
     importc, libprag.}
@@ -4423,7 +4225,7 @@ proc g_volume_can_mount(self: ptr Volume00): gboolean {.
 proc canMount*(self: Volume): bool =
   toBool(g_volume_can_mount(cast[ptr Volume00](self.impl)))
 
-proc g_volume_enumerate_identifiers(self: ptr Volume00): cstringArray {.
+proc g_volume_enumerate_identifiers(self: ptr Volume00): ptr cstring {.
     importc, libprag.}
 
 proc enumerateIdentifiers*(self: Volume): seq[string] =
@@ -4554,13 +4356,6 @@ proc g_volume_get_identifier(self: ptr Volume00; kind: cstring): cstring {.
     importc, libprag.}
 
 proc getIdentifier*(self: Volume; kind: cstring): string =
-  let resul0 = g_volume_get_identifier(cast[ptr Volume00](self.impl), kind)
-  if resul0.isNil:
-    return
-  result = $resul0
-  cogfree(resul0)
-
-proc identifier*(self: Volume; kind: cstring): string =
   let resul0 = g_volume_get_identifier(cast[ptr Volume00](self.impl), kind)
   if resul0.isNil:
     return
@@ -4737,44 +4532,51 @@ proc volume*(self: Mount): Volume =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
+proc g_drive_get_volumes(self: ptr Drive00): ptr glib.List {.
+    importc, libprag.}
+
+proc getVolumes*(self: Drive): seq[Volume] =
+  let resul0 = g_drive_get_volumes(cast[ptr Drive00](self.impl))
+  result = glistObjects2seq(Volume, resul0, true)
+  g_list_free(resul0)
+
+proc volumes*(self: Drive): seq[Volume] =
+  let resul0 = g_drive_get_volumes(cast[ptr Drive00](self.impl))
+  result = glistObjects2seq(Volume, resul0, true)
+  g_list_free(resul0)
+
 type
   AppInfo00* = object of gobject.Object00
   AppInfo* = ref object of gobject.Object
 
-proc getAll*(): ptr pointer {.
-    importc: "g_app_info_get_all", libprag.}
+proc g_app_info_get_all(): ptr glib.List {.
+    importc, libprag.}
 
-proc all*(): ptr pointer {.
-    importc: "g_app_info_get_all", libprag.}
+proc getAll*(): seq[AppInfo] =
+  let resul0 = g_app_info_get_all()
+  result = glistObjects2seq(AppInfo, resul0, true)
+  g_list_free(resul0)
 
-proc getAllForType*(contentType: cstring): ptr pointer {.
-    importc: "g_app_info_get_all_for_type", libprag.}
+proc g_app_info_get_all_for_type(contentType: cstring): ptr glib.List {.
+    importc, libprag.}
 
-proc allForType*(contentType: cstring): ptr pointer {.
-    importc: "g_app_info_get_all_for_type", libprag.}
+proc getAllForType*(contentType: cstring): seq[AppInfo] =
+  let resul0 = g_app_info_get_all_for_type(contentType)
+  result = glistObjects2seq(AppInfo, resul0, true)
+  g_list_free(resul0)
+
+proc allForType*(contentType: cstring): seq[AppInfo] =
+  let resul0 = g_app_info_get_all_for_type(contentType)
+  result = glistObjects2seq(AppInfo, resul0, true)
+  g_list_free(resul0)
 
 proc g_app_info_get_default_for_type(contentType: cstring; mustSupportUris: gboolean): ptr AppInfo00 {.
     importc, libprag.}
 
 proc getDefaultForType*(contentType: cstring; mustSupportUris: bool): AppInfo =
   let gobj = g_app_info_get_default_for_type(contentType, gboolean(mustSupportUris))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultForType*(contentType: cstring; mustSupportUris: bool): AppInfo =
-  let gobj = g_app_info_get_default_for_type(contentType, gboolean(mustSupportUris))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -4795,6 +4597,8 @@ proc g_app_info_get_default_for_uri_scheme(uriScheme: cstring): ptr AppInfo00 {.
 
 proc getDefaultForUriScheme*(uriScheme: cstring): AppInfo =
   let gobj = g_app_info_get_default_for_uri_scheme(uriScheme)
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -4812,6 +4616,8 @@ proc getDefaultForUriScheme*(uriScheme: cstring): AppInfo =
 
 proc defaultForUriScheme*(uriScheme: cstring): AppInfo =
   let gobj = g_app_info_get_default_for_uri_scheme(uriScheme)
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -4827,17 +4633,31 @@ proc defaultForUriScheme*(uriScheme: cstring): AppInfo =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc getFallbackForType*(contentType: cstring): ptr pointer {.
-    importc: "g_app_info_get_fallback_for_type", libprag.}
+proc g_app_info_get_fallback_for_type(contentType: cstring): ptr glib.List {.
+    importc, libprag.}
 
-proc fallbackForType*(contentType: cstring): ptr pointer {.
-    importc: "g_app_info_get_fallback_for_type", libprag.}
+proc getFallbackForType*(contentType: cstring): seq[AppInfo] =
+  let resul0 = g_app_info_get_fallback_for_type(contentType)
+  result = glistObjects2seq(AppInfo, resul0, true)
+  g_list_free(resul0)
 
-proc getRecommendedForType*(contentType: cstring): ptr pointer {.
-    importc: "g_app_info_get_recommended_for_type", libprag.}
+proc fallbackForType*(contentType: cstring): seq[AppInfo] =
+  let resul0 = g_app_info_get_fallback_for_type(contentType)
+  result = glistObjects2seq(AppInfo, resul0, true)
+  g_list_free(resul0)
 
-proc recommendedForType*(contentType: cstring): ptr pointer {.
-    importc: "g_app_info_get_recommended_for_type", libprag.}
+proc g_app_info_get_recommended_for_type(contentType: cstring): ptr glib.List {.
+    importc, libprag.}
+
+proc getRecommendedForType*(contentType: cstring): seq[AppInfo] =
+  let resul0 = g_app_info_get_recommended_for_type(contentType)
+  result = glistObjects2seq(AppInfo, resul0, true)
+  g_list_free(resul0)
+
+proc recommendedForType*(contentType: cstring): seq[AppInfo] =
+  let resul0 = g_app_info_get_recommended_for_type(contentType)
+  result = glistObjects2seq(AppInfo, resul0, true)
+  g_list_free(resul0)
 
 proc resetTypeAssociations*(contentType: cstring) {.
     importc: "g_app_info_reset_type_associations", libprag.}
@@ -5078,19 +4898,23 @@ proc initDesktopAppInfoFromKeyfile*[T](result: var T; keyFile: glib.KeyFile) {.d
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc getImplementations*(`interface`: cstring): ptr pointer {.
-    importc: "g_desktop_app_info_get_implementations", libprag.}
+proc g_desktop_app_info_get_implementations(`interface`: cstring): ptr glib.List {.
+    importc, libprag.}
 
-proc implementations*(`interface`: cstring): ptr pointer {.
-    importc: "g_desktop_app_info_get_implementations", libprag.}
+proc getImplementations*(`interface`: cstring): seq[DesktopAppInfo] =
+  let resul0 = g_desktop_app_info_get_implementations(`interface`)
+  result = glistObjects2seq(DesktopAppInfo, resul0, true)
+  g_list_free(resul0)
 
-proc search*(searchString: cstring): cstringArrayArray {.
+proc implementations*(`interface`: cstring): seq[DesktopAppInfo] =
+  let resul0 = g_desktop_app_info_get_implementations(`interface`)
+  result = glistObjects2seq(DesktopAppInfo, resul0, true)
+  g_list_free(resul0)
+
+proc search*(searchString: cstring): ptr ptr cstring {.
     importc: "g_desktop_app_info_search", libprag.}
 
 proc setDesktopEnv*(desktopEnv: cstring) {.
-    importc: "g_desktop_app_info_set_desktop_env", libprag.}
-
-proc `desktopEnv=`*(desktopEnv: cstring) {.
     importc: "g_desktop_app_info_set_desktop_env", libprag.}
 
 proc g_desktop_app_info_get_action_name(self: ptr DesktopAppInfo00; actionName: cstring): cstring {.
@@ -5101,18 +4925,10 @@ proc getActionName*(self: DesktopAppInfo; actionName: cstring): string =
   result = $resul0
   cogfree(resul0)
 
-proc actionName*(self: DesktopAppInfo; actionName: cstring): string =
-  let resul0 = g_desktop_app_info_get_action_name(cast[ptr DesktopAppInfo00](self.impl), actionName)
-  result = $resul0
-  cogfree(resul0)
-
 proc g_desktop_app_info_get_boolean(self: ptr DesktopAppInfo00; key: cstring): gboolean {.
     importc, libprag.}
 
 proc getBoolean*(self: DesktopAppInfo; key: cstring): bool =
-  toBool(g_desktop_app_info_get_boolean(cast[ptr DesktopAppInfo00](self.impl), key))
-
-proc boolean*(self: DesktopAppInfo; key: cstring): bool =
   toBool(g_desktop_app_info_get_boolean(cast[ptr DesktopAppInfo00](self.impl), key))
 
 proc g_desktop_app_info_get_categories(self: ptr DesktopAppInfo00): cstring {.
@@ -5151,7 +4967,7 @@ proc getIsHidden*(self: DesktopAppInfo): bool =
 proc isHidden*(self: DesktopAppInfo): bool =
   toBool(g_desktop_app_info_get_is_hidden(cast[ptr DesktopAppInfo00](self.impl)))
 
-proc g_desktop_app_info_get_keywords(self: ptr DesktopAppInfo00): cstringArray {.
+proc g_desktop_app_info_get_keywords(self: ptr DesktopAppInfo00): ptr cstring {.
     importc, libprag.}
 
 proc getKeywords*(self: DesktopAppInfo): seq[string] =
@@ -5164,13 +4980,6 @@ proc g_desktop_app_info_get_locale_string(self: ptr DesktopAppInfo00; key: cstri
     importc, libprag.}
 
 proc getLocaleString*(self: DesktopAppInfo; key: cstring): string =
-  let resul0 = g_desktop_app_info_get_locale_string(cast[ptr DesktopAppInfo00](self.impl), key)
-  if resul0.isNil:
-    return
-  result = $resul0
-  cogfree(resul0)
-
-proc localeString*(self: DesktopAppInfo; key: cstring): string =
   let resul0 = g_desktop_app_info_get_locale_string(cast[ptr DesktopAppInfo00](self.impl), key)
   if resul0.isNil:
     return
@@ -5192,9 +5001,6 @@ proc g_desktop_app_info_get_show_in(self: ptr DesktopAppInfo00; desktopEnv: cstr
 proc getShowIn*(self: DesktopAppInfo; desktopEnv: cstring = ""): bool =
   toBool(g_desktop_app_info_get_show_in(cast[ptr DesktopAppInfo00](self.impl), safeStringToCString(desktopEnv)))
 
-proc showIn*(self: DesktopAppInfo; desktopEnv: cstring = ""): bool =
-  toBool(g_desktop_app_info_get_show_in(cast[ptr DesktopAppInfo00](self.impl), safeStringToCString(desktopEnv)))
-
 proc g_desktop_app_info_get_startup_wm_class(self: ptr DesktopAppInfo00): cstring {.
     importc, libprag.}
 
@@ -5213,17 +5019,11 @@ proc getString*(self: DesktopAppInfo; key: cstring): string =
   cogfree(resul0)
 
 proc g_desktop_app_info_get_string_list(self: ptr DesktopAppInfo00; key: cstring;
-    length: var uint64): cstringArray {.
+    length: var uint64): ptr cstring {.
     importc, libprag.}
 
 proc getStringList*(self: DesktopAppInfo; key: cstring;
-    length: var uint64): seq[string] =
-  let resul0 = g_desktop_app_info_get_string_list(cast[ptr DesktopAppInfo00](self.impl), key, length)
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc stringList*(self: DesktopAppInfo; key: cstring;
-    length: var uint64): seq[string] =
+    length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = g_desktop_app_info_get_string_list(cast[ptr DesktopAppInfo00](self.impl), key, length)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
@@ -5234,7 +5034,7 @@ proc g_desktop_app_info_has_key(self: ptr DesktopAppInfo00; key: cstring): gbool
 proc hasKey*(self: DesktopAppInfo; key: cstring): bool =
   toBool(g_desktop_app_info_has_key(cast[ptr DesktopAppInfo00](self.impl), key))
 
-proc g_desktop_app_info_list_actions(self: ptr DesktopAppInfo00): cstringArray {.
+proc g_desktop_app_info_list_actions(self: ptr DesktopAppInfo00): ptr cstring {.
     importc, libprag.}
 
 proc listActions*(self: DesktopAppInfo): seq[string] =
@@ -5318,22 +5118,18 @@ proc initAppLaunchContext*[T](result: var T) {.deprecated.} =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc g_app_launch_context_get_display(self: ptr AppLaunchContext00; info: ptr AppInfo00;
-    files: ptr pointer): cstring {.
+    files: ptr glib.List): cstring {.
     importc, libprag.}
 
 proc getDisplay*(self: AppLaunchContext; info: AppInfo | DesktopAppInfo;
-    files: ptr pointer): string =
-  let resul0 = g_app_launch_context_get_display(cast[ptr AppLaunchContext00](self.impl), cast[ptr AppInfo00](info.impl), files)
+    files: seq[GFile]): string =
+  var tempResGL = seq2GList(files)
+  let resul0 = g_app_launch_context_get_display(cast[ptr AppLaunchContext00](self.impl), cast[ptr AppInfo00](info.impl), tempResGL)
+  g_list_free(tempResGL)
   result = $resul0
   cogfree(resul0)
 
-proc display*(self: AppLaunchContext; info: AppInfo | DesktopAppInfo;
-    files: ptr pointer): string =
-  let resul0 = g_app_launch_context_get_display(cast[ptr AppLaunchContext00](self.impl), cast[ptr AppInfo00](info.impl), files)
-  result = $resul0
-  cogfree(resul0)
-
-proc g_app_launch_context_get_environment(self: ptr AppLaunchContext00): cstringArray {.
+proc g_app_launch_context_get_environment(self: ptr AppLaunchContext00): ptr cstring {.
     importc, libprag.}
 
 proc getEnvironment*(self: AppLaunchContext): seq[string] =
@@ -5347,18 +5143,14 @@ proc environment*(self: AppLaunchContext): seq[string] =
   g_strfreev(resul0)
 
 proc g_app_launch_context_get_startup_notify_id(self: ptr AppLaunchContext00;
-    info: ptr AppInfo00; files: ptr pointer): cstring {.
+    info: ptr AppInfo00; files: ptr glib.List): cstring {.
     importc, libprag.}
 
 proc getStartupNotifyId*(self: AppLaunchContext; info: AppInfo | DesktopAppInfo;
-    files: ptr pointer): string =
-  let resul0 = g_app_launch_context_get_startup_notify_id(cast[ptr AppLaunchContext00](self.impl), cast[ptr AppInfo00](info.impl), files)
-  result = $resul0
-  cogfree(resul0)
-
-proc startupNotifyId*(self: AppLaunchContext; info: AppInfo | DesktopAppInfo;
-    files: ptr pointer): string =
-  let resul0 = g_app_launch_context_get_startup_notify_id(cast[ptr AppLaunchContext00](self.impl), cast[ptr AppInfo00](info.impl), files)
+    files: seq[GFile]): string =
+  var tempResGL = seq2GList(files)
+  let resul0 = g_app_launch_context_get_startup_notify_id(cast[ptr AppLaunchContext00](self.impl), cast[ptr AppInfo00](info.impl), tempResGL)
+  g_list_free(tempResGL)
   result = $resul0
   cogfree(resul0)
 
@@ -5541,7 +5333,7 @@ proc getName*(self: AppInfo | DesktopAppInfo): string =
 proc name*(self: AppInfo | DesktopAppInfo): string =
   result = $g_app_info_get_name(cast[ptr AppInfo00](self.impl))
 
-proc g_app_info_get_supported_types(self: ptr AppInfo00): cstringArray {.
+proc g_app_info_get_supported_types(self: ptr AppInfo00): ptr cstring {.
     importc, libprag.}
 
 proc getSupportedTypes*(self: AppInfo | DesktopAppInfo): seq[string] =
@@ -5550,28 +5342,32 @@ proc getSupportedTypes*(self: AppInfo | DesktopAppInfo): seq[string] =
 proc supportedTypes*(self: AppInfo | DesktopAppInfo): seq[string] =
   cstringArrayToSeq(g_app_info_get_supported_types(cast[ptr AppInfo00](self.impl)))
 
-proc g_app_info_launch(self: ptr AppInfo00; files: ptr pointer; context: ptr AppLaunchContext00;
+proc g_app_info_launch(self: ptr AppInfo00; files: ptr glib.List; context: ptr AppLaunchContext00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc launch*(self: AppInfo | DesktopAppInfo; files: ptr pointer;
+proc launch*(self: AppInfo | DesktopAppInfo; files: seq[GFile];
     context: AppLaunchContext = nil): bool =
+  var tempResGL = seq2GList(files)
   var gerror: ptr glib.Error
-  let resul0 = g_app_info_launch(cast[ptr AppInfo00](self.impl), files, if context.isNil: nil else: cast[ptr AppLaunchContext00](context.impl), addr gerror)
+  let resul0 = g_app_info_launch(cast[ptr AppInfo00](self.impl), tempResGL, if context.isNil: nil else: cast[ptr AppLaunchContext00](context.impl), addr gerror)
+  g_list_free(tempResGL)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_app_info_launch_uris(self: ptr AppInfo00; uris: ptr pointer; context: ptr AppLaunchContext00;
+proc g_app_info_launch_uris(self: ptr AppInfo00; uris: ptr glib.List; context: ptr AppLaunchContext00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc launchUris*(self: AppInfo | DesktopAppInfo; uris: ptr pointer;
+proc launchUris*(self: AppInfo | DesktopAppInfo; uris: seq[cstring];
     context: AppLaunchContext = nil): bool =
+  var tempResGL = seq2GList(uris)
   var gerror: ptr glib.Error
-  let resul0 = g_app_info_launch_uris(cast[ptr AppInfo00](self.impl), uris, if context.isNil: nil else: cast[ptr AppLaunchContext00](context.impl), addr gerror)
+  let resul0 = g_app_info_launch_uris(cast[ptr AppInfo00](self.impl), tempResGL, if context.isNil: nil else: cast[ptr AppLaunchContext00](context.impl), addr gerror)
+  g_list_free(tempResGL)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -5605,16 +5401,6 @@ proc setAsDefaultForExtension*(self: AppInfo | DesktopAppInfo;
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc `asDefaultForExtension=`*(self: AppInfo | DesktopAppInfo;
-    extension: cstring): bool =
-  var gerror: ptr glib.Error
-  let resul0 = g_app_info_set_as_default_for_extension(cast[ptr AppInfo00](self.impl), extension, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
 proc g_app_info_set_as_default_for_type(self: ptr AppInfo00; contentType: cstring;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
@@ -5628,30 +5414,11 @@ proc setAsDefaultForType*(self: AppInfo | DesktopAppInfo; contentType: cstring):
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc `asDefaultForType=`*(self: AppInfo | DesktopAppInfo; contentType: cstring): bool =
-  var gerror: ptr glib.Error
-  let resul0 = g_app_info_set_as_default_for_type(cast[ptr AppInfo00](self.impl), contentType, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
 proc g_app_info_set_as_last_used_for_type(self: ptr AppInfo00; contentType: cstring;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc setAsLastUsedForType*(self: AppInfo | DesktopAppInfo;
-    contentType: cstring): bool =
-  var gerror: ptr glib.Error
-  let resul0 = g_app_info_set_as_last_used_for_type(cast[ptr AppInfo00](self.impl), contentType, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc `asLastUsedForType=`*(self: AppInfo | DesktopAppInfo;
     contentType: cstring): bool =
   var gerror: ptr glib.Error
   let resul0 = g_app_info_set_as_last_used_for_type(cast[ptr AppInfo00](self.impl), contentType, addr gerror)
@@ -6040,7 +5807,7 @@ proc returnPointer*(self: Task; resu: pointer; resultDestroy: DestroyNotify) =
 proc g_task_return_value(self: ptr Task00; resu: gobject.Value) {.
     importc, libprag.}
 
-proc returnValue*(self: Task; resu: gobject.Value = cast[ptr gobject.Value](nil)[]) =
+proc returnValue*(self: Task; resu: gobject.Value = cast[var gobject.Value](nil)) =
   g_task_return_value(cast[ptr Task00](self.impl), resu)
 
 proc g_task_set_check_cancellable(self: ptr Task00; checkCancellable: gboolean) {.
@@ -6074,9 +5841,6 @@ proc g_task_set_return_on_cancel(self: ptr Task00; returnOnCancel: gboolean): gb
     importc, libprag.}
 
 proc setReturnOnCancel*(self: Task; returnOnCancel: bool = true): bool =
-  toBool(g_task_set_return_on_cancel(cast[ptr Task00](self.impl), gboolean(returnOnCancel)))
-
-proc `returnOnCancel=`*(self: Task; returnOnCancel: bool): bool =
   toBool(g_task_set_return_on_cancel(cast[ptr Task00](self.impl), gboolean(returnOnCancel)))
 
 proc g_task_set_source_tag(self: ptr Task00; sourceTag: pointer) {.
@@ -6277,7 +6041,7 @@ proc g_file_load_bytes_finish(self: ptr GFile00; resu: ptr AsyncResult00;
     importc, libprag.}
 
 proc loadBytesFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task;
-    etagOut: var string): glib.Bytes =
+    etagOut: var string = cast[var string](nil)): glib.Bytes =
   var gerror: ptr glib.Error
   var etagOut_00 = cstring(etagOut)
   let impl0 = g_file_load_bytes_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), etagOut_00, addr gerror)
@@ -6290,21 +6054,23 @@ proc loadBytesFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task;
   etagOut = $(etagOut_00)
 
 proc g_file_load_contents_finish(self: ptr GFile00; res: ptr AsyncResult00;
-    contents: var uint8Array; length: var uint64; etagOut: var cstring; error: ptr ptr glib.Error = nil): gboolean {.
+    contents: var ptr uint8; length: var uint64; etagOut: var cstring; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc loadContentsFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task;
-    contents: var (seq[uint8] | string); length: var uint64; etagOut: var string): bool =
+    contents: var (seq[uint8] | string); length: var uint64 = cast[var uint64](nil);
+    etagOut: var string = cast[var string](nil)): bool =
   var gerror: ptr glib.Error
-  var etagOut_00 = cstring(etagOut)
-  var contents_00: pointer
+  var etagOut_00: cstring
+  var contents_00: ptr uint8
   let resul0 = g_file_load_contents_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), contents_00, length, etagOut_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  etagOut = $(etagOut_00)
+  if etagOut.addr != nil:
+    etagOut = $(etagOut_00)
   contents.setLen(length)
   copyMem(unsafeaddr contents[0], contents_00, length.int * sizeof(contents[0]))
   cogfree(contents_00)
@@ -6327,7 +6093,8 @@ proc g_file_measure_disk_usage_finish(self: ptr GFile00; resu: ptr AsyncResult00
     importc, libprag.}
 
 proc measureDiskUsageFinish*(self: GFile; resu: AsyncResult | SimpleAsyncResult | Task;
-    diskUsage: var uint64; numDirs: var uint64; numFiles: var uint64): bool =
+    diskUsage: var uint64 = cast[var uint64](nil); numDirs: var uint64 = cast[var uint64](nil);
+    numFiles: var uint64 = cast[var uint64](nil)): bool =
   var gerror: ptr glib.Error
   let resul0 = g_file_measure_disk_usage_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](resu.impl), diskUsage, numDirs, numFiles, addr gerror)
   if gerror != nil:
@@ -6497,16 +6264,17 @@ proc g_file_replace_contents_finish(self: ptr GFile00; res: ptr AsyncResult00;
     importc, libprag.}
 
 proc replaceContentsFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task;
-    newEtag: var string): bool =
+    newEtag: var string = cast[var string](nil)): bool =
   var gerror: ptr glib.Error
-  var newEtag_00 = cstring(newEtag)
+  var newEtag_00: cstring
   let resul0 = g_file_replace_contents_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), newEtag_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  newEtag = $(newEtag_00)
+  if newEtag.addr != nil:
+    newEtag = $(newEtag_00)
 
 proc g_file_replace_finish(self: ptr GFile00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr FileOutputStream00 {.
     importc, libprag.}
@@ -6579,28 +6347,6 @@ proc g_file_set_display_name_finish(self: ptr GFile00; res: ptr AsyncResult00;
     importc, libprag.}
 
 proc setDisplayNameFinish*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): GFile =
-  var gerror: ptr glib.Error
-  let gobj = g_file_set_display_name_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc `displayNameFinish=`*(self: GFile; res: AsyncResult | SimpleAsyncResult | Task): GFile =
   var gerror: ptr glib.Error
   let gobj = g_file_set_display_name_finish(cast[ptr GFile00](self.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
@@ -6781,7 +6527,7 @@ proc g_output_stream_write_all_finish(self: ptr OutputStream00; resu: ptr AsyncR
     importc, libprag.}
 
 proc writeAllFinish*(self: OutputStream; resu: AsyncResult | SimpleAsyncResult | Task;
-    bytesWritten: var uint64): bool =
+    bytesWritten: var uint64 = cast[var uint64](nil)): bool =
   var gerror: ptr glib.Error
   let resul0 = g_output_stream_write_all_finish(cast[ptr OutputStream00](self.impl), cast[ptr AsyncResult00](resu.impl), bytesWritten, addr gerror)
   if gerror != nil:
@@ -6821,7 +6567,7 @@ proc g_output_stream_writev_all_finish(self: ptr OutputStream00; resu: ptr Async
     importc, libprag.}
 
 proc writevAllFinish*(self: OutputStream; resu: AsyncResult | SimpleAsyncResult | Task;
-    bytesWritten: var uint64): bool =
+    bytesWritten: var uint64 = cast[var uint64](nil)): bool =
   var gerror: ptr glib.Error
   let resul0 = g_output_stream_writev_all_finish(cast[ptr OutputStream00](self.impl), cast[ptr AsyncResult00](resu.impl), bytesWritten, addr gerror)
   if gerror != nil:
@@ -6835,7 +6581,7 @@ proc g_output_stream_writev_finish(self: ptr OutputStream00; resu: ptr AsyncResu
     importc, libprag.}
 
 proc writevFinish*(self: OutputStream; resu: AsyncResult | SimpleAsyncResult | Task;
-    bytesWritten: var uint64): bool =
+    bytesWritten: var uint64 = cast[var uint64](nil)): bool =
   var gerror: ptr glib.Error
   let resul0 = g_output_stream_writev_finish(cast[ptr OutputStream00](self.impl), cast[ptr AsyncResult00](resu.impl), bytesWritten, addr gerror)
   if gerror != nil:
@@ -6924,17 +6670,18 @@ proc closeFinish*(self: FileEnumerator; resu: AsyncResult | SimpleAsyncResult | 
   result = toBool(resul0)
 
 proc g_file_enumerator_next_files_finish(self: ptr FileEnumerator00; resu: ptr AsyncResult00;
-    error: ptr ptr glib.Error = nil): ptr pointer {.
+    error: ptr ptr glib.Error = nil): ptr glib.List {.
     importc, libprag.}
 
-proc nextFilesFinish*(self: FileEnumerator; resu: AsyncResult | SimpleAsyncResult | Task): ptr pointer =
+proc nextFilesFinish*(self: FileEnumerator; resu: AsyncResult | SimpleAsyncResult | Task): seq[FileInfo] =
   var gerror: ptr glib.Error
   let resul0 = g_file_enumerator_next_files_finish(cast[ptr FileEnumerator00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = resul0
+  result = glistObjects2seq(FileInfo, resul0, true)
+  g_list_free(resul0)
 
 proc g_mount_eject_finish(self: ptr Mount00; resu: ptr AsyncResult00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
@@ -6962,7 +6709,7 @@ proc ejectWithOperationFinish*(self: Mount; resu: AsyncResult | SimpleAsyncResul
   result = toBool(resul0)
 
 proc g_mount_guess_content_type_finish(self: ptr Mount00; resu: ptr AsyncResult00;
-    error: ptr ptr glib.Error = nil): cstringArray {.
+    error: ptr ptr glib.Error = nil): ptr cstring {.
     importc, libprag.}
 
 proc guessContentTypeFinish*(self: Mount; resu: AsyncResult | SimpleAsyncResult | Task): seq[string] =
@@ -7590,24 +7337,6 @@ proc getDBusActionGroup*(connection: DBusConnection; busName: cstring = "";
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc dBusActionGroup*(connection: DBusConnection; busName: cstring = "";
-    objectPath: cstring): DBusActionGroup =
-  let gobj = g_dbus_action_group_get(cast[ptr DBusConnection00](connection.impl), safeStringToCString(busName), objectPath)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 type
   UnixFDList* = ref object of gobject.Object
   UnixFDList00* = object of gobject.Object00
@@ -7679,12 +7408,12 @@ proc initUnixFDList*[T](result: var T) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_unix_fd_list_new_from_array(fds: int32Array; nFds: int32): ptr UnixFDList00 {.
+proc g_unix_fd_list_new_from_array(fds: ptr int32; nFds: int32): ptr UnixFDList00 {.
     importc, libprag.}
 
 proc newUnixFDListFromArray*(fds: seq[int32]): UnixFDList =
   let nFds = int(fds.len)
-  let gobj = g_unix_fd_list_new_from_array(unsafeaddr(fds[0]), int32(nFds))
+  let gobj = g_unix_fd_list_new_from_array(cast[ptr int32](unsafeaddr(fds[0])), int32(nFds))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -7703,7 +7432,7 @@ proc newUnixFDListFromArray*(fds: seq[int32]): UnixFDList =
 proc newUnixFDListFromArray*(tdesc: typedesc; fds: seq[int32]): tdesc =
   let nFds = int(fds.len)
   assert(result is UnixFDList)
-  let gobj = g_unix_fd_list_new_from_array(unsafeaddr(fds[0]), int32(nFds))
+  let gobj = g_unix_fd_list_new_from_array(cast[ptr int32](unsafeaddr(fds[0])), int32(nFds))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -7722,7 +7451,7 @@ proc newUnixFDListFromArray*(tdesc: typedesc; fds: seq[int32]): tdesc =
 proc initUnixFDListFromArray*[T](result: var T; fds: seq[int32]) {.deprecated.} =
   let nFds = int(fds.len)
   assert(result is UnixFDList)
-  let gobj = g_unix_fd_list_new_from_array(unsafeaddr(fds[0]), int32(nFds))
+  let gobj = g_unix_fd_list_new_from_array(cast[ptr int32](unsafeaddr(fds[0])), int32(nFds))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -7762,15 +7491,6 @@ proc getUnixFDList*(self: UnixFDList; index: int): int =
     raise newException(GException, msg)
   result = int(resul0)
 
-proc unixFDList*(self: UnixFDList; index: int): int =
-  var gerror: ptr glib.Error
-  let resul0 = g_unix_fd_list_get(cast[ptr UnixFDList00](self.impl), int32(index), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = int(resul0)
-
 proc g_unix_fd_list_get_length(self: ptr UnixFDList00): int32 {.
     importc, libprag.}
 
@@ -7780,32 +7500,34 @@ proc getLength*(self: UnixFDList): int =
 proc length*(self: UnixFDList): int =
   int(g_unix_fd_list_get_length(cast[ptr UnixFDList00](self.impl)))
 
-proc g_unix_fd_list_peek_fds(self: ptr UnixFDList00; length: var int32): int32Array {.
+proc g_unix_fd_list_peek_fds(self: ptr UnixFDList00; length: var int32): ptr int32 {.
     importc, libprag.}
 
-proc peekFds*(self: UnixFDList; length: var int): seq[int32] =
-  var length_00 = int32(length)
-  result = int32ArrayZT2seq(g_unix_fd_list_peek_fds(cast[ptr UnixFDList00](self.impl), length_00))
-  length = int(length_00)
+proc peekFds*(self: UnixFDList; length: var int = cast[var int](nil)): seq[int32] =
+  var length_00: int32
+  result = int32ArrayToSeq(g_unix_fd_list_peek_fds(cast[ptr UnixFDList00](self.impl), length_00), length.int)
+  if length.addr != nil:
+    length = int(length_00)
 
-proc g_unix_fd_list_steal_fds(self: ptr UnixFDList00; length: var int32): int32Array {.
+proc g_unix_fd_list_steal_fds(self: ptr UnixFDList00; length: var int32): ptr int32 {.
     importc, libprag.}
 
-proc stealFds*(self: UnixFDList; length: var int): seq[int32] =
-  var length_00 = int32(length)
+proc stealFds*(self: UnixFDList; length: var int = cast[var int](nil)): seq[int32] =
+  var length_00: int32
   let resul0 = g_unix_fd_list_steal_fds(cast[ptr UnixFDList00](self.impl), length_00)
-  result = int32ArrayZT2seq(resul0)
+  result = int32ArrayToSeq(resul0, length.int)
   cogfree(resul0)
-  length = int(length_00)
+  if length.addr != nil:
+    length = int(length_00)
 
 proc g_dbus_connection_call_with_unix_fd_list_finish(self: ptr DBusConnection00;
     outFdList: var ptr UnixFDList00; res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr glib.Variant00 {.
     importc, libprag.}
 
 proc callWithUnixFdListFinish*(self: DBusConnection;
-    outFdList: var UnixFDList; res: AsyncResult | SimpleAsyncResult | Task): glib.Variant =
+    outFdList: var UnixFDList = cast[var UnixFDList](nil); res: AsyncResult | SimpleAsyncResult | Task): glib.Variant =
   var gerror: ptr glib.Error
-  let impl0 = g_dbus_connection_call_with_unix_fd_list_finish(cast[ptr DBusConnection00](self.impl), cast[var ptr UnixFDList00](addr outFdList.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let impl0 = g_dbus_connection_call_with_unix_fd_list_finish(cast[ptr DBusConnection00](self.impl), cast[var ptr UnixFDList00](if addr(outFdList) == nil: nil else: addr outFdList.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -7847,33 +7569,11 @@ proc getItemAttributeValue*(self: MenuModel; itemIndex: int;
   fnew(result, finalizerunref)
   result.impl = g_menu_model_get_item_attribute_value(cast[ptr MenuModel00](self.impl), int32(itemIndex), attribute, if expectedType.isNil: nil else: cast[ptr glib.VariantType00](expectedType.impl))
 
-proc itemAttributeValue*(self: MenuModel; itemIndex: int;
-    attribute: cstring; expectedType: glib.VariantType = nil): glib.Variant =
-  fnew(result, finalizerunref)
-  result.impl = g_menu_model_get_item_attribute_value(cast[ptr MenuModel00](self.impl), int32(itemIndex), attribute, if expectedType.isNil: nil else: cast[ptr glib.VariantType00](expectedType.impl))
-
 proc g_menu_model_get_item_link(self: ptr MenuModel00; itemIndex: int32;
     link: cstring): ptr MenuModel00 {.
     importc, libprag.}
 
 proc getItemLink*(self: MenuModel; itemIndex: int; link: cstring): MenuModel =
-  let gobj = g_menu_model_get_item_link(cast[ptr MenuModel00](self.impl), int32(itemIndex), link)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc itemLink*(self: MenuModel; itemIndex: int; link: cstring): MenuModel =
   let gobj = g_menu_model_get_item_link(cast[ptr MenuModel00](self.impl), int32(itemIndex), link)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -7955,19 +7655,14 @@ proc g_menu_attribute_iter_get_next(self: ptr MenuAttributeIter00; outName: var 
     value: var ptr glib.Variant00): gboolean {.
     importc, libprag.}
 
-proc getNext*(self: MenuAttributeIter; outName: var string;
-    value: var glib.Variant): bool =
-  fnew(value, finalizerunref)
-  var outName_00 = cstring(outName)
-  result = toBool(g_menu_attribute_iter_get_next(cast[ptr MenuAttributeIter00](self.impl), outName_00, cast[var ptr glib.Variant00](addr value.impl)))
-  outName = $(outName_00)
-
-proc next*(self: MenuAttributeIter; outName: var string;
-    value: var glib.Variant): bool =
-  fnew(value, finalizerunref)
-  var outName_00 = cstring(outName)
-  result = toBool(g_menu_attribute_iter_get_next(cast[ptr MenuAttributeIter00](self.impl), outName_00, cast[var ptr glib.Variant00](addr value.impl)))
-  outName = $(outName_00)
+proc getNext*(self: MenuAttributeIter; outName: var string = cast[var string](nil);
+    value: var glib.Variant = cast[var glib.Variant](nil)): bool =
+  if addr(value) != nil:
+    fnew(value, finalizerunref)
+  var outName_00: cstring
+  result = toBool(g_menu_attribute_iter_get_next(cast[ptr MenuAttributeIter00](self.impl), outName_00, cast[var ptr glib.Variant00](if addr(value) == nil: nil else: addr value.impl)))
+  if outName.addr != nil:
+    outName = $(outName_00)
 
 proc g_menu_attribute_iter_get_value(self: ptr MenuAttributeIter00): ptr glib.Variant00 {.
     importc, libprag.}
@@ -8034,17 +7729,14 @@ proc g_menu_link_iter_get_next(self: ptr MenuLinkIter00; outLink: var cstring;
     value: var ptr MenuModel00): gboolean {.
     importc, libprag.}
 
-proc getNext*(self: MenuLinkIter; outLink: var string; value: var MenuModel): bool =
-  fnew(value, gio.finalizeGObject)
-  var outLink_00 = cstring(outLink)
-  result = toBool(g_menu_link_iter_get_next(cast[ptr MenuLinkIter00](self.impl), outLink_00, cast[var ptr MenuModel00](addr value.impl)))
-  outLink = $(outLink_00)
-
-proc next*(self: MenuLinkIter; outLink: var string; value: var MenuModel): bool =
-  fnew(value, gio.finalizeGObject)
-  var outLink_00 = cstring(outLink)
-  result = toBool(g_menu_link_iter_get_next(cast[ptr MenuLinkIter00](self.impl), outLink_00, cast[var ptr MenuModel00](addr value.impl)))
-  outLink = $(outLink_00)
+proc getNext*(self: MenuLinkIter; outLink: var string = cast[var string](nil);
+    value: var MenuModel = cast[var MenuModel](nil)): bool =
+  if addr(value) != nil:
+    fnew(value, gio.finalizeGObject)
+  var outLink_00: cstring
+  result = toBool(g_menu_link_iter_get_next(cast[ptr MenuLinkIter00](self.impl), outLink_00, cast[var ptr MenuModel00](if addr(value) == nil: nil else: addr value.impl)))
+  if outLink.addr != nil:
+    outLink = $(outLink_00)
 
 proc g_menu_link_iter_get_value(self: ptr MenuLinkIter00): ptr MenuModel00 {.
     importc, libprag.}
@@ -8281,15 +7973,6 @@ proc setUnixUser*(self: Credentials; uid: int): bool =
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc `unixUser=`*(self: Credentials; uid: int): bool =
-  var gerror: ptr glib.Error
-  let resul0 = g_credentials_set_unix_user(cast[ptr Credentials00](self.impl), uint32(uid), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
 proc g_credentials_to_string(self: ptr Credentials00): cstring {.
     importc, libprag.}
 
@@ -8436,6 +8119,7 @@ type
     openbsdSockpeercred = 3
     solarisUcred = 4
     netbsdUnpcbid = 5
+    appleXucred = 6
 
 proc g_credentials_set_native(self: ptr Credentials00; nativeType: CredentialsType;
     native: pointer) {.
@@ -8462,6 +8146,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_dbus_interface_info_get_type(), cast[ptr DBusInterfaceInfo00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var DBusInterfaceInfo) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGDBusInterfaceInfo)
 
 proc g_dbus_interface_info_unref(self: ptr DBusInterfaceInfo00) {.
     importc, libprag.}
@@ -8535,6 +8225,12 @@ when defined(gcDestructors):
       boxedFree(g_dbus_method_info_get_type(), cast[ptr DBusMethodInfo00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var DBusMethodInfo) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGDBusMethodInfo)
+
 proc g_dbus_method_info_unref(self: ptr DBusMethodInfo00) {.
     importc, libprag.}
 
@@ -8577,6 +8273,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_dbus_property_info_get_type(), cast[ptr DBusPropertyInfo00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var DBusPropertyInfo) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGDBusPropertyInfo)
 
 proc g_dbus_property_info_unref(self: ptr DBusPropertyInfo00) {.
     importc, libprag.}
@@ -8621,6 +8323,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_dbus_signal_info_get_type(), cast[ptr DBusSignalInfo00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var DBusSignalInfo) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGDBusSignalInfo)
 
 proc g_dbus_signal_info_unref(self: ptr DBusSignalInfo00) {.
     importc, libprag.}
@@ -8746,14 +8454,14 @@ proc initDBusMessage*[T](result: var T) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_dbus_message_new_from_blob(blob: uint8Array; blobLen: uint64; capabilities: DBusCapabilityFlags;
+proc g_dbus_message_new_from_blob(blob: ptr uint8; blobLen: uint64; capabilities: DBusCapabilityFlags;
     error: ptr ptr glib.Error = nil): ptr DBusMessage00 {.
     importc, libprag.}
 
 proc newDBusMessageFromBlob*(blob: seq[uint8] | string; capabilities: DBusCapabilityFlags): DBusMessage =
   let blobLen = uint64(blob.len)
   var gerror: ptr glib.Error
-  let gobj = g_dbus_message_new_from_blob(unsafeaddr(blob[0]), blobLen, capabilities, addr gerror)
+  let gobj = g_dbus_message_new_from_blob(cast[ptr uint8](unsafeaddr(blob[0])), blobLen, capabilities, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -8777,7 +8485,7 @@ proc newDBusMessageFromBlob*(tdesc: typedesc; blob: seq[uint8] | string; capabil
   let blobLen = uint64(blob.len)
   var gerror: ptr glib.Error
   assert(result is DBusMessage)
-  let gobj = g_dbus_message_new_from_blob(unsafeaddr(blob[0]), blobLen, capabilities, addr gerror)
+  let gobj = g_dbus_message_new_from_blob(cast[ptr uint8](unsafeaddr(blob[0])), blobLen, capabilities, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -8801,7 +8509,7 @@ proc initDBusMessageFromBlob*[T](result: var T; blob: seq[uint8] | string; capab
   let blobLen = uint64(blob.len)
   var gerror: ptr glib.Error
   assert(result is DBusMessage)
-  let gobj = g_dbus_message_new_from_blob(unsafeaddr(blob[0]), blobLen, capabilities, addr gerror)
+  let gobj = g_dbus_message_new_from_blob(cast[ptr uint8](unsafeaddr(blob[0])), blobLen, capabilities, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -8937,13 +8645,13 @@ proc initDBusMessageSignal*[T](result: var T; path: cstring; `interface`: cstrin
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_dbus_message_bytes_needed(blob: uint8Array; blobLen: uint64; error: ptr ptr glib.Error = nil): int64 {.
+proc g_dbus_message_bytes_needed(blob: ptr uint8; blobLen: uint64; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
 proc bytesNeeded*(blob: seq[uint8] | string): int64 =
   let blobLen = uint64(blob.len)
   var gerror: ptr glib.Error
-  let resul0 = g_dbus_message_bytes_needed(unsafeaddr(blob[0]), blobLen, addr gerror)
+  let resul0 = g_dbus_message_bytes_needed(cast[ptr uint8](unsafeaddr(blob[0])), blobLen, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -9015,7 +8723,7 @@ proc getErrorName*(self: DBusMessage): string =
 proc errorName*(self: DBusMessage): string =
   result = $g_dbus_message_get_error_name(cast[ptr DBusMessage00](self.impl))
 
-proc g_dbus_message_get_header_fields(self: ptr DBusMessage00): uint8Array {.
+proc g_dbus_message_get_header_fields(self: ptr DBusMessage00): ptr uint8 {.
     importc, libprag.}
 
 proc getHeaderFields*(self: DBusMessage): seq[uint8] =
@@ -9302,7 +9010,7 @@ proc `unixFdList=`*(self: DBusMessage; fdList: UnixFDList = nil) =
   g_dbus_message_set_unix_fd_list(cast[ptr DBusMessage00](self.impl), if fdList.isNil: nil else: cast[ptr UnixFDList00](fdList.impl))
 
 proc g_dbus_message_to_blob(self: ptr DBusMessage00; outSize: var uint64;
-    capabilities: DBusCapabilityFlags; error: ptr ptr glib.Error = nil): uint8Array {.
+    capabilities: DBusCapabilityFlags; error: ptr ptr glib.Error = nil): ptr uint8 {.
     importc, libprag.}
 
 proc toBlob*(self: DBusMessage; outSize: var uint64; capabilities: DBusCapabilityFlags): seq[uint8] =
@@ -9312,7 +9020,7 @@ proc toBlob*(self: DBusMessage; outSize: var uint64; capabilities: DBusCapabilit
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = uint8ArrayZT2seq(resul0)
+  result = uint8ArrayToSeq(resul0, outSize.int)
   cogfree(resul0)
 
 proc g_dbus_message_to_gerror(self: ptr DBusMessage00; error: ptr ptr glib.Error = nil): gboolean {.
@@ -9365,16 +9073,17 @@ proc g_dbus_connection_send_message(self: ptr DBusConnection00; message: ptr DBu
     importc, libprag.}
 
 proc sendMessage*(self: DBusConnection; message: DBusMessage;
-    flags: DBusSendMessageFlags; outSerial: var int): bool =
+    flags: DBusSendMessageFlags; outSerial: var int = cast[var int](nil)): bool =
   var gerror: ptr glib.Error
-  var outSerial_00 = uint32(outSerial)
+  var outSerial_00: uint32
   let resul0 = g_dbus_connection_send_message(cast[ptr DBusConnection00](self.impl), cast[ptr DBusMessage00](message.impl), flags, outSerial_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  outSerial = int(outSerial_00)
+  if outSerial.addr != nil:
+    outSerial = int(outSerial_00)
 
 type
   DBusMessageByteOrder* {.size: sizeof(cint), pure.} = enum
@@ -9442,14 +9151,6 @@ proc g_dbus_message_get_header(self: ptr DBusMessage00; headerField: DBusMessage
     importc, libprag.}
 
 proc getHeader*(self: DBusMessage; headerField: DBusMessageHeaderField): glib.Variant =
-  let impl0 = g_dbus_message_get_header(cast[ptr DBusMessage00](self.impl), headerField)
-  if impl0.isNil:
-    return nil
-  fnew(result, finalizerunref)
-  result.impl = impl0
-  result.ignoreFinalizer = true
-
-proc header*(self: DBusMessage; headerField: DBusMessageHeaderField): glib.Variant =
   let impl0 = g_dbus_message_get_header(cast[ptr DBusMessage00](self.impl), headerField)
   if impl0.isNil:
     return nil
@@ -9594,24 +9295,6 @@ proc getCurrent*(): Cancellable =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc current*(): Cancellable =
-  let gobj = g_cancellable_get_current()
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc g_cancellable_cancel(self: ptr Cancellable00) {.
     importc, libprag.}
 
@@ -9647,11 +9330,11 @@ proc g_cancellable_is_cancelled(self: ptr Cancellable00): gboolean {.
 proc isCancelled*(self: Cancellable): bool =
   toBool(g_cancellable_is_cancelled(cast[ptr Cancellable00](self.impl)))
 
-proc g_cancellable_make_pollfd(self: ptr Cancellable00; pollfd: ptr glib.PollFD00): gboolean {.
+proc g_cancellable_make_pollfd(self: ptr Cancellable00; pollfd: glib.PollFD): gboolean {.
     importc, libprag.}
 
 proc makePollfd*(self: Cancellable; pollfd: glib.PollFD): bool =
-  toBool(g_cancellable_make_pollfd(cast[ptr Cancellable00](self.impl), cast[ptr glib.PollFD00](pollfd.impl)))
+  toBool(g_cancellable_make_pollfd(cast[ptr Cancellable00](self.impl), pollfd))
 
 proc g_cancellable_pop_current(self: ptr Cancellable00) {.
     importc, libprag.}
@@ -9681,15 +9364,6 @@ proc g_cancellable_set_error_if_cancelled(self: ptr Cancellable00; error: ptr pt
     importc, libprag.}
 
 proc setErrorIfCancelled*(self: Cancellable): bool =
-  var gerror: ptr glib.Error
-  let resul0 = g_cancellable_set_error_if_cancelled(cast[ptr Cancellable00](self.impl), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc `errorIfCancelled=`*(self: Cancellable): bool =
   var gerror: ptr glib.Error
   let resul0 = g_cancellable_set_error_if_cancelled(cast[ptr Cancellable00](self.impl), addr gerror)
   if gerror != nil:
@@ -9866,7 +9540,7 @@ proc g_file_load_bytes(self: ptr GFile00; cancellable: ptr Cancellable00;
     etagOut: var cstring; error: ptr ptr glib.Error = nil): ptr glib.Bytes00 {.
     importc, libprag.}
 
-proc loadBytes*(self: GFile; cancellable: Cancellable = nil; etagOut: var string): glib.Bytes =
+proc loadBytes*(self: GFile; cancellable: Cancellable = nil; etagOut: var string = cast[var string](nil)): glib.Bytes =
   var gerror: ptr glib.Error
   var etagOut_00 = cstring(etagOut)
   let impl0 = g_file_load_bytes(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), etagOut_00, addr gerror)
@@ -9879,21 +9553,22 @@ proc loadBytes*(self: GFile; cancellable: Cancellable = nil; etagOut: var string
   etagOut = $(etagOut_00)
 
 proc g_file_load_contents(self: ptr GFile00; cancellable: ptr Cancellable00;
-    contents: var uint8Array; length: var uint64; etagOut: var cstring; error: ptr ptr glib.Error = nil): gboolean {.
+    contents: var ptr uint8; length: var uint64; etagOut: var cstring; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc loadContents*(self: GFile; cancellable: Cancellable = nil; contents: var (seq[uint8] | string);
-    length: var uint64; etagOut: var string): bool =
+    length: var uint64 = cast[var uint64](nil); etagOut: var string = cast[var string](nil)): bool =
   var gerror: ptr glib.Error
-  var etagOut_00 = cstring(etagOut)
-  var contents_00: pointer
+  var etagOut_00: cstring
+  var contents_00: ptr uint8
   let resul0 = g_file_load_contents(cast[ptr GFile00](self.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), contents_00, length, etagOut_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  etagOut = $(etagOut_00)
+  if etagOut.addr != nil:
+    etagOut = $(etagOut_00)
   contents.setLen(length)
   copyMem(unsafeaddr contents[0], contents_00, length.int * sizeof(contents[0]))
   cogfree(contents_00)
@@ -10082,24 +9757,25 @@ proc replace*(self: GFile; etag: cstring = ""; makeBackup: bool; flags: FileCrea
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_file_replace_contents(self: ptr GFile00; contents: uint8Array; length: uint64;
+proc g_file_replace_contents(self: ptr GFile00; contents: ptr uint8; length: uint64;
     etag: cstring; makeBackup: gboolean; flags: FileCreateFlags; newEtag: var cstring;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc replaceContents*(self: GFile; contents: seq[uint8] | string;
-    etag: cstring = ""; makeBackup: bool; flags: FileCreateFlags; newEtag: var string;
+    etag: cstring = ""; makeBackup: bool; flags: FileCreateFlags; newEtag: var string = cast[var string](nil);
     cancellable: Cancellable = nil): bool =
   let length = uint64(contents.len)
   var gerror: ptr glib.Error
-  var newEtag_00 = cstring(newEtag)
-  let resul0 = g_file_replace_contents(cast[ptr GFile00](self.impl), unsafeaddr(contents[0]), length, safeStringToCString(etag), gboolean(makeBackup), flags, newEtag_00, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  var newEtag_00: cstring
+  let resul0 = g_file_replace_contents(cast[ptr GFile00](self.impl), cast[ptr uint8](unsafeaddr(contents[0])), length, safeStringToCString(etag), gboolean(makeBackup), flags, newEtag_00, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  newEtag = $(newEtag_00)
+  if newEtag.addr != nil:
+    newEtag = $(newEtag_00)
 
 proc g_file_replace_readwrite(self: ptr GFile00; etag: cstring; makeBackup: gboolean;
     flags: FileCreateFlags; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr FileIOStream00 {.
@@ -10359,31 +10035,31 @@ proc flush*(self: OutputStream; cancellable: Cancellable = nil): bool =
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_output_stream_write(self: ptr OutputStream00; buffer: uint8Array;
-    count: uint64; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
+proc g_output_stream_write(self: ptr OutputStream00; buffer: ptr uint8; count: uint64;
+    cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
 proc write*(self: OutputStream; buffer: seq[uint8] | string;
     cancellable: Cancellable = nil): int64 =
   let count = uint64(buffer.len)
   var gerror: ptr glib.Error
-  let resul0 = g_output_stream_write(cast[ptr OutputStream00](self.impl), unsafeaddr(buffer[0]), count, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_output_stream_write(cast[ptr OutputStream00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = resul0
 
-proc g_output_stream_write_all(self: ptr OutputStream00; buffer: uint8Array;
+proc g_output_stream_write_all(self: ptr OutputStream00; buffer: ptr uint8;
     count: uint64; bytesWritten: var uint64; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc writeAll*(self: OutputStream; buffer: seq[uint8] | string;
-    bytesWritten: var uint64; cancellable: Cancellable = nil): bool =
+    bytesWritten: var uint64 = cast[var uint64](nil); cancellable: Cancellable = nil): bool =
   let count = uint64(buffer.len)
   var gerror: ptr glib.Error
-  let resul0 = g_output_stream_write_all(cast[ptr OutputStream00](self.impl), unsafeaddr(buffer[0]), count, bytesWritten, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_output_stream_write_all(cast[ptr OutputStream00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, bytesWritten, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10403,13 +10079,13 @@ proc writeBytes*(self: OutputStream; bytes: glib.Bytes; cancellable: Cancellable
     raise newException(GException, msg)
   result = resul0
 
-proc g_output_stream_writev(self: ptr OutputStream00; vectors: OutputVector00Array;
+proc g_output_stream_writev(self: ptr OutputStream00; vectors: ptr OutputVector;
     nVectors: uint64; bytesWritten: var uint64; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc writev*(self: OutputStream; vectors: OutputVector00Array;
-    nVectors: uint64; bytesWritten: var uint64; cancellable: Cancellable = nil): bool =
+proc writev*(self: OutputStream; vectors: ptr OutputVector;
+    nVectors: uint64; bytesWritten: var uint64 = cast[var uint64](nil); cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
   let resul0 = g_output_stream_writev(cast[ptr OutputStream00](self.impl), vectors, nVectors, bytesWritten, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
@@ -10418,13 +10094,13 @@ proc writev*(self: OutputStream; vectors: OutputVector00Array;
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_output_stream_writev_all(self: ptr OutputStream00; vectors: OutputVector00Array;
+proc g_output_stream_writev_all(self: ptr OutputStream00; vectors: ptr OutputVector;
     nVectors: uint64; bytesWritten: var uint64; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc writevAll*(self: OutputStream; vectors: OutputVector00Array;
-    nVectors: uint64; bytesWritten: var uint64; cancellable: Cancellable = nil): bool =
+proc writevAll*(self: OutputStream; vectors: ptr OutputVector;
+    nVectors: uint64; bytesWritten: var uint64 = cast[var uint64](nil); cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
   let resul0 = g_output_stream_writev_all(cast[ptr OutputStream00](self.impl), vectors, nVectors, bytesWritten, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
@@ -10450,14 +10126,18 @@ proc g_file_enumerator_iterate(self: ptr FileEnumerator00; outInfo: var ptr File
     outChild: var ptr GFile00; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc iterate*(self: FileEnumerator; outInfo: var FileInfo;
-    outChild: var GFile; cancellable: Cancellable = nil): bool =
-  fnew(outInfo, gio.finalizeGObject)
-  outInfo.ignoreFinalizer = true
-  new(outChild)
-  outChild.ignoreFinalizer = true
+proc iterate*(self: FileEnumerator; outInfo: var FileInfo = cast[var FileInfo](nil);
+    outChild: var GFile = cast[var GFile](nil); cancellable: Cancellable = nil): bool =
+  if addr(outInfo) != nil:
+    fnew(outInfo, gio.finalizeGObject)
+  if addr(outInfo) != nil:
+    outInfo.ignoreFinalizer = true
+  if addr(outChild) != nil:
+    new(outChild)
+  if addr(outChild) != nil:
+    outChild.ignoreFinalizer = true
   var gerror: ptr glib.Error
-  let resul0 = g_file_enumerator_iterate(cast[ptr FileEnumerator00](self.impl), cast[var ptr FileInfo00](addr outInfo.impl), cast[var ptr GFile00](addr outChild.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_file_enumerator_iterate(cast[ptr FileEnumerator00](self.impl), cast[var ptr FileInfo00](if addr(outInfo) == nil: nil else: addr outInfo.impl), cast[var ptr GFile00](if addr(outChild) == nil: nil else: addr outChild.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10493,7 +10173,7 @@ proc nextFile*(self: FileEnumerator; cancellable: Cancellable = nil): FileInfo =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc g_mount_guess_content_type_sync(self: ptr Mount00; forceRescan: gboolean;
-    cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): cstringArray {.
+    cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr cstring {.
     importc, libprag.}
 
 proc guessContentTypeSync*(self: Mount; forceRescan: bool; cancellable: Cancellable = nil): seq[string] =
@@ -10758,10 +10438,10 @@ proc g_dbus_connection_call_with_unix_fd_list_sync(self: ptr DBusConnection00;
 proc callWithUnixFdListSync*(self: DBusConnection;
     busName: cstring = ""; objectPath: cstring; interfaceName: cstring; methodName: cstring;
     parameters: glib.Variant = nil; replyType: glib.VariantType = nil; flags: DBusCallFlags;
-    timeoutMsec: int; fdList: UnixFDList = nil; outFdList: var UnixFDList;
+    timeoutMsec: int; fdList: UnixFDList = nil; outFdList: var UnixFDList = cast[var UnixFDList](nil);
     cancellable: Cancellable = nil): glib.Variant =
   var gerror: ptr glib.Error
-  let impl0 = g_dbus_connection_call_with_unix_fd_list_sync(cast[ptr DBusConnection00](self.impl), safeStringToCString(busName), objectPath, interfaceName, methodName, if parameters.isNil: nil else: cast[ptr glib.Variant00](parameters.impl), if replyType.isNil: nil else: cast[ptr glib.VariantType00](replyType.impl), flags, int32(timeoutMsec), if fdList.isNil: nil else: cast[ptr UnixFDList00](fdList.impl), cast[var ptr UnixFDList00](addr outFdList.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let impl0 = g_dbus_connection_call_with_unix_fd_list_sync(cast[ptr DBusConnection00](self.impl), safeStringToCString(busName), objectPath, interfaceName, methodName, if parameters.isNil: nil else: cast[ptr glib.Variant00](parameters.impl), if replyType.isNil: nil else: cast[ptr glib.VariantType00](replyType.impl), flags, int32(timeoutMsec), if fdList.isNil: nil else: cast[ptr UnixFDList00](fdList.impl), cast[var ptr UnixFDList00](if addr(outFdList) == nil: nil else: addr outFdList.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10801,7 +10481,7 @@ proc g_dbus_connection_send_message_with_reply_sync(self: ptr DBusConnection00;
     importc, libprag.}
 
 proc sendMessageWithReplySync*(self: DBusConnection;
-    message: DBusMessage; flags: DBusSendMessageFlags; timeoutMsec: int; outSerial: var int;
+    message: DBusMessage; flags: DBusSendMessageFlags; timeoutMsec: int; outSerial: var int = cast[var int](nil);
     cancellable: Cancellable = nil): DBusMessage =
   var gerror: ptr glib.Error
   var outSerial_00 = uint32(outSerial)
@@ -10983,6 +10663,12 @@ when defined(gcDestructors):
       boxedFree(g_file_attribute_info_list_get_type(), cast[ptr FileAttributeInfoList00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var FileAttributeInfoList) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGFileAttributeInfoList)
+
 proc g_file_attribute_info_list_unref(self: ptr FileAttributeInfoList00) {.
     importc, libprag.}
 
@@ -11068,19 +10754,17 @@ proc add*(self: FileAttributeInfoList; name: cstring;
   g_file_attribute_info_list_add(cast[ptr FileAttributeInfoList00](self.impl), name, `type`, flags)
 
 type
-  FileAttributeInfo00* {.pure.} = object
-  FileAttributeInfo* = ref object
-    impl*: ptr FileAttributeInfo00
-    ignoreFinalizer*: bool
+  FileAttributeInfo* {.pure, byRef.} = object
+    name*: cstring
+    `type`*: FileAttributeType
+    flags*: FileAttributeInfoFlags
 
 proc g_file_attribute_info_list_lookup(self: ptr FileAttributeInfoList00;
-    name: cstring): ptr FileAttributeInfo00 {.
+    name: cstring): ptr FileAttributeInfo {.
     importc, libprag.}
 
-proc lookup*(self: FileAttributeInfoList; name: cstring): FileAttributeInfo =
-  new(result)
-  result.impl = g_file_attribute_info_list_lookup(cast[ptr FileAttributeInfoList00](self.impl), name)
-  result.ignoreFinalizer = true
+proc lookup*(self: FileAttributeInfoList; name: cstring): ptr FileAttributeInfo =
+  g_file_attribute_info_list_lookup(cast[ptr FileAttributeInfoList00](self.impl), name)
 
 type
   Notification* = ref object of gobject.Object
@@ -11392,21 +11076,21 @@ proc g_input_stream_is_closed(self: ptr InputStream00): gboolean {.
 proc isClosed*(self: InputStream): bool =
   toBool(g_input_stream_is_closed(cast[ptr InputStream00](self.impl)))
 
-proc g_input_stream_read(self: ptr InputStream00; buffer: uint8Array; count: var uint64;
+proc g_input_stream_read(self: ptr InputStream00; buffer: ptr uint8; count: var uint64;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
 proc read*(self: InputStream; buffer: var (seq[uint8] | string);
     count: var uint64; cancellable: Cancellable = nil): int64 =
   var gerror: ptr glib.Error
-  let resul0 = g_input_stream_read(cast[ptr InputStream00](self.impl), unsafeaddr(buffer[0]), count, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_input_stream_read(cast[ptr InputStream00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = resul0
 
-proc g_input_stream_read_all(self: ptr InputStream00; buffer: uint8Array;
+proc g_input_stream_read_all(self: ptr InputStream00; buffer: ptr uint8;
     count: var uint64; bytesRead: var uint64; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
@@ -11414,7 +11098,7 @@ proc g_input_stream_read_all(self: ptr InputStream00; buffer: uint8Array;
 proc readAll*(self: InputStream; buffer: var (seq[uint8] | string);
     count: var uint64; bytesRead: var uint64; cancellable: Cancellable = nil): bool =
   var gerror: ptr glib.Error
-  let resul0 = g_input_stream_read_all(cast[ptr InputStream00](self.impl), unsafeaddr(buffer[0]), count, bytesRead, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_input_stream_read_all(cast[ptr InputStream00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, bytesRead, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -11480,15 +11164,6 @@ proc g_input_stream_set_pending(self: ptr InputStream00; error: ptr ptr glib.Err
     importc, libprag.}
 
 proc setPending*(self: InputStream): bool =
-  var gerror: ptr glib.Error
-  let resul0 = g_input_stream_set_pending(cast[ptr InputStream00](self.impl), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc `pending=`*(self: InputStream): bool =
   var gerror: ptr glib.Error
   let resul0 = g_input_stream_set_pending(cast[ptr InputStream00](self.impl), addr gerror)
   if gerror != nil:
@@ -11738,19 +11413,19 @@ type
   ActionMap00* = object of gobject.Object00
   ActionMap* = ref object of gobject.Object
 
-proc g_action_map_add_action(self: ptr ActionMap00; action: ptr Action00) {.
+proc g_action_map_add_action*(self: ptr ActionMap00; action: ptr Action00) {.
     importc, libprag.}
 
 proc addAction*(self: ActionMap | GApplication | SimpleActionGroup;
     action: Action | PropertyAction | SimpleAction) =
   g_action_map_add_action(cast[ptr ActionMap00](self.impl), cast[ptr Action00](action.impl))
 
-proc g_action_map_add_action_entries(self: ptr ActionMap00; entries: ActionEntry00Array;
+proc g_action_map_add_action_entries(self: ptr ActionMap00; entries: ptr ActionEntry00;
     nEntries: int32; userData: pointer) {.
     importc, libprag.}
 
 proc addActionEntries*(self: ActionMap | GApplication | SimpleActionGroup;
-    entries: ActionEntry00Array; nEntries: int; userData: pointer) =
+    entries: ptr ActionEntry00; nEntries: int; userData: pointer) =
   g_action_map_add_action_entries(cast[ptr ActionMap00](self.impl), entries, int32(nEntries), userData)
 
 proc g_action_map_lookup_action(self: ptr ActionMap00; actionName: cstring): ptr Action00 {.
@@ -11818,23 +11493,6 @@ proc getAppInfoMonitor*(): AppInfoMonitor =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc appInfoMonitor*(): AppInfoMonitor =
-  let gobj = g_app_info_monitor_get()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 type
   AsyncInitable00* = object of gobject.Object00
   AsyncInitable* = ref object of gobject.Object
@@ -11854,7 +11512,7 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc scGPropertiesChanged*(self: DBusProxy;  p: proc (self: ptr DBusProxy00; changedProperties: ptr glib.Variant00; invalidatedProperties: cstringArray; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scGPropertiesChanged*(self: DBusProxy;  p: proc (self: ptr DBusProxy00; changedProperties: ptr glib.Variant00; invalidatedProperties: ptr cstring; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "g-properties-changed", cast[GCallback](p), xdata, nil, cf)
 
 proc scGSignal*(self: DBusProxy;  p: proc (self: ptr DBusProxy00; senderName: cstring; signalName: cstring; parameters: ptr glib.Variant00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
@@ -12036,10 +11694,10 @@ proc g_dbus_proxy_call_with_unix_fd_list_finish(self: ptr DBusProxy00; outFdList
     res: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr glib.Variant00 {.
     importc, libprag.}
 
-proc callWithUnixFdListFinish*(self: DBusProxy; outFdList: var UnixFDList;
+proc callWithUnixFdListFinish*(self: DBusProxy; outFdList: var UnixFDList = cast[var UnixFDList](nil);
     res: AsyncResult | SimpleAsyncResult | Task): glib.Variant =
   var gerror: ptr glib.Error
-  let impl0 = g_dbus_proxy_call_with_unix_fd_list_finish(cast[ptr DBusProxy00](self.impl), cast[var ptr UnixFDList00](addr outFdList.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
+  let impl0 = g_dbus_proxy_call_with_unix_fd_list_finish(cast[ptr DBusProxy00](self.impl), cast[var ptr UnixFDList00](if addr(outFdList) == nil: nil else: addr outFdList.impl), cast[ptr AsyncResult00](res.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -12055,9 +11713,10 @@ proc g_dbus_proxy_call_with_unix_fd_list_sync(self: ptr DBusProxy00; methodName:
 
 proc callWithUnixFdListSync*(self: DBusProxy; methodName: cstring;
     parameters: glib.Variant = nil; flags: DBusCallFlags; timeoutMsec: int;
-    fdList: UnixFDList = nil; outFdList: var UnixFDList; cancellable: Cancellable = nil): glib.Variant =
+    fdList: UnixFDList = nil; outFdList: var UnixFDList = cast[var UnixFDList](nil);
+    cancellable: Cancellable = nil): glib.Variant =
   var gerror: ptr glib.Error
-  let impl0 = g_dbus_proxy_call_with_unix_fd_list_sync(cast[ptr DBusProxy00](self.impl), methodName, if parameters.isNil: nil else: cast[ptr glib.Variant00](parameters.impl), flags, int32(timeoutMsec), if fdList.isNil: nil else: cast[ptr UnixFDList00](fdList.impl), cast[var ptr UnixFDList00](addr outFdList.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let impl0 = g_dbus_proxy_call_with_unix_fd_list_sync(cast[ptr DBusProxy00](self.impl), methodName, if parameters.isNil: nil else: cast[ptr glib.Variant00](parameters.impl), flags, int32(timeoutMsec), if fdList.isNil: nil else: cast[ptr UnixFDList00](fdList.impl), cast[var ptr UnixFDList00](if addr(outFdList) == nil: nil else: addr outFdList.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -12075,14 +11734,7 @@ proc getCachedProperty*(self: DBusProxy; propertyName: cstring): glib.Variant =
   fnew(result, finalizerunref)
   result.impl = impl0
 
-proc cachedProperty*(self: DBusProxy; propertyName: cstring): glib.Variant =
-  let impl0 = g_dbus_proxy_get_cached_property(cast[ptr DBusProxy00](self.impl), propertyName)
-  if impl0.isNil:
-    return nil
-  fnew(result, finalizerunref)
-  result.impl = impl0
-
-proc g_dbus_proxy_get_cached_property_names(self: ptr DBusProxy00): cstringArray {.
+proc g_dbus_proxy_get_cached_property_names(self: ptr DBusProxy00): ptr cstring {.
     importc, libprag.}
 
 proc getCachedPropertyNames*(self: DBusProxy): seq[string] =
@@ -12354,7 +12006,7 @@ when defined(gcDestructors):
       self.impl = nil
 
 proc scInterfaceProxyPropertiesChanged*(self: DBusObjectManagerClient;  p: proc (self: ptr DBusObjectManagerClient00; objectProxy: ptr DBusObjectProxy00; interfaceProxy: ptr DBusProxy00;
-    changedProperties: ptr glib.Variant00; invalidatedProperties: cstringArray; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+    changedProperties: ptr glib.Variant00; invalidatedProperties: ptr cstring; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "interface-proxy-properties-changed", cast[GCallback](p), xdata, nil, cf)
 
 proc scInterfaceProxySignal*(self: DBusObjectManagerClient;  p: proc (self: ptr DBusObjectManagerClient00; objectProxy: ptr DBusObjectProxy00; interfaceProxy: ptr DBusProxy00;
@@ -12980,7 +12632,7 @@ proc replaceAsync*(self: GFile; etag: cstring = ""; makeBackup: bool;
     callback: AsyncReadyCallback; userData: pointer) =
   g_file_replace_async(cast[ptr GFile00](self.impl), safeStringToCString(etag), gboolean(makeBackup), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_file_replace_contents_async(self: ptr GFile00; contents: uint8Array;
+proc g_file_replace_contents_async(self: ptr GFile00; contents: ptr uint8;
     length: uint64; etag: cstring; makeBackup: gboolean; flags: FileCreateFlags;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
@@ -12989,7 +12641,7 @@ proc replaceContentsAsync*(self: GFile; contents: seq[uint8] | string;
     etag: cstring = ""; makeBackup: bool; flags: FileCreateFlags; cancellable: Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
   let length = uint64(contents.len)
-  g_file_replace_contents_async(cast[ptr GFile00](self.impl), unsafeaddr(contents[0]), length, safeStringToCString(etag), gboolean(makeBackup), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_file_replace_contents_async(cast[ptr GFile00](self.impl), cast[ptr uint8](unsafeaddr(contents[0])), length, safeStringToCString(etag), gboolean(makeBackup), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
 proc g_file_replace_contents_bytes_async(self: ptr GFile00; contents: ptr glib.Bytes00;
     etag: cstring; makeBackup: gboolean; flags: FileCreateFlags; cancellable: ptr Cancellable00;
@@ -13126,7 +12778,7 @@ proc spliceAsync*(self: OutputStream; source: InputStream;
     callback: AsyncReadyCallback; userData: pointer) =
   g_output_stream_splice_async(cast[ptr OutputStream00](self.impl), cast[ptr InputStream00](source.impl), flags, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_output_stream_write_all_async(self: ptr OutputStream00; buffer: uint8Array;
+proc g_output_stream_write_all_async(self: ptr OutputStream00; buffer: ptr uint8;
     count: uint64; ioPriority: int32; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
@@ -13135,9 +12787,9 @@ proc writeAllAsync*(self: OutputStream; buffer: seq[uint8] | string;
     ioPriority: int; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
   let count = uint64(buffer.len)
-  g_output_stream_write_all_async(cast[ptr OutputStream00](self.impl), unsafeaddr(buffer[0]), count, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_output_stream_write_all_async(cast[ptr OutputStream00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_output_stream_write_async(self: ptr OutputStream00; buffer: uint8Array;
+proc g_output_stream_write_async(self: ptr OutputStream00; buffer: ptr uint8;
     count: uint64; ioPriority: int32; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
@@ -13146,7 +12798,7 @@ proc writeAsync*(self: OutputStream; buffer: seq[uint8] | string;
     ioPriority: int; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
   let count = uint64(buffer.len)
-  g_output_stream_write_async(cast[ptr OutputStream00](self.impl), unsafeaddr(buffer[0]), count, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_output_stream_write_async(cast[ptr OutputStream00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
 proc g_output_stream_write_bytes_async(self: ptr OutputStream00; bytes: ptr glib.Bytes00;
     ioPriority: int32; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
@@ -13158,22 +12810,22 @@ proc writeBytesAsync*(self: OutputStream; bytes: glib.Bytes;
     userData: pointer) =
   g_output_stream_write_bytes_async(cast[ptr OutputStream00](self.impl), cast[ptr glib.Bytes00](bytes.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_output_stream_writev_all_async(self: ptr OutputStream00; vectors: OutputVector00Array;
+proc g_output_stream_writev_all_async(self: ptr OutputStream00; vectors: ptr OutputVector;
     nVectors: uint64; ioPriority: int32; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
 
-proc writevAllAsync*(self: OutputStream; vectors: OutputVector00Array;
+proc writevAllAsync*(self: OutputStream; vectors: ptr OutputVector;
     nVectors: uint64; ioPriority: int; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
   g_output_stream_writev_all_async(cast[ptr OutputStream00](self.impl), vectors, nVectors, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_output_stream_writev_async(self: ptr OutputStream00; vectors: OutputVector00Array;
+proc g_output_stream_writev_async(self: ptr OutputStream00; vectors: ptr OutputVector;
     nVectors: uint64; ioPriority: int32; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
 
-proc writevAsync*(self: OutputStream; vectors: OutputVector00Array;
+proc writevAsync*(self: OutputStream; vectors: ptr OutputVector;
     nVectors: uint64; ioPriority: int; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
   g_output_stream_writev_async(cast[ptr OutputStream00](self.impl), vectors, nVectors, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
@@ -13324,15 +12976,17 @@ proc launchDefaultForUriAsync*(uri: cstring; context: AppLaunchContext = nil;
     cancellable: Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
   g_app_info_launch_default_for_uri_async(uri, if context.isNil: nil else: cast[ptr AppLaunchContext00](context.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_app_info_launch_uris_async(self: ptr AppInfo00; uris: ptr pointer;
+proc g_app_info_launch_uris_async(self: ptr AppInfo00; uris: ptr glib.List;
     context: ptr AppLaunchContext00; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
 
-proc launchUrisAsync*(self: AppInfo | DesktopAppInfo; uris: ptr pointer;
+proc launchUrisAsync*(self: AppInfo | DesktopAppInfo; uris: seq[cstring];
     context: AppLaunchContext = nil; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
-  g_app_info_launch_uris_async(cast[ptr AppInfo00](self.impl), uris, if context.isNil: nil else: cast[ptr AppLaunchContext00](context.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  var tempResGL = seq2GList(uris)
+  g_app_info_launch_uris_async(cast[ptr AppInfo00](self.impl), tempResGL, if context.isNil: nil else: cast[ptr AppLaunchContext00](context.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_list_free(tempResGL)
 
 proc g_file_output_stream_query_info_async(self: ptr FileOutputStream00;
     attributes: cstring; ioPriority: int32; cancellable: ptr Cancellable00;
@@ -13601,11 +13255,12 @@ proc g_dbus_connection_send_message_with_reply(self: ptr DBusConnection00;
     importc, libprag.}
 
 proc sendMessageWithReply*(self: DBusConnection; message: DBusMessage;
-    flags: DBusSendMessageFlags; timeoutMsec: int; outSerial: var int; cancellable: Cancellable = nil;
-    callback: AsyncReadyCallback; userData: pointer) =
-  var outSerial_00 = uint32(outSerial)
+    flags: DBusSendMessageFlags; timeoutMsec: int; outSerial: var int = cast[var int](nil);
+    cancellable: Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
+  var outSerial_00: uint32
   g_dbus_connection_send_message_with_reply(cast[ptr DBusConnection00](self.impl), cast[ptr DBusMessage00](message.impl), flags, int32(timeoutMsec), outSerial_00, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
-  outSerial = int(outSerial_00)
+  if outSerial.addr != nil:
+    outSerial = int(outSerial_00)
 
 proc g_input_stream_close_async(self: ptr InputStream00; ioPriority: int32;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
@@ -13615,7 +13270,7 @@ proc closeAsync*(self: InputStream; ioPriority: int; cancellable: Cancellable = 
     callback: AsyncReadyCallback; userData: pointer) =
   g_input_stream_close_async(cast[ptr InputStream00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_input_stream_read_all_async(self: ptr InputStream00; buffer: uint8Array;
+proc g_input_stream_read_all_async(self: ptr InputStream00; buffer: ptr uint8;
     count: var uint64; ioPriority: int32; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
@@ -13623,9 +13278,9 @@ proc g_input_stream_read_all_async(self: ptr InputStream00; buffer: uint8Array;
 proc readAllAsync*(self: InputStream; buffer: var (seq[uint8] | string);
     count: var uint64; ioPriority: int; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
-  g_input_stream_read_all_async(cast[ptr InputStream00](self.impl), unsafeaddr(buffer[0]), count, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_input_stream_read_all_async(cast[ptr InputStream00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_input_stream_read_async(self: ptr InputStream00; buffer: uint8Array;
+proc g_input_stream_read_async(self: ptr InputStream00; buffer: ptr uint8;
     count: var uint64; ioPriority: int32; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
@@ -13633,7 +13288,7 @@ proc g_input_stream_read_async(self: ptr InputStream00; buffer: uint8Array;
 proc readAsync*(self: InputStream; buffer: var (seq[uint8] | string);
     count: var uint64; ioPriority: int; cancellable: Cancellable = nil; callback: AsyncReadyCallback;
     userData: pointer) =
-  g_input_stream_read_async(cast[ptr InputStream00](self.impl), unsafeaddr(buffer[0]), count, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+  g_input_stream_read_async(cast[ptr InputStream00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
 proc g_input_stream_read_bytes_async(self: ptr InputStream00; count: uint64;
     ioPriority: int32; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
@@ -13977,21 +13632,21 @@ proc getBufferSize*(self: BufferedInputStream): uint64 =
 proc bufferSize*(self: BufferedInputStream): uint64 =
   g_buffered_input_stream_get_buffer_size(cast[ptr BufferedInputStream00](self.impl))
 
-proc g_buffered_input_stream_peek(self: ptr BufferedInputStream00; buffer: uint8Array;
+proc g_buffered_input_stream_peek(self: ptr BufferedInputStream00; buffer: ptr uint8;
     offset: uint64; count: uint64): uint64 {.
     importc, libprag.}
 
 proc peek*(self: BufferedInputStream; buffer: seq[uint8] | string;
     offset: uint64): uint64 =
   let count = uint64(buffer.len)
-  g_buffered_input_stream_peek(cast[ptr BufferedInputStream00](self.impl), unsafeaddr(buffer[0]), offset, count)
+  g_buffered_input_stream_peek(cast[ptr BufferedInputStream00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), offset, count)
 
 proc g_buffered_input_stream_peek_buffer(self: ptr BufferedInputStream00;
-    count: var uint64): uint8Array {.
+    count: var uint64): ptr uint8 {.
     importc, libprag.}
 
 proc peekBuffer*(self: BufferedInputStream; count: var uint64): seq[uint8] =
-  result = uint8ArrayZT2seq(g_buffered_input_stream_peek_buffer(cast[ptr BufferedInputStream00](self.impl), count))
+  result = uint8ArrayToSeq(g_buffered_input_stream_peek_buffer(cast[ptr BufferedInputStream00](self.impl), count), count.int)
 
 proc g_buffered_input_stream_read_byte(self: ptr BufferedInputStream00; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): int32 {.
@@ -14849,6 +14504,12 @@ when defined(gcDestructors):
       boxedFree(g_dbus_annotation_info_get_type(), cast[ptr DBusAnnotationInfo00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var DBusAnnotationInfo) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGDBusAnnotationInfo)
+
 proc g_dbus_annotation_info_unref(self: ptr DBusAnnotationInfo00) {.
     importc, libprag.}
 
@@ -14866,11 +14527,11 @@ proc `ref`*(self: DBusAnnotationInfo): DBusAnnotationInfo =
   fnew(result, gBoxedFreeGDBusAnnotationInfo)
   result.impl = g_dbus_annotation_info_ref(cast[ptr DBusAnnotationInfo00](self.impl))
 
-proc g_dbus_annotation_info_lookup(annotations: ptr DBusAnnotationInfo00Array;
+proc g_dbus_annotation_info_lookup(annotations: ptr ptr DBusAnnotationInfo00;
     name: cstring): cstring {.
     importc, libprag.}
 
-proc lookup*(annotations: ptr DBusAnnotationInfo00Array;
+proc lookup*(annotations: ptr ptr DBusAnnotationInfo00;
     name: cstring): string =
   result = $g_dbus_annotation_info_lookup(annotations, name)
 
@@ -14891,6 +14552,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_dbus_arg_info_get_type(), cast[ptr DBusArgInfo00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var DBusArgInfo) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGDBusArgInfo)
 
 proc g_dbus_arg_info_unref(self: ptr DBusArgInfo00) {.
     importc, libprag.}
@@ -15007,17 +14674,16 @@ proc unregisterError*(errorDomain: int; errorCode: int; dbusErrorName: cstring):
   toBool(g_dbus_error_unregister_error(uint32(errorDomain), int32(errorCode), dbusErrorName))
 
 type
-  DBusErrorEntry00* {.pure.} = object
-  DBusErrorEntry* = ref object
-    impl*: ptr DBusErrorEntry00
-    ignoreFinalizer*: bool
+  DBusErrorEntry* {.pure, byRef.} = object
+    errorCode*: int32
+    dbusErrorName*: cstring
 
 proc g_dbus_error_register_error_domain(errorDomainQuarkName: cstring; quarkVolatile: ptr uint64;
-    entries: DBusErrorEntry00Array; numEntries: uint32) {.
+    entries: ptr DBusErrorEntry; numEntries: uint32) {.
     importc, libprag.}
 
 proc registerErrorDomain*(errorDomainQuarkName: cstring; quarkVolatile: ptr uint64;
-    entries: DBusErrorEntry00Array; numEntries: int) =
+    entries: ptr DBusErrorEntry; numEntries: int) =
   g_dbus_error_register_error_domain(errorDomainQuarkName, quarkVolatile, entries, uint32(numEntries))
 
 type
@@ -15295,14 +14961,18 @@ proc connection*(self: DBusInterfaceSkeleton): DBusConnection =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_dbus_interface_skeleton_get_connections(self: ptr DBusInterfaceSkeleton00): ptr pointer {.
+proc g_dbus_interface_skeleton_get_connections(self: ptr DBusInterfaceSkeleton00): ptr glib.List {.
     importc, libprag.}
 
-proc getConnections*(self: DBusInterfaceSkeleton): ptr pointer =
-  g_dbus_interface_skeleton_get_connections(cast[ptr DBusInterfaceSkeleton00](self.impl))
+proc getConnections*(self: DBusInterfaceSkeleton): seq[DBusConnection] =
+  let resul0 = g_dbus_interface_skeleton_get_connections(cast[ptr DBusInterfaceSkeleton00](self.impl))
+  result = glistObjects2seq(DBusConnection, resul0, true)
+  g_list_free(resul0)
 
-proc connections*(self: DBusInterfaceSkeleton): ptr pointer =
-  g_dbus_interface_skeleton_get_connections(cast[ptr DBusInterfaceSkeleton00](self.impl))
+proc connections*(self: DBusInterfaceSkeleton): seq[DBusConnection] =
+  let resul0 = g_dbus_interface_skeleton_get_connections(cast[ptr DBusInterfaceSkeleton00](self.impl))
+  result = glistObjects2seq(DBusConnection, resul0, true)
+  g_list_free(resul0)
 
 proc g_dbus_interface_skeleton_get_info(self: ptr DBusInterfaceSkeleton00): ptr DBusInterfaceInfo00 {.
     importc, libprag.}
@@ -15540,14 +15210,18 @@ proc getInterface*(self: DBusObject | DBusObjectSkeleton | DBusObjectProxy;
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_dbus_object_get_interfaces(self: ptr DBusObject00): ptr pointer {.
+proc g_dbus_object_get_interfaces(self: ptr DBusObject00): ptr glib.List {.
     importc, libprag.}
 
-proc getInterfaces*(self: DBusObject | DBusObjectSkeleton | DBusObjectProxy): ptr pointer =
-  g_dbus_object_get_interfaces(cast[ptr DBusObject00](self.impl))
+proc getInterfaces*(self: DBusObject | DBusObjectSkeleton | DBusObjectProxy): seq[DBusInterface] =
+  let resul0 = g_dbus_object_get_interfaces(cast[ptr DBusObject00](self.impl))
+  result = glistObjects2seq(DBusInterface, resul0, true)
+  g_list_free(resul0)
 
-proc interfaces*(self: DBusObject | DBusObjectSkeleton | DBusObjectProxy): ptr pointer =
-  g_dbus_object_get_interfaces(cast[ptr DBusObject00](self.impl))
+proc interfaces*(self: DBusObject | DBusObjectSkeleton | DBusObjectProxy): seq[DBusInterface] =
+  let resul0 = g_dbus_object_get_interfaces(cast[ptr DBusObject00](self.impl))
+  result = glistObjects2seq(DBusInterface, resul0, true)
+  g_list_free(resul0)
 
 proc g_dbus_object_get_object_path(self: ptr DBusObject00): cstring {.
     importc, libprag.}
@@ -15646,24 +15320,6 @@ proc getDBusMenuModel*(connection: DBusConnection; busName: cstring = "";
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc dBusMenuModel*(connection: DBusConnection; busName: cstring = "";
-    objectPath: cstring): DBusMenuModel =
-  let gobj = g_dbus_menu_model_get(cast[ptr DBusConnection00](connection.impl), safeStringToCString(busName), objectPath)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 type
   DBusMessageFilterFunction* = proc (connection: ptr DBusConnection00; message: ptr DBusMessage00; incoming: gboolean;
     userData: pointer): ptr DBusMessage00 {.cdecl.}
@@ -15693,6 +15349,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_dbus_node_info_get_type(), cast[ptr DBusNodeInfo00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var DBusNodeInfo) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGDBusNodeInfo)
 
 proc g_dbus_node_info_unref(self: ptr DBusNodeInfo00) {.
     importc, libprag.}
@@ -15980,14 +15642,18 @@ proc getObjectPath*(self: DBusObjectManager | DBusObjectManagerClient | DBusObje
 proc objectPath*(self: DBusObjectManager | DBusObjectManagerClient | DBusObjectManagerServer): string =
   result = $g_dbus_object_manager_get_object_path(cast[ptr DBusObjectManager00](self.impl))
 
-proc g_dbus_object_manager_get_objects(self: ptr DBusObjectManager00): ptr pointer {.
+proc g_dbus_object_manager_get_objects(self: ptr DBusObjectManager00): ptr glib.List {.
     importc, libprag.}
 
-proc getObjects*(self: DBusObjectManager | DBusObjectManagerClient | DBusObjectManagerServer): ptr pointer =
-  g_dbus_object_manager_get_objects(cast[ptr DBusObjectManager00](self.impl))
+proc getObjects*(self: DBusObjectManager | DBusObjectManagerClient | DBusObjectManagerServer): seq[DBusObject] =
+  let resul0 = g_dbus_object_manager_get_objects(cast[ptr DBusObjectManager00](self.impl))
+  result = glistObjects2seq(DBusObject, resul0, true)
+  g_list_free(resul0)
 
-proc objects*(self: DBusObjectManager | DBusObjectManagerClient | DBusObjectManagerServer): ptr pointer =
-  g_dbus_object_manager_get_objects(cast[ptr DBusObjectManager00](self.impl))
+proc objects*(self: DBusObjectManager | DBusObjectManagerClient | DBusObjectManagerServer): seq[DBusObject] =
+  let resul0 = g_dbus_object_manager_get_objects(cast[ptr DBusObjectManager00](self.impl))
+  result = glistObjects2seq(DBusObject, resul0, true)
+  g_list_free(resul0)
 
 type
   DBusPropertyInfoFlag* {.size: sizeof(cint), pure.} = enum
@@ -16488,10 +16154,10 @@ proc readInt64*(self: DataInputStream; cancellable: Cancellable = nil): int64 =
   result = resul0
 
 proc g_data_input_stream_read_line(self: ptr DataInputStream00; length: var uint64;
-    cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): uint8Array {.
+    cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr uint8 {.
     importc, libprag.}
 
-proc readLine*(self: DataInputStream; length: var uint64;
+proc readLine*(self: DataInputStream; length: var uint64 = cast[var uint64](nil);
     cancellable: Cancellable = nil): seq[uint8] =
   var gerror: ptr glib.Error
   let resul0 = g_data_input_stream_read_line(cast[ptr DataInputStream00](self.impl), length, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
@@ -16513,11 +16179,11 @@ proc readLineAsync*(self: DataInputStream; ioPriority: int;
   g_data_input_stream_read_line_async(cast[ptr DataInputStream00](self.impl), int32(ioPriority), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
 proc g_data_input_stream_read_line_finish(self: ptr DataInputStream00; resu: ptr AsyncResult00;
-    length: var uint64; error: ptr ptr glib.Error = nil): uint8Array {.
+    length: var uint64; error: ptr ptr glib.Error = nil): ptr uint8 {.
     importc, libprag.}
 
 proc readLineFinish*(self: DataInputStream; resu: AsyncResult | SimpleAsyncResult | Task;
-    length: var uint64): seq[uint8] =
+    length: var uint64 = cast[var uint64](nil)): seq[uint8] =
   var gerror: ptr glib.Error
   let resul0 = g_data_input_stream_read_line_finish(cast[ptr DataInputStream00](self.impl), cast[ptr AsyncResult00](resu.impl), length, addr gerror)
   if gerror != nil:
@@ -16534,7 +16200,7 @@ proc g_data_input_stream_read_line_finish_utf8(self: ptr DataInputStream00;
     importc, libprag.}
 
 proc readLineFinishUtf8*(self: DataInputStream; resu: AsyncResult | SimpleAsyncResult | Task;
-    length: var uint64): string =
+    length: var uint64 = cast[var uint64](nil)): string =
   var gerror: ptr glib.Error
   let resul0 = g_data_input_stream_read_line_finish_utf8(cast[ptr DataInputStream00](self.impl), cast[ptr AsyncResult00](resu.impl), length, addr gerror)
   if gerror != nil:
@@ -16550,7 +16216,7 @@ proc g_data_input_stream_read_line_utf8(self: ptr DataInputStream00; length: var
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
 
-proc readLineUtf8*(self: DataInputStream; length: var uint64;
+proc readLineUtf8*(self: DataInputStream; length: var uint64 = cast[var uint64](nil);
     cancellable: Cancellable = nil): string =
   var gerror: ptr glib.Error
   let resul0 = g_data_input_stream_read_line_utf8(cast[ptr DataInputStream00](self.impl), length, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
@@ -16607,7 +16273,7 @@ proc g_data_input_stream_read_until(self: ptr DataInputStream00; stopChars: cstr
     importc, libprag.}
 
 proc readUntil*(self: DataInputStream; stopChars: cstring;
-    length: var uint64; cancellable: Cancellable = nil): string =
+    length: var uint64 = cast[var uint64](nil); cancellable: Cancellable = nil): string =
   var gerror: ptr glib.Error
   let resul0 = g_data_input_stream_read_until(cast[ptr DataInputStream00](self.impl), stopChars, length, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
@@ -16632,7 +16298,7 @@ proc g_data_input_stream_read_until_finish(self: ptr DataInputStream00; resu: pt
     importc, libprag.}
 
 proc readUntilFinish*(self: DataInputStream; resu: AsyncResult | SimpleAsyncResult | Task;
-    length: var uint64): string =
+    length: var uint64 = cast[var uint64](nil)): string =
   var gerror: ptr glib.Error
   let resul0 = g_data_input_stream_read_until_finish(cast[ptr DataInputStream00](self.impl), cast[ptr AsyncResult00](resu.impl), length, addr gerror)
   if gerror != nil:
@@ -16648,7 +16314,7 @@ proc g_data_input_stream_read_upto(self: ptr DataInputStream00; stopChars: cstri
     importc, libprag.}
 
 proc readUpto*(self: DataInputStream; stopChars: cstring;
-    stopCharsLen: int64; length: var uint64; cancellable: Cancellable = nil): string =
+    stopCharsLen: int64; length: var uint64 = cast[var uint64](nil); cancellable: Cancellable = nil): string =
   var gerror: ptr glib.Error
   let resul0 = g_data_input_stream_read_upto(cast[ptr DataInputStream00](self.impl), stopChars, stopCharsLen, length, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
@@ -16673,7 +16339,7 @@ proc g_data_input_stream_read_upto_finish(self: ptr DataInputStream00; resu: ptr
     importc, libprag.}
 
 proc readUptoFinish*(self: DataInputStream; resu: AsyncResult | SimpleAsyncResult | Task;
-    length: var uint64): string =
+    length: var uint64 = cast[var uint64](nil)): string =
   var gerror: ptr glib.Error
   let resul0 = g_data_input_stream_read_upto_finish(cast[ptr DataInputStream00](self.impl), cast[ptr AsyncResult00](resu.impl), length, addr gerror)
   if gerror != nil:
@@ -17228,25 +16894,15 @@ proc g_socket_get_option(self: ptr Socket00; level: int32; optname: int32;
 
 proc getOption*(self: Socket; level: int; optname: int; value: var int): bool =
   var gerror: ptr glib.Error
-  var value_00 = int32(value)
+  var value_00: int32
   let resul0 = g_socket_get_option(cast[ptr Socket00](self.impl), int32(level), int32(optname), value_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  value = int(value_00)
-
-proc option*(self: Socket; level: int; optname: int; value: var int): bool =
-  var gerror: ptr glib.Error
-  var value_00 = int32(value)
-  let resul0 = g_socket_get_option(cast[ptr Socket00](self.impl), int32(level), int32(optname), value_00, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-  value = int(value_00)
+  if value.addr != nil:
+    value = int(value_00)
 
 proc g_socket_get_timeout(self: ptr Socket00): uint32 {.
     importc, libprag.}
@@ -17290,58 +16946,57 @@ proc listen*(self: Socket): bool =
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_socket_receive(self: ptr Socket00; buffer: uint8Array; size: uint64;
+proc g_socket_receive(self: ptr Socket00; buffer: ptr uint8; size: var uint64;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
-proc receive*(self: Socket; buffer: seq[uint8] | string; cancellable: Cancellable = nil): int64 =
-  let size = uint64(buffer.len)
+proc receive*(self: Socket; buffer: var (seq[uint8] | string); size: var uint64;
+    cancellable: Cancellable = nil): int64 =
   var gerror: ptr glib.Error
-  let resul0 = g_socket_receive(cast[ptr Socket00](self.impl), unsafeaddr(buffer[0]), size, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_socket_receive(cast[ptr Socket00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), size, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = resul0
 
-proc g_socket_receive_with_blocking(self: ptr Socket00; buffer: uint8Array;
-    size: uint64; blocking: gboolean; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
+proc g_socket_receive_with_blocking(self: ptr Socket00; buffer: ptr uint8;
+    size: var uint64; blocking: gboolean; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
-proc receiveWithBlocking*(self: Socket; buffer: seq[uint8] | string;
-    blocking: bool; cancellable: Cancellable = nil): int64 =
-  let size = uint64(buffer.len)
+proc receiveWithBlocking*(self: Socket; buffer: var (seq[uint8] | string);
+    size: var uint64; blocking: bool; cancellable: Cancellable = nil): int64 =
   var gerror: ptr glib.Error
-  let resul0 = g_socket_receive_with_blocking(cast[ptr Socket00](self.impl), unsafeaddr(buffer[0]), size, gboolean(blocking), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_socket_receive_with_blocking(cast[ptr Socket00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), size, gboolean(blocking), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = resul0
 
-proc g_socket_send(self: ptr Socket00; buffer: uint8Array; size: uint64;
-    cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
+proc g_socket_send(self: ptr Socket00; buffer: ptr uint8; size: uint64; cancellable: ptr Cancellable00;
+    error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
 proc send*(self: Socket; buffer: seq[uint8] | string; cancellable: Cancellable = nil): int64 =
   let size = uint64(buffer.len)
   var gerror: ptr glib.Error
-  let resul0 = g_socket_send(cast[ptr Socket00](self.impl), unsafeaddr(buffer[0]), size, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_socket_send(cast[ptr Socket00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), size, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = resul0
 
-proc g_socket_send_with_blocking(self: ptr Socket00; buffer: uint8Array;
-    size: uint64; blocking: gboolean; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
+proc g_socket_send_with_blocking(self: ptr Socket00; buffer: ptr uint8; size: uint64;
+    blocking: gboolean; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
 proc sendWithBlocking*(self: Socket; buffer: seq[uint8] | string;
     blocking: bool; cancellable: Cancellable = nil): int64 =
   let size = uint64(buffer.len)
   var gerror: ptr glib.Error
-  let resul0 = g_socket_send_with_blocking(cast[ptr Socket00](self.impl), unsafeaddr(buffer[0]), size, gboolean(blocking), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_socket_send_with_blocking(cast[ptr Socket00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), size, gboolean(blocking), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -17778,11 +17433,11 @@ proc initInetAddressAny*[T](result: var T; family: SocketFamily) {.deprecated.} 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_inet_address_new_from_bytes(bytes: uint8Array; family: SocketFamily): ptr InetAddress00 {.
+proc g_inet_address_new_from_bytes(bytes: ptr uint8; family: SocketFamily): ptr InetAddress00 {.
     importc, libprag.}
 
 proc newInetAddressFromBytes*(bytes: seq[uint8] | string; family: SocketFamily): InetAddress =
-  let gobj = g_inet_address_new_from_bytes(unsafeaddr(bytes[0]), family)
+  let gobj = g_inet_address_new_from_bytes(cast[ptr uint8](unsafeaddr(bytes[0])), family)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -17800,7 +17455,7 @@ proc newInetAddressFromBytes*(bytes: seq[uint8] | string; family: SocketFamily):
 
 proc newInetAddressFromBytes*(tdesc: typedesc; bytes: seq[uint8] | string; family: SocketFamily): tdesc =
   assert(result is InetAddress)
-  let gobj = g_inet_address_new_from_bytes(unsafeaddr(bytes[0]), family)
+  let gobj = g_inet_address_new_from_bytes(cast[ptr uint8](unsafeaddr(bytes[0])), family)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -17818,7 +17473,7 @@ proc newInetAddressFromBytes*(tdesc: typedesc; bytes: seq[uint8] | string; famil
 
 proc initInetAddressFromBytes*[T](result: var T; bytes: seq[uint8] | string; family: SocketFamily) {.deprecated.} =
   assert(result is InetAddress)
-  let gobj = g_inet_address_new_from_bytes(unsafeaddr(bytes[0]), family)
+  let gobj = g_inet_address_new_from_bytes(cast[ptr uint8](unsafeaddr(bytes[0])), family)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -17839,6 +17494,8 @@ proc g_inet_address_new_from_string(string: cstring): ptr InetAddress00 {.
 
 proc newInetAddressFromString*(string: cstring): InetAddress =
   let gobj = g_inet_address_new_from_string(string)
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -17857,6 +17514,8 @@ proc newInetAddressFromString*(string: cstring): InetAddress =
 proc newInetAddressFromString*(tdesc: typedesc; string: cstring): tdesc =
   assert(result is InetAddress)
   let gobj = g_inet_address_new_from_string(string)
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -17875,6 +17534,8 @@ proc newInetAddressFromString*(tdesc: typedesc; string: cstring): tdesc =
 proc initInetAddressFromString*[T](result: var T; string: cstring) {.deprecated.} =
   assert(result is InetAddress)
   let gobj = g_inet_address_new_from_string(string)
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -18347,22 +18008,22 @@ proc remoteAddress*(self: Socket): SocketAddress =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc g_socket_receive_from(self: ptr Socket00; address: var ptr SocketAddress00;
-    buffer: uint8Array; size: uint64; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
+    buffer: ptr uint8; size: var uint64; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
-proc receiveFrom*(self: Socket; address: var SocketAddress; buffer: seq[uint8] | string;
-    cancellable: Cancellable = nil): int64 =
-  let size = uint64(buffer.len)
-  fnew(address, gio.finalizeGObject)
+proc receiveFrom*(self: Socket; address: var SocketAddress = cast[var SocketAddress](nil);
+    buffer: var (seq[uint8] | string); size: var uint64; cancellable: Cancellable = nil): int64 =
+  if addr(address) != nil:
+    fnew(address, gio.finalizeGObject)
   var gerror: ptr glib.Error
-  let resul0 = g_socket_receive_from(cast[ptr Socket00](self.impl), cast[var ptr SocketAddress00](addr address.impl), unsafeaddr(buffer[0]), size, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_socket_receive_from(cast[ptr Socket00](self.impl), cast[var ptr SocketAddress00](if addr(address) == nil: nil else: addr address.impl), cast[ptr uint8](unsafeaddr(buffer[0])), size, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = resul0
 
-proc g_socket_send_to(self: ptr Socket00; address: ptr SocketAddress00; buffer: uint8Array;
+proc g_socket_send_to(self: ptr Socket00; address: ptr SocketAddress00; buffer: ptr uint8;
     size: uint64; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
@@ -18370,7 +18031,7 @@ proc sendTo*(self: Socket; address: SocketAddress = nil; buffer: seq[uint8] | st
     cancellable: Cancellable = nil): int64 =
   let size = uint64(buffer.len)
   var gerror: ptr glib.Error
-  let resul0 = g_socket_send_to(cast[ptr Socket00](self.impl), if address.isNil: nil else: cast[ptr SocketAddress00](address.impl), unsafeaddr(buffer[0]), size, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_socket_send_to(cast[ptr Socket00](self.impl), if address.isNil: nil else: cast[ptr SocketAddress00](address.impl), cast[ptr uint8](unsafeaddr(buffer[0])), size, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -18517,12 +18178,12 @@ when defined(gcDestructors):
       self.impl = nil
 
 proc g_socket_control_message_deserialize(level: int32; `type`: int32; size: uint64;
-    data: uint8Array): ptr SocketControlMessage00 {.
+    data: ptr uint8): ptr SocketControlMessage00 {.
     importc, libprag.}
 
 proc deserialize*(level: int; `type`: int; data: seq[uint8] | string): SocketControlMessage =
   let size = uint64(data.len)
-  let gobj = g_socket_control_message_deserialize(int32(level), int32(`type`), size, unsafeaddr(data[0]))
+  let gobj = g_socket_control_message_deserialize(int32(level), int32(`type`), size, cast[ptr uint8](unsafeaddr(data[0])))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -18573,34 +18234,36 @@ proc serialize*(self: SocketControlMessage; data: pointer) =
   g_socket_control_message_serialize(cast[ptr SocketControlMessage00](self.impl), data)
 
 proc g_socket_receive_message(self: ptr Socket00; address: var ptr SocketAddress00;
-    vectors: InputVector00Array; numVectors: int32; messages: var ptr SocketControlMessage00Array;
+    vectors: ptr InputVector00; numVectors: int32; messages: var ptr ptr SocketControlMessage00;
     numMessages: var int32; flags: var int32; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
-proc receiveMessage*(self: Socket; address: var SocketAddress; vectors: InputVector00Array;
-    numVectors: int; messages: var ptr SocketControlMessage00Array; numMessages: var int;
-    flags: var int; cancellable: Cancellable = nil): int64 =
-  fnew(address, gio.finalizeGObject)
+proc receiveMessage*(self: Socket; address: var SocketAddress = cast[var SocketAddress](nil);
+    vectors: ptr InputVector00; numVectors: int; messages: var ptr ptr SocketControlMessage00 = cast[var ptr ptr SocketControlMessage00](nil);
+    numMessages: var int; flags: var int; cancellable: Cancellable = nil): int64 =
+  if addr(address) != nil:
+    fnew(address, gio.finalizeGObject)
   var gerror: ptr glib.Error
-  var numMessages_00 = int32(numMessages)
+  var numMessages_00: int32
   var flags_00 = int32(flags)
-  let resul0 = g_socket_receive_message(cast[ptr Socket00](self.impl), cast[var ptr SocketAddress00](addr address.impl), vectors, int32(numVectors), messages, numMessages_00, flags_00, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_socket_receive_message(cast[ptr Socket00](self.impl), cast[var ptr SocketAddress00](if addr(address) == nil: nil else: addr address.impl), vectors, int32(numVectors), messages, numMessages_00, flags_00, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = resul0
-  numMessages = int(numMessages_00)
+  if numMessages.addr != nil:
+    numMessages = int(numMessages_00)
   flags = int(flags_00)
 
 proc g_socket_send_message(self: ptr Socket00; address: ptr SocketAddress00;
-    vectors: OutputVector00Array; numVectors: int32; messages: ptr SocketControlMessage00Array;
+    vectors: ptr OutputVector; numVectors: int32; messages: ptr ptr SocketControlMessage00;
     numMessages: int32; flags: int32; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
-proc sendMessage*(self: Socket; address: SocketAddress = nil; vectors: OutputVector00Array;
-    numVectors: int; messages: ptr SocketControlMessage00Array; numMessages: int;
+proc sendMessage*(self: Socket; address: SocketAddress = nil; vectors: ptr OutputVector;
+    numVectors: int; messages: ptr ptr SocketControlMessage00; numMessages: int;
     flags: int; cancellable: Cancellable = nil): int64 =
   var gerror: ptr glib.Error
   let resul0 = g_socket_send_message(cast[ptr Socket00](self.impl), if address.isNil: nil else: cast[ptr SocketAddress00](address.impl), vectors, int32(numVectors), messages, int32(numMessages), int32(flags), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
@@ -18617,14 +18280,14 @@ type
     ok = 1
 
 proc g_socket_send_message_with_timeout(self: ptr Socket00; address: ptr SocketAddress00;
-    vectors: OutputVector00Array; numVectors: int32; messages: ptr SocketControlMessage00Array;
+    vectors: ptr OutputVector; numVectors: int32; messages: ptr ptr SocketControlMessage00;
     numMessages: int32; flags: int32; timeoutUs: int64; bytesWritten: var uint64;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): PollableReturn {.
     importc, libprag.}
 
 proc sendMessageWithTimeout*(self: Socket; address: SocketAddress = nil;
-    vectors: OutputVector00Array; numVectors: int; messages: ptr SocketControlMessage00Array;
-    numMessages: int; flags: int; timeoutUs: int64; bytesWritten: var uint64;
+    vectors: ptr OutputVector; numVectors: int; messages: ptr ptr SocketControlMessage00;
+    numMessages: int; flags: int; timeoutUs: int64; bytesWritten: var uint64 = cast[var uint64](nil);
     cancellable: Cancellable = nil): PollableReturn =
   var gerror: ptr glib.Error
   let resul0 = g_socket_send_message_with_timeout(cast[ptr Socket00](self.impl), if address.isNil: nil else: cast[ptr SocketAddress00](address.impl), vectors, int32(numVectors), messages, int32(numMessages), int32(flags), timeoutUs, bytesWritten, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
@@ -18640,12 +18303,12 @@ type
     impl*: ptr InputMessage00
     ignoreFinalizer*: bool
 
-proc g_datagram_based_receive_messages(self: ptr DatagramBased00; messages: InputMessage00Array;
+proc g_datagram_based_receive_messages(self: ptr DatagramBased00; messages: ptr InputMessage00;
     numMessages: uint32; flags: int32; timeout: int64; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): int32 {.
     importc, libprag.}
 
-proc receiveMessages*(self: DatagramBased | Socket; messages: InputMessage00Array;
+proc receiveMessages*(self: DatagramBased | Socket; messages: ptr InputMessage00;
     numMessages: int; flags: int; timeout: int64; cancellable: Cancellable = nil): int =
   var gerror: ptr glib.Error
   let resul0 = g_datagram_based_receive_messages(cast[ptr DatagramBased00](self.impl), messages, uint32(numMessages), int32(flags), timeout, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
@@ -18655,11 +18318,11 @@ proc receiveMessages*(self: DatagramBased | Socket; messages: InputMessage00Arra
     raise newException(GException, msg)
   result = int(resul0)
 
-proc g_socket_receive_messages(self: ptr Socket00; messages: InputMessage00Array;
+proc g_socket_receive_messages(self: ptr Socket00; messages: ptr InputMessage00;
     numMessages: uint32; flags: int32; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int32 {.
     importc, libprag.}
 
-proc receiveMessages*(self: Socket; messages: InputMessage00Array;
+proc receiveMessages*(self: Socket; messages: ptr InputMessage00;
     numMessages: int; flags: int; cancellable: Cancellable = nil): int =
   var gerror: ptr glib.Error
   let resul0 = g_socket_receive_messages(cast[ptr Socket00](self.impl), messages, uint32(numMessages), int32(flags), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
@@ -18675,12 +18338,12 @@ type
     impl*: ptr OutputMessage00
     ignoreFinalizer*: bool
 
-proc g_datagram_based_send_messages(self: ptr DatagramBased00; messages: OutputMessage00Array;
+proc g_datagram_based_send_messages(self: ptr DatagramBased00; messages: ptr OutputMessage00;
     numMessages: uint32; flags: int32; timeout: int64; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): int32 {.
     importc, libprag.}
 
-proc sendMessages*(self: DatagramBased | Socket; messages: OutputMessage00Array;
+proc sendMessages*(self: DatagramBased | Socket; messages: ptr OutputMessage00;
     numMessages: int; flags: int; timeout: int64; cancellable: Cancellable = nil): int =
   var gerror: ptr glib.Error
   let resul0 = g_datagram_based_send_messages(cast[ptr DatagramBased00](self.impl), messages, uint32(numMessages), int32(flags), timeout, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
@@ -18690,11 +18353,11 @@ proc sendMessages*(self: DatagramBased | Socket; messages: OutputMessage00Array;
     raise newException(GException, msg)
   result = int(resul0)
 
-proc g_socket_send_messages(self: ptr Socket00; messages: OutputMessage00Array;
+proc g_socket_send_messages(self: ptr Socket00; messages: ptr OutputMessage00;
     numMessages: uint32; flags: int32; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int32 {.
     importc, libprag.}
 
-proc sendMessages*(self: Socket; messages: OutputMessage00Array;
+proc sendMessages*(self: Socket; messages: ptr OutputMessage00;
     numMessages: int; flags: int; cancellable: Cancellable = nil): int =
   var gerror: ptr glib.Error
   let resul0 = g_socket_send_messages(cast[ptr Socket00](self.impl), messages, uint32(numMessages), int32(flags), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
@@ -18718,24 +18381,8 @@ proc g_desktop_app_info_lookup_get_default_for_uri_scheme(self: ptr DesktopAppIn
 proc getDefaultForUriScheme*(self: DesktopAppInfoLookup;
     uriScheme: cstring): AppInfo =
   let gobj = g_desktop_app_info_lookup_get_default_for_uri_scheme(cast[ptr DesktopAppInfoLookup00](self.impl), uriScheme)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultForUriScheme*(self: DesktopAppInfoLookup;
-    uriScheme: cstring): AppInfo =
-  let gobj = g_desktop_app_info_lookup_get_default_for_uri_scheme(cast[ptr DesktopAppInfoLookup00](self.impl), uriScheme)
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -18755,16 +18402,18 @@ type
   DesktopAppLaunchCallback* = proc (appinfo: ptr DesktopAppInfo00; pid: int32; userData: pointer) {.cdecl.}
 
 proc g_desktop_app_info_launch_uris_as_manager(self: ptr DesktopAppInfo00;
-    uris: ptr pointer; launchContext: ptr AppLaunchContext00; spawnFlags: glib.SpawnFlags;
+    uris: ptr glib.List; launchContext: ptr AppLaunchContext00; spawnFlags: glib.SpawnFlags;
     userSetup: SpawnChildSetupFunc; userSetupData: pointer; pidCallback: DesktopAppLaunchCallback;
     pidCallbackData: pointer; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc launchUrisAsManager*(self: DesktopAppInfo; uris: ptr pointer;
+proc launchUrisAsManager*(self: DesktopAppInfo; uris: seq[cstring];
     launchContext: AppLaunchContext = nil; spawnFlags: glib.SpawnFlags; userSetup: SpawnChildSetupFunc;
     userSetupData: pointer; pidCallback: DesktopAppLaunchCallback; pidCallbackData: pointer): bool =
+  var tempResGL = seq2GList(uris)
   var gerror: ptr glib.Error
-  let resul0 = g_desktop_app_info_launch_uris_as_manager(cast[ptr DesktopAppInfo00](self.impl), uris, if launchContext.isNil: nil else: cast[ptr AppLaunchContext00](launchContext.impl), spawnFlags, userSetup, userSetupData, pidCallback, pidCallbackData, addr gerror)
+  let resul0 = g_desktop_app_info_launch_uris_as_manager(cast[ptr DesktopAppInfo00](self.impl), tempResGL, if launchContext.isNil: nil else: cast[ptr AppLaunchContext00](launchContext.impl), spawnFlags, userSetup, userSetupData, pidCallback, pidCallbackData, addr gerror)
+  g_list_free(tempResGL)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -18772,18 +18421,20 @@ proc launchUrisAsManager*(self: DesktopAppInfo; uris: ptr pointer;
   result = toBool(resul0)
 
 proc g_desktop_app_info_launch_uris_as_manager_with_fds(self: ptr DesktopAppInfo00;
-    uris: ptr pointer; launchContext: ptr AppLaunchContext00; spawnFlags: glib.SpawnFlags;
+    uris: ptr glib.List; launchContext: ptr AppLaunchContext00; spawnFlags: glib.SpawnFlags;
     userSetup: SpawnChildSetupFunc; userSetupData: pointer; pidCallback: DesktopAppLaunchCallback;
     pidCallbackData: pointer; stdinFd: int32; stdoutFd: int32; stderrFd: int32;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc launchUrisAsManagerWithFds*(self: DesktopAppInfo;
-    uris: ptr pointer; launchContext: AppLaunchContext = nil; spawnFlags: glib.SpawnFlags;
+    uris: seq[cstring]; launchContext: AppLaunchContext = nil; spawnFlags: glib.SpawnFlags;
     userSetup: SpawnChildSetupFunc; userSetupData: pointer; pidCallback: DesktopAppLaunchCallback;
     pidCallbackData: pointer; stdinFd: int; stdoutFd: int; stderrFd: int): bool =
+  var tempResGL = seq2GList(uris)
   var gerror: ptr glib.Error
-  let resul0 = g_desktop_app_info_launch_uris_as_manager_with_fds(cast[ptr DesktopAppInfo00](self.impl), uris, if launchContext.isNil: nil else: cast[ptr AppLaunchContext00](launchContext.impl), spawnFlags, userSetup, userSetupData, pidCallback, pidCallbackData, int32(stdinFd), int32(stdoutFd), int32(stderrFd), addr gerror)
+  let resul0 = g_desktop_app_info_launch_uris_as_manager_with_fds(cast[ptr DesktopAppInfo00](self.impl), tempResGL, if launchContext.isNil: nil else: cast[ptr AppLaunchContext00](launchContext.impl), spawnFlags, userSetup, userSetupData, pidCallback, pidCallbackData, int32(stdinFd), int32(stdoutFd), int32(stderrFd), addr gerror)
+  g_list_free(tempResGL)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -18794,14 +18445,16 @@ type
   DtlsClientConnection00* = object of gobject.Object00
   DtlsClientConnection* = ref object of gobject.Object
 
-proc g_dtls_client_connection_get_accepted_cas(self: ptr DtlsClientConnection00): ptr pointer {.
+proc g_dtls_client_connection_get_accepted_cas(self: ptr DtlsClientConnection00): ptr glib.List {.
     importc, libprag.}
 
-proc getAcceptedCas*(self: DtlsClientConnection): ptr pointer =
-  g_dtls_client_connection_get_accepted_cas(cast[ptr DtlsClientConnection00](self.impl))
+proc getAcceptedCas*(self: DtlsClientConnection): seq[ptr ByteArray00] =
+  let resul0 = g_dtls_client_connection_get_accepted_cas(cast[ptr DtlsClientConnection00](self.impl))
+  g_list_free(resul0)
 
-proc acceptedCas*(self: DtlsClientConnection): ptr pointer =
-  g_dtls_client_connection_get_accepted_cas(cast[ptr DtlsClientConnection00](self.impl))
+proc acceptedCas*(self: DtlsClientConnection): seq[ptr ByteArray00] =
+  let resul0 = g_dtls_client_connection_get_accepted_cas(cast[ptr DtlsClientConnection00](self.impl))
+  g_list_free(resul0)
 
 type
   SocketConnectable00* = object of gobject.Object00
@@ -19060,10 +18713,10 @@ proc initUnixSocketAddress*[T](result: var T; path: cstring) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_unix_socket_address_new_abstract(path: int8Array; pathLen: int32): ptr UnixSocketAddress00 {.
+proc g_unix_socket_address_new_abstract(path: ptr int8; pathLen: int32): ptr UnixSocketAddress00 {.
     importc, libprag.}
 
-proc newUnixSocketAddressAbstract*(path: int8Array; pathLen: int): UnixSocketAddress {.deprecated.}  =
+proc newUnixSocketAddressAbstract*(path: ptr int8; pathLen: int): UnixSocketAddress {.deprecated.}  =
   let gobj = g_unix_socket_address_new_abstract(path, int32(pathLen))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -19080,7 +18733,7 @@ proc newUnixSocketAddressAbstract*(path: int8Array; pathLen: int): UnixSocketAdd
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newUnixSocketAddressAbstract*(tdesc: typedesc; path: int8Array; pathLen: int): tdesc {.deprecated.}  =
+proc newUnixSocketAddressAbstract*(tdesc: typedesc; path: ptr int8; pathLen: int): tdesc {.deprecated.}  =
   assert(result is UnixSocketAddress)
   let gobj = g_unix_socket_address_new_abstract(path, int32(pathLen))
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -19098,7 +18751,7 @@ proc newUnixSocketAddressAbstract*(tdesc: typedesc; path: int8Array; pathLen: in
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initUnixSocketAddressAbstract*[T](result: var T; path: int8Array; pathLen: int) {.deprecated.} =
+proc initUnixSocketAddressAbstract*[T](result: var T; path: ptr int8; pathLen: int) {.deprecated.} =
   assert(result is UnixSocketAddress)
   let gobj = g_unix_socket_address_new_abstract(path, int32(pathLen))
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -19341,6 +18994,8 @@ proc g_inet_socket_address_new_from_string(address: cstring; port: uint32): ptr 
 
 proc newInetSocketAddressFromString*(address: cstring; port: int): InetSocketAddress =
   let gobj = g_inet_socket_address_new_from_string(address, uint32(port))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -19359,6 +19014,8 @@ proc newInetSocketAddressFromString*(address: cstring; port: int): InetSocketAdd
 proc newInetSocketAddressFromString*(tdesc: typedesc; address: cstring; port: int): tdesc =
   assert(result is InetSocketAddress)
   let gobj = g_inet_socket_address_new_from_string(address, uint32(port))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -19377,6 +19034,8 @@ proc newInetSocketAddressFromString*(tdesc: typedesc; address: cstring; port: in
 proc initInetSocketAddressFromString*[T](result: var T; address: cstring; port: int) {.deprecated.} =
   assert(result is InetSocketAddress)
   let gobj = g_inet_socket_address_new_from_string(address, uint32(port))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -19890,11 +19549,11 @@ type
     abstract = 3
     abstractPadded = 4
 
-proc g_unix_socket_address_new_with_type(path: int8Array; pathLen: int32;
+proc g_unix_socket_address_new_with_type(path: ptr int8; pathLen: int32;
     `type`: UnixSocketAddressType): ptr UnixSocketAddress00 {.
     importc, libprag.}
 
-proc newUnixSocketAddressWithType*(path: int8Array; pathLen: int; `type`: UnixSocketAddressType): UnixSocketAddress =
+proc newUnixSocketAddressWithType*(path: ptr int8; pathLen: int; `type`: UnixSocketAddressType): UnixSocketAddress =
   let gobj = g_unix_socket_address_new_with_type(path, int32(pathLen), `type`)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -19911,7 +19570,7 @@ proc newUnixSocketAddressWithType*(path: int8Array; pathLen: int; `type`: UnixSo
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newUnixSocketAddressWithType*(tdesc: typedesc; path: int8Array; pathLen: int; `type`: UnixSocketAddressType): tdesc =
+proc newUnixSocketAddressWithType*(tdesc: typedesc; path: ptr int8; pathLen: int; `type`: UnixSocketAddressType): tdesc =
   assert(result is UnixSocketAddress)
   let gobj = g_unix_socket_address_new_with_type(path, int32(pathLen), `type`)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -19929,7 +19588,7 @@ proc newUnixSocketAddressWithType*(tdesc: typedesc; path: int8Array; pathLen: in
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initUnixSocketAddressWithType*[T](result: var T; path: int8Array; pathLen: int; `type`: UnixSocketAddressType) {.deprecated.} =
+proc initUnixSocketAddressWithType*[T](result: var T; path: ptr int8; pathLen: int; `type`: UnixSocketAddressType) {.deprecated.} =
   assert(result is UnixSocketAddress)
   let gobj = g_unix_socket_address_new_with_type(path, int32(pathLen), `type`)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -20217,8 +19876,18 @@ proc initTlsCertificateFromPem*[T](result: var T; data: cstring; length: int64) 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc listNewFromFile*(file: cstring; error: ptr ptr glib.Error = nil): ptr pointer {.
-    importc: "g_tls_certificate_list_new_from_file", libprag.}
+proc g_tls_certificate_list_new_from_file(file: cstring; error: ptr ptr glib.Error = nil): ptr glib.List {.
+    importc, libprag.}
+
+proc listNewFromFile*(file: cstring): seq[TlsCertificate] =
+  var gerror: ptr glib.Error
+  let resul0 = g_tls_certificate_list_new_from_file(file, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = glistObjects2seq(TlsCertificate, resul0, true)
+  g_list_free(resul0)
 
 proc g_tls_certificate_get_issuer(self: ptr TlsCertificate00): ptr TlsCertificate00 {.
     importc, libprag.}
@@ -20323,6 +19992,8 @@ proc g_dtls_connection_get_certificate(self: ptr DtlsConnection00): ptr TlsCerti
 
 proc getCertificate*(self: DtlsConnection): TlsCertificate =
   let gobj = g_dtls_connection_get_certificate(cast[ptr DtlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -20339,6 +20010,8 @@ proc getCertificate*(self: DtlsConnection): TlsCertificate =
 
 proc certificate*(self: DtlsConnection): TlsCertificate =
   let gobj = g_dtls_connection_get_certificate(cast[ptr DtlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -20373,6 +20046,8 @@ proc g_dtls_connection_get_peer_certificate(self: ptr DtlsConnection00): ptr Tls
 
 proc getPeerCertificate*(self: DtlsConnection): TlsCertificate =
   let gobj = g_dtls_connection_get_peer_certificate(cast[ptr DtlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -20389,6 +20064,8 @@ proc getPeerCertificate*(self: DtlsConnection): TlsCertificate =
 
 proc peerCertificate*(self: DtlsConnection): TlsCertificate =
   let gobj = g_dtls_connection_get_peer_certificate(cast[ptr DtlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -20456,7 +20133,7 @@ proc handshakeFinish*(self: DtlsConnection; resu: AsyncResult | SimpleAsyncResul
   result = toBool(resul0)
 
 proc g_dtls_connection_set_advertised_protocols(self: ptr DtlsConnection00;
-    protocols: cstringArray) {.
+    protocols: ptr cstring) {.
     importc, libprag.}
 
 proc setAdvertisedProtocols*(self: DtlsConnection; protocols: varargs[string, `$`]) =
@@ -20519,6 +20196,25 @@ proc g_dtls_connection_shutdown_finish(self: ptr DtlsConnection00; resu: ptr Asy
 proc shutdownFinish*(self: DtlsConnection; resu: AsyncResult | SimpleAsyncResult | Task): bool =
   var gerror: ptr glib.Error
   let resul0 = g_dtls_connection_shutdown_finish(cast[ptr DtlsConnection00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+
+type
+  TlsChannelBindingType* {.size: sizeof(cint), pure.} = enum
+    unique = 0
+    serverEndPoint = 1
+
+proc g_dtls_connection_get_channel_binding_data(self: ptr DtlsConnection00;
+    `type`: TlsChannelBindingType; data: var ptr ByteArray00; error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc getChannelBindingData*(self: DtlsConnection; `type`: TlsChannelBindingType;
+    data: var ptr ByteArray00 = cast[var ptr ByteArray00](nil)): bool =
+  var gerror: ptr glib.Error
+  let resul0 = g_dtls_connection_get_channel_binding_data(cast[ptr DtlsConnection00](self.impl), `type`, data, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -20604,18 +20300,19 @@ proc lookupCertificateIssuerFinish*(self: TlsDatabase; resu: AsyncResult | Simpl
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc g_tls_database_lookup_certificates_issued_by_finish(self: ptr TlsDatabase00;
-    resu: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr pointer {.
+    resu: ptr AsyncResult00; error: ptr ptr glib.Error = nil): ptr glib.List {.
     importc, libprag.}
 
 proc lookupCertificatesIssuedByFinish*(self: TlsDatabase;
-    resu: AsyncResult | SimpleAsyncResult | Task): ptr pointer =
+    resu: AsyncResult | SimpleAsyncResult | Task): seq[TlsCertificate] =
   var gerror: ptr glib.Error
   let resul0 = g_tls_database_lookup_certificates_issued_by_finish(cast[ptr TlsDatabase00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = resul0
+  result = glistObjects2seq(TlsCertificate, resul0, true)
+  g_list_free(resul0)
 
 proc g_tls_database_verify_chain_finish(self: ptr TlsDatabase00; resu: ptr AsyncResult00;
     error: ptr ptr glib.Error = nil): TlsCertificateFlags {.
@@ -20635,6 +20332,8 @@ proc g_dtls_connection_get_database(self: ptr DtlsConnection00): ptr TlsDatabase
 
 proc getDatabase*(self: DtlsConnection): TlsDatabase =
   let gobj = g_dtls_connection_get_database(cast[ptr DtlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -20651,6 +20350,8 @@ proc getDatabase*(self: DtlsConnection): TlsDatabase =
 
 proc database*(self: DtlsConnection): TlsDatabase =
   let gobj = g_dtls_connection_get_database(cast[ptr DtlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -20668,11 +20369,11 @@ proc database*(self: DtlsConnection): TlsDatabase =
 proc g_dtls_connection_set_database(self: ptr DtlsConnection00; database: ptr TlsDatabase00) {.
     importc, libprag.}
 
-proc setDatabase*(self: DtlsConnection; database: TlsDatabase) =
-  g_dtls_connection_set_database(cast[ptr DtlsConnection00](self.impl), cast[ptr TlsDatabase00](database.impl))
+proc setDatabase*(self: DtlsConnection; database: TlsDatabase = nil) =
+  g_dtls_connection_set_database(cast[ptr DtlsConnection00](self.impl), if database.isNil: nil else: cast[ptr TlsDatabase00](database.impl))
 
-proc `database=`*(self: DtlsConnection; database: TlsDatabase) =
-  g_dtls_connection_set_database(cast[ptr DtlsConnection00](self.impl), cast[ptr TlsDatabase00](database.impl))
+proc `database=`*(self: DtlsConnection; database: TlsDatabase = nil) =
+  g_dtls_connection_set_database(cast[ptr DtlsConnection00](self.impl), if database.isNil: nil else: cast[ptr TlsDatabase00](database.impl))
 
 type
   TlsInteraction* = ref object of gobject.Object
@@ -20694,6 +20395,8 @@ proc g_dtls_connection_get_interaction(self: ptr DtlsConnection00): ptr TlsInter
 
 proc getInteraction*(self: DtlsConnection): TlsInteraction =
   let gobj = g_dtls_connection_get_interaction(cast[ptr DtlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -20710,6 +20413,8 @@ proc getInteraction*(self: DtlsConnection): TlsInteraction =
 
 proc interaction*(self: DtlsConnection): TlsInteraction =
   let gobj = g_dtls_connection_get_interaction(cast[ptr DtlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -20819,18 +20524,19 @@ proc lookupCertificateIssuerAsync*(self: TlsDatabase; certificate: TlsCertificat
 
 proc g_tls_database_lookup_certificates_issued_by(self: ptr TlsDatabase00;
     issuerRawDn: ptr ByteArray00; interaction: ptr TlsInteraction00; flags: TlsDatabaseLookupFlags;
-    cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr pointer {.
+    cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr glib.List {.
     importc, libprag.}
 
 proc lookupCertificatesIssuedBy*(self: TlsDatabase; issuerRawDn: ptr ByteArray00;
-    interaction: TlsInteraction = nil; flags: TlsDatabaseLookupFlags; cancellable: Cancellable = nil): ptr pointer =
+    interaction: TlsInteraction = nil; flags: TlsDatabaseLookupFlags; cancellable: Cancellable = nil): seq[TlsCertificate] =
   var gerror: ptr glib.Error
   let resul0 = g_tls_database_lookup_certificates_issued_by(cast[ptr TlsDatabase00](self.impl), issuerRawDn, if interaction.isNil: nil else: cast[ptr TlsInteraction00](interaction.impl), flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = resul0
+  result = glistObjects2seq(TlsCertificate, resul0, true)
+  g_list_free(resul0)
 
 proc g_tls_database_lookup_certificates_issued_by_async(self: ptr TlsDatabase00;
     issuerRawDn: ptr ByteArray00; interaction: ptr TlsInteraction00; flags: TlsDatabaseLookupFlags;
@@ -20904,9 +20610,6 @@ proc g_tls_password_get_value(self: ptr TlsPassword00; length: ptr uint64): ptr 
 proc getValue*(self: TlsPassword; length: ptr uint64): ptr uint8 =
   g_tls_password_get_value(cast[ptr TlsPassword00](self.impl), length)
 
-proc value*(self: TlsPassword; length: ptr uint64): ptr uint8 =
-  g_tls_password_get_value(cast[ptr TlsPassword00](self.impl), length)
-
 proc g_tls_password_get_warning(self: ptr TlsPassword00): cstring {.
     importc, libprag.}
 
@@ -20925,22 +20628,22 @@ proc setDescription*(self: TlsPassword; description: cstring) =
 proc `description=`*(self: TlsPassword; description: cstring) =
   g_tls_password_set_description(cast[ptr TlsPassword00](self.impl), description)
 
-proc g_tls_password_set_value(self: ptr TlsPassword00; value: uint8Array;
+proc g_tls_password_set_value(self: ptr TlsPassword00; value: ptr uint8;
     length: int64) {.
     importc, libprag.}
 
 proc setValue*(self: TlsPassword; value: seq[uint8] | string) =
   let length = int64(value.len)
-  g_tls_password_set_value(cast[ptr TlsPassword00](self.impl), unsafeaddr(value[0]), length)
+  g_tls_password_set_value(cast[ptr TlsPassword00](self.impl), cast[ptr uint8](unsafeaddr(value[0])), length)
 
-proc g_tls_password_set_value_full(self: ptr TlsPassword00; value: uint8Array;
+proc g_tls_password_set_value_full(self: ptr TlsPassword00; value: ptr uint8;
     length: int64; destroy: DestroyNotify) {.
     importc, libprag.}
 
 proc setValueFull*(self: TlsPassword; value: seq[uint8] | string;
     destroy: DestroyNotify) =
   let length = int64(value.len)
-  g_tls_password_set_value_full(cast[ptr TlsPassword00](self.impl), unsafeaddr(value[0]), length, destroy)
+  g_tls_password_set_value_full(cast[ptr TlsPassword00](self.impl), cast[ptr uint8](unsafeaddr(value[0])), length, destroy)
 
 proc g_tls_password_set_warning(self: ptr TlsPassword00; warning: cstring) {.
     importc, libprag.}
@@ -21072,6 +20775,8 @@ proc g_tls_connection_get_certificate(self: ptr TlsConnection00): ptr TlsCertifi
 
 proc getCertificate*(self: TlsConnection): TlsCertificate =
   let gobj = g_tls_connection_get_certificate(cast[ptr TlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -21088,6 +20793,8 @@ proc getCertificate*(self: TlsConnection): TlsCertificate =
 
 proc certificate*(self: TlsConnection): TlsCertificate =
   let gobj = g_tls_connection_get_certificate(cast[ptr TlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -21102,11 +20809,27 @@ proc certificate*(self: TlsConnection): TlsCertificate =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
+proc g_tls_connection_get_channel_binding_data(self: ptr TlsConnection00;
+    `type`: TlsChannelBindingType; data: var ptr ByteArray00; error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc getChannelBindingData*(self: TlsConnection; `type`: TlsChannelBindingType;
+    data: var ptr ByteArray00 = cast[var ptr ByteArray00](nil)): bool =
+  var gerror: ptr glib.Error
+  let resul0 = g_tls_connection_get_channel_binding_data(cast[ptr TlsConnection00](self.impl), `type`, data, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+
 proc g_tls_connection_get_database(self: ptr TlsConnection00): ptr TlsDatabase00 {.
     importc, libprag.}
 
 proc getDatabase*(self: TlsConnection): TlsDatabase =
   let gobj = g_tls_connection_get_database(cast[ptr TlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -21123,6 +20846,8 @@ proc getDatabase*(self: TlsConnection): TlsDatabase =
 
 proc database*(self: TlsConnection): TlsDatabase =
   let gobj = g_tls_connection_get_database(cast[ptr TlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -21142,6 +20867,8 @@ proc g_tls_connection_get_interaction(self: ptr TlsConnection00): ptr TlsInterac
 
 proc getInteraction*(self: TlsConnection): TlsInteraction =
   let gobj = g_tls_connection_get_interaction(cast[ptr TlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -21158,6 +20885,8 @@ proc getInteraction*(self: TlsConnection): TlsInteraction =
 
 proc interaction*(self: TlsConnection): TlsInteraction =
   let gobj = g_tls_connection_get_interaction(cast[ptr TlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -21192,6 +20921,8 @@ proc g_tls_connection_get_peer_certificate(self: ptr TlsConnection00): ptr TlsCe
 
 proc getPeerCertificate*(self: TlsConnection): TlsCertificate =
   let gobj = g_tls_connection_get_peer_certificate(cast[ptr TlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -21208,6 +20939,8 @@ proc getPeerCertificate*(self: TlsConnection): TlsCertificate =
 
 proc peerCertificate*(self: TlsConnection): TlsCertificate =
   let gobj = g_tls_connection_get_peer_certificate(cast[ptr TlsConnection00](self.impl))
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -21284,7 +21017,7 @@ proc handshakeFinish*(self: TlsConnection; resu: AsyncResult | SimpleAsyncResult
   result = toBool(resul0)
 
 proc g_tls_connection_set_advertised_protocols(self: ptr TlsConnection00;
-    protocols: cstringArray) {.
+    protocols: ptr cstring) {.
     importc, libprag.}
 
 proc setAdvertisedProtocols*(self: TlsConnection; protocols: varargs[string, `$`]) =
@@ -21309,11 +21042,11 @@ proc `certificate=`*(self: TlsConnection; certificate: TlsCertificate) =
 proc g_tls_connection_set_database(self: ptr TlsConnection00; database: ptr TlsDatabase00) {.
     importc, libprag.}
 
-proc setDatabase*(self: TlsConnection; database: TlsDatabase) =
-  g_tls_connection_set_database(cast[ptr TlsConnection00](self.impl), cast[ptr TlsDatabase00](database.impl))
+proc setDatabase*(self: TlsConnection; database: TlsDatabase = nil) =
+  g_tls_connection_set_database(cast[ptr TlsConnection00](self.impl), if database.isNil: nil else: cast[ptr TlsDatabase00](database.impl))
 
-proc `database=`*(self: TlsConnection; database: TlsDatabase) =
-  g_tls_connection_set_database(cast[ptr TlsConnection00](self.impl), cast[ptr TlsDatabase00](database.impl))
+proc `database=`*(self: TlsConnection; database: TlsDatabase = nil) =
+  g_tls_connection_set_database(cast[ptr TlsConnection00](self.impl), if database.isNil: nil else: cast[ptr TlsDatabase00](database.impl))
 
 proc g_tls_connection_set_interaction(self: ptr TlsConnection00; interaction: ptr TlsInteraction00) {.
     importc, libprag.}
@@ -22035,22 +21768,11 @@ proc getCompletionSuffix*(self: FilenameCompleter;
   result = $resul0
   cogfree(resul0)
 
-proc completionSuffix*(self: FilenameCompleter;
-    initialText: cstring): string =
-  let resul0 = g_filename_completer_get_completion_suffix(cast[ptr FilenameCompleter00](self.impl), initialText)
-  result = $resul0
-  cogfree(resul0)
-
 proc g_filename_completer_get_completions(self: ptr FilenameCompleter00;
-    initialText: cstring): cstringArray {.
+    initialText: cstring): ptr cstring {.
     importc, libprag.}
 
 proc getCompletions*(self: FilenameCompleter; initialText: cstring): seq[string] =
-  let resul0 = g_filename_completer_get_completions(cast[ptr FilenameCompleter00](self.impl), initialText)
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc completions*(self: FilenameCompleter; initialText: cstring): seq[string] =
   let resul0 = g_filename_completer_get_completions(cast[ptr FilenameCompleter00](self.impl), initialText)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
@@ -22168,19 +21890,14 @@ proc getExtensionByName*(self: IOExtensionPoint; name: cstring): IOExtension =
   result.impl = g_io_extension_point_get_extension_by_name(cast[ptr IOExtensionPoint00](self.impl), name)
   result.ignoreFinalizer = true
 
-proc extensionByName*(self: IOExtensionPoint; name: cstring): IOExtension =
-  new(result)
-  result.impl = g_io_extension_point_get_extension_by_name(cast[ptr IOExtensionPoint00](self.impl), name)
-  result.ignoreFinalizer = true
-
-proc g_io_extension_point_get_extensions(self: ptr IOExtensionPoint00): ptr pointer {.
+proc g_io_extension_point_get_extensions(self: ptr IOExtensionPoint00): ptr glib.List {.
     importc, libprag.}
 
-proc getExtensions*(self: IOExtensionPoint): ptr pointer =
-  g_io_extension_point_get_extensions(cast[ptr IOExtensionPoint00](self.impl))
+proc getExtensions*(self: IOExtensionPoint): seq[IOExtension] =
+  discard
 
-proc extensions*(self: IOExtensionPoint): ptr pointer =
-  g_io_extension_point_get_extensions(cast[ptr IOExtensionPoint00](self.impl))
+proc extensions*(self: IOExtensionPoint): seq[IOExtension] =
+  discard
 
 proc g_io_extension_point_get_required_type(self: ptr IOExtensionPoint00): GType {.
     importc, libprag.}
@@ -22298,7 +22015,7 @@ proc initIOModule*[T](result: var T; filename: cstring) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_io_module_query(): cstringArray {.
+proc g_io_module_query(): ptr cstring {.
     importc, libprag.}
 
 proc query*(): seq[string] =
@@ -22353,29 +22070,26 @@ type
   IOModuleScopeFlags* {.size: sizeof(cint).} = set[IOModuleScopeFlag]
 
 type
-  IOSchedulerJob00* {.pure.} = object
-  IOSchedulerJob* = ref object
-    impl*: ptr IOSchedulerJob00
-    ignoreFinalizer*: bool
+  IOSchedulerJob* {.pure, byRef.} = object
 
-proc g_io_scheduler_job_send_to_mainloop(self: ptr IOSchedulerJob00; `func`: SourceFunc;
+proc g_io_scheduler_job_send_to_mainloop(self: IOSchedulerJob; `func`: SourceFunc;
     userData: pointer; notify: DestroyNotify): gboolean {.
     importc, libprag.}
 
 proc sendToMainloop*(self: IOSchedulerJob; `func`: SourceFunc;
     userData: pointer; notify: DestroyNotify): bool =
-  toBool(g_io_scheduler_job_send_to_mainloop(cast[ptr IOSchedulerJob00](self.impl), `func`, userData, notify))
+  toBool(g_io_scheduler_job_send_to_mainloop(self, `func`, userData, notify))
 
-proc g_io_scheduler_job_send_to_mainloop_async(self: ptr IOSchedulerJob00;
-    `func`: SourceFunc; userData: pointer; notify: DestroyNotify) {.
+proc g_io_scheduler_job_send_to_mainloop_async(self: IOSchedulerJob; `func`: SourceFunc;
+    userData: pointer; notify: DestroyNotify) {.
     importc, libprag.}
 
 proc sendToMainloopAsync*(self: IOSchedulerJob; `func`: SourceFunc;
     userData: pointer; notify: DestroyNotify) =
-  g_io_scheduler_job_send_to_mainloop_async(cast[ptr IOSchedulerJob00](self.impl), `func`, userData, notify)
+  g_io_scheduler_job_send_to_mainloop_async(self, `func`, userData, notify)
 
 type
-  IOSchedulerJobFunc* = proc (job: ptr IOSchedulerJob00; cancellable: ptr Cancellable00; userData: pointer): gboolean {.cdecl.}
+  IOSchedulerJobFunc* = proc (job: IOSchedulerJob; cancellable: ptr Cancellable00; userData: pointer): gboolean {.cdecl.}
 
 type
   IOStreamAdapter00* {.pure.} = object
@@ -22617,11 +22331,11 @@ type
   Initable00* = object of gobject.Object00
   Initable* = ref object of gobject.Object
 
-proc g_initable_newv(objectType: GType; nParameters: uint32; parameters: gobject.Parameter00Array;
+proc g_initable_newv(objectType: GType; nParameters: uint32; parameters: ptr gobject.Parameter00;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr gobject.Object00 {.
     importc, libprag.}
 
-proc newInitablev*(objectType: GType; nParameters: int; parameters: gobject.Parameter00Array;
+proc newInitablev*(objectType: GType; nParameters: int; parameters: ptr gobject.Parameter00;
     cancellable: Cancellable = nil): gobject.Object =
   var gerror: ptr glib.Error
   let gobj = g_initable_newv(objectType, uint32(nParameters), parameters, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
@@ -22665,11 +22379,14 @@ proc g_subprocess_communicate(self: ptr Subprocess00; stdinBuf: ptr glib.Bytes00
     importc, libprag.}
 
 proc communicate*(self: Subprocess; stdinBuf: glib.Bytes = nil;
-    cancellable: Cancellable = nil; stdoutBuf: var glib.Bytes; stderrBuf: var glib.Bytes): bool =
-  fnew(stdoutBuf, gBoxedFreeGBytes)
-  fnew(stderrBuf, gBoxedFreeGBytes)
+    cancellable: Cancellable = nil; stdoutBuf: var glib.Bytes = cast[var glib.Bytes](nil);
+    stderrBuf: var glib.Bytes = cast[var glib.Bytes](nil)): bool =
+  if addr(stdoutBuf) != nil:
+    fnew(stdoutBuf, gBoxedFreeGBytes)
+  if addr(stderrBuf) != nil:
+    fnew(stderrBuf, gBoxedFreeGBytes)
   var gerror: ptr glib.Error
-  let resul0 = g_subprocess_communicate(cast[ptr Subprocess00](self.impl), if stdinBuf.isNil: nil else: cast[ptr glib.Bytes00](stdinBuf.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), cast[var ptr glib.Bytes00](addr stdoutBuf.impl), cast[var ptr glib.Bytes00](addr stderrBuf.impl), addr gerror)
+  let resul0 = g_subprocess_communicate(cast[ptr Subprocess00](self.impl), if stdinBuf.isNil: nil else: cast[ptr glib.Bytes00](stdinBuf.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), cast[var ptr glib.Bytes00](if addr(stdoutBuf) == nil: nil else: addr stdoutBuf.impl), cast[var ptr glib.Bytes00](if addr(stderrBuf) == nil: nil else: addr stderrBuf.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -22689,11 +22406,13 @@ proc g_subprocess_communicate_finish(self: ptr Subprocess00; resu: ptr AsyncResu
     importc, libprag.}
 
 proc communicateFinish*(self: Subprocess; resu: AsyncResult | SimpleAsyncResult | Task;
-    stdoutBuf: var glib.Bytes; stderrBuf: var glib.Bytes): bool =
-  fnew(stdoutBuf, gBoxedFreeGBytes)
-  fnew(stderrBuf, gBoxedFreeGBytes)
+    stdoutBuf: var glib.Bytes = cast[var glib.Bytes](nil); stderrBuf: var glib.Bytes = cast[var glib.Bytes](nil)): bool =
+  if addr(stdoutBuf) != nil:
+    fnew(stdoutBuf, gBoxedFreeGBytes)
+  if addr(stderrBuf) != nil:
+    fnew(stderrBuf, gBoxedFreeGBytes)
   var gerror: ptr glib.Error
-  let resul0 = g_subprocess_communicate_finish(cast[ptr Subprocess00](self.impl), cast[ptr AsyncResult00](resu.impl), cast[var ptr glib.Bytes00](addr stdoutBuf.impl), cast[var ptr glib.Bytes00](addr stderrBuf.impl), addr gerror)
+  let resul0 = g_subprocess_communicate_finish(cast[ptr Subprocess00](self.impl), cast[ptr AsyncResult00](resu.impl), cast[var ptr glib.Bytes00](if addr(stdoutBuf) == nil: nil else: addr stdoutBuf.impl), cast[var ptr glib.Bytes00](if addr(stderrBuf) == nil: nil else: addr stderrBuf.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -22706,18 +22425,21 @@ proc g_subprocess_communicate_utf8(self: ptr Subprocess00; stdinBuf: cstring;
     importc, libprag.}
 
 proc communicateUtf8*(self: Subprocess; stdinBuf: cstring = "";
-    cancellable: Cancellable = nil; stdoutBuf: var string; stderrBuf: var string): bool =
+    cancellable: Cancellable = nil; stdoutBuf: var string = cast[var string](nil);
+    stderrBuf: var string = cast[var string](nil)): bool =
   var gerror: ptr glib.Error
-  var stderrBuf_00 = cstring(stderrBuf)
-  var stdoutBuf_00 = cstring(stdoutBuf)
+  var stderrBuf_00: cstring
+  var stdoutBuf_00: cstring
   let resul0 = g_subprocess_communicate_utf8(cast[ptr Subprocess00](self.impl), safeStringToCString(stdinBuf), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), stdoutBuf_00, stderrBuf_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  stderrBuf = $(stderrBuf_00)
-  stdoutBuf = $(stdoutBuf_00)
+  if stderrBuf.addr != nil:
+    stderrBuf = $(stderrBuf_00)
+  if stdoutBuf.addr != nil:
+    stdoutBuf = $(stdoutBuf_00)
 
 proc g_subprocess_communicate_utf8_async(self: ptr Subprocess00; stdinBuf: cstring;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
@@ -22732,18 +22454,20 @@ proc g_subprocess_communicate_utf8_finish(self: ptr Subprocess00; resu: ptr Asyn
     importc, libprag.}
 
 proc communicateUtf8Finish*(self: Subprocess; resu: AsyncResult | SimpleAsyncResult | Task;
-    stdoutBuf: var string; stderrBuf: var string): bool =
+    stdoutBuf: var string = cast[var string](nil); stderrBuf: var string = cast[var string](nil)): bool =
   var gerror: ptr glib.Error
-  var stderrBuf_00 = cstring(stderrBuf)
-  var stdoutBuf_00 = cstring(stdoutBuf)
+  var stderrBuf_00: cstring
+  var stdoutBuf_00: cstring
   let resul0 = g_subprocess_communicate_utf8_finish(cast[ptr Subprocess00](self.impl), cast[ptr AsyncResult00](resu.impl), stdoutBuf_00, stderrBuf_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  stderrBuf = $(stderrBuf_00)
-  stdoutBuf = $(stdoutBuf_00)
+  if stderrBuf.addr != nil:
+    stderrBuf = $(stderrBuf_00)
+  if stdoutBuf.addr != nil:
+    stdoutBuf = $(stdoutBuf_00)
 
 proc g_subprocess_force_exit(self: ptr Subprocess00) {.
     importc, libprag.}
@@ -23026,7 +22750,7 @@ type
 
   SubprocessFlags* {.size: sizeof(cint).} = set[SubprocessFlag]
 
-proc g_subprocess_newv(argv: cstringArray; flags: SubprocessFlags; error: ptr ptr glib.Error = nil): ptr Subprocess00 {.
+proc g_subprocess_newv(argv: ptr cstring; flags: SubprocessFlags; error: ptr ptr glib.Error = nil): ptr Subprocess00 {.
     importc, libprag.}
 
 proc newSubprocess*(argv: openArray[string]; flags: SubprocessFlags): Subprocess =
@@ -23184,20 +22908,22 @@ proc g_list_store_find(self: ptr ListStore00; item: ptr gobject.Object00;
     position: var uint32): gboolean {.
     importc, libprag.}
 
-proc findListStore*(self: ListStore; item: gobject.Object; position: var int): bool =
-  var position_00 = uint32(position)
+proc findListStore*(self: ListStore; item: gobject.Object; position: var int = cast[var int](nil)): bool =
+  var position_00: uint32
   result = toBool(g_list_store_find(cast[ptr ListStore00](self.impl), cast[ptr gobject.Object00](item.impl), position_00))
-  position = int(position_00)
+  if position.addr != nil:
+    position = int(position_00)
 
 proc g_list_store_find_with_equal_func(self: ptr ListStore00; item: ptr gobject.Object00;
     equalFunc: EqualFunc; position: var uint32): gboolean {.
     importc, libprag.}
 
 proc findWithEqualFunc*(self: ListStore; item: gobject.Object;
-    equalFunc: EqualFunc; position: var int): bool =
-  var position_00 = uint32(position)
+    equalFunc: EqualFunc; position: var int = cast[var int](nil)): bool =
+  var position_00: uint32
   result = toBool(g_list_store_find_with_equal_func(cast[ptr ListStore00](self.impl), cast[ptr gobject.Object00](item.impl), equalFunc, position_00))
-  position = int(position_00)
+  if position.addr != nil:
+    position = int(position_00)
 
 proc g_list_store_insert(self: ptr ListStore00; position: uint32; item: ptr gobject.Object00) {.
     importc, libprag.}
@@ -23233,11 +22959,11 @@ proc sort*(self: ListStore; compareFunc: CompareDataFunc; userData: pointer) =
   g_list_store_sort(cast[ptr ListStore00](self.impl), compareFunc, userData)
 
 proc g_list_store_splice(self: ptr ListStore00; position: uint32; nRemovals: uint32;
-    additions: gobject.Object00Array; nAdditions: uint32) {.
+    additions: ptr gobject.Object00; nAdditions: uint32) {.
     importc, libprag.}
 
 proc splice*(self: ListStore; position: int; nRemovals: int;
-    additions: gobject.Object00Array; nAdditions: int) =
+    additions: ptr gobject.Object00; nAdditions: int) =
   g_list_store_splice(cast[ptr ListStore00](self.impl), uint32(position), uint32(nRemovals), additions, uint32(nAdditions))
 
 type
@@ -23287,25 +23013,6 @@ proc getItem*(self: ListModel | ListStore; position: int): gobject.Object =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc item*(self: ListModel | ListStore; position: int): gobject.Object =
-  let gobj = g_list_model_get_object(cast[ptr ListModel00](self.impl), uint32(position))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gobject.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc g_list_model_items_changed(self: ptr ListModel00; position: uint32;
     removed: uint32; added: uint32) {.
     importc, libprag.}
@@ -23323,7 +23030,7 @@ proc g_loadable_icon_load(self: ptr LoadableIcon00; size: int32; `type`: var cst
     importc, libprag.}
 
 proc load*(self: LoadableIcon | BytesIcon | FileIcon; size: int;
-    `type`: var string; cancellable: Cancellable = nil): InputStream =
+    `type`: var string = cast[var string](nil); cancellable: Cancellable = nil): InputStream =
   var gerror: ptr glib.Error
   var type_00 = cstring(`type`)
   let gobj = g_loadable_icon_load(cast[ptr LoadableIcon00](self.impl), int32(size), type_00, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
@@ -23361,7 +23068,7 @@ proc g_loadable_icon_load_finish(self: ptr LoadableIcon00; res: ptr AsyncResult0
     importc, libprag.}
 
 proc loadFinish*(self: LoadableIcon | BytesIcon | FileIcon;
-    res: AsyncResult | SimpleAsyncResult | Task; `type`: var string): InputStream =
+    res: AsyncResult | SimpleAsyncResult | Task; `type`: var string = cast[var string](nil)): InputStream =
   var gerror: ptr glib.Error
   var type_00 = cstring(`type`)
   let gobj = g_loadable_icon_load_finish(cast[ptr LoadableIcon00](self.impl), cast[ptr AsyncResult00](res.impl), type_00, addr gerror)
@@ -23528,12 +23235,12 @@ proc initMemoryInputStreamFromBytes*[T](result: var T; bytes: glib.Bytes) {.depr
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_memory_input_stream_new_from_data(data: uint8Array; len: int64; destroy: DestroyNotify): ptr MemoryInputStream00 {.
+proc g_memory_input_stream_new_from_data(data: ptr uint8; len: int64; destroy: DestroyNotify): ptr MemoryInputStream00 {.
     importc, libprag.}
 
 proc newMemoryInputStreamFromData*(data: seq[uint8] | string; destroy: DestroyNotify): MemoryInputStream =
   let len = int64(data.len)
-  let gobj = g_memory_input_stream_new_from_data(unsafeaddr(data[0]), len, destroy)
+  let gobj = g_memory_input_stream_new_from_data(cast[ptr uint8](unsafeaddr(data[0])), len, destroy)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -23552,7 +23259,7 @@ proc newMemoryInputStreamFromData*(data: seq[uint8] | string; destroy: DestroyNo
 proc newMemoryInputStreamFromData*(tdesc: typedesc; data: seq[uint8] | string; destroy: DestroyNotify): tdesc =
   let len = int64(data.len)
   assert(result is MemoryInputStream)
-  let gobj = g_memory_input_stream_new_from_data(unsafeaddr(data[0]), len, destroy)
+  let gobj = g_memory_input_stream_new_from_data(cast[ptr uint8](unsafeaddr(data[0])), len, destroy)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -23571,7 +23278,7 @@ proc newMemoryInputStreamFromData*(tdesc: typedesc; data: seq[uint8] | string; d
 proc initMemoryInputStreamFromData*[T](result: var T; data: seq[uint8] | string; destroy: DestroyNotify) {.deprecated.} =
   let len = int64(data.len)
   assert(result is MemoryInputStream)
-  let gobj = g_memory_input_stream_new_from_data(unsafeaddr(data[0]), len, destroy)
+  let gobj = g_memory_input_stream_new_from_data(cast[ptr uint8](unsafeaddr(data[0])), len, destroy)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -23593,14 +23300,14 @@ proc g_memory_input_stream_add_bytes(self: ptr MemoryInputStream00; bytes: ptr g
 proc addBytes*(self: MemoryInputStream; bytes: glib.Bytes) =
   g_memory_input_stream_add_bytes(cast[ptr MemoryInputStream00](self.impl), cast[ptr glib.Bytes00](bytes.impl))
 
-proc g_memory_input_stream_add_data(self: ptr MemoryInputStream00; data: uint8Array;
+proc g_memory_input_stream_add_data(self: ptr MemoryInputStream00; data: ptr uint8;
     len: int64; destroy: DestroyNotify) {.
     importc, libprag.}
 
 proc addData*(self: MemoryInputStream; data: seq[uint8] | string;
     destroy: DestroyNotify) =
   let len = int64(data.len)
-  g_memory_input_stream_add_data(cast[ptr MemoryInputStream00](self.impl), unsafeaddr(data[0]), len, destroy)
+  g_memory_input_stream_add_data(cast[ptr MemoryInputStream00](self.impl), cast[ptr uint8](unsafeaddr(data[0])), len, destroy)
 
 type
   MemoryMonitorWarningLevel* {.size: sizeof(cint), pure.} = enum
@@ -24138,32 +23845,10 @@ proc getAttributeValue*(self: MenuItem; attribute: cstring;
   fnew(result, finalizerunref)
   result.impl = g_menu_item_get_attribute_value(cast[ptr MenuItem00](self.impl), attribute, if expectedType.isNil: nil else: cast[ptr glib.VariantType00](expectedType.impl))
 
-proc attributeValue*(self: MenuItem; attribute: cstring;
-    expectedType: glib.VariantType = nil): glib.Variant =
-  fnew(result, finalizerunref)
-  result.impl = g_menu_item_get_attribute_value(cast[ptr MenuItem00](self.impl), attribute, if expectedType.isNil: nil else: cast[ptr glib.VariantType00](expectedType.impl))
-
 proc g_menu_item_get_link(self: ptr MenuItem00; link: cstring): ptr MenuModel00 {.
     importc, libprag.}
 
 proc getLink*(self: MenuItem; link: cstring): MenuModel =
-  let gobj = g_menu_item_get_link(cast[ptr MenuItem00](self.impl), link)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc link*(self: MenuItem; link: cstring): MenuModel =
   let gobj = g_menu_item_get_link(cast[ptr MenuItem00](self.impl), link)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -24360,31 +24045,18 @@ proc getVolumeMonitor*(): VolumeMonitor =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc volumeMonitor*(): VolumeMonitor =
-  let gobj = g_volume_monitor_get()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc g_volume_monitor_get_connected_drives(self: ptr VolumeMonitor00): ptr pointer {.
+proc g_volume_monitor_get_connected_drives(self: ptr VolumeMonitor00): ptr glib.List {.
     importc, libprag.}
 
-proc getConnectedDrives*(self: VolumeMonitor): ptr pointer =
-  g_volume_monitor_get_connected_drives(cast[ptr VolumeMonitor00](self.impl))
+proc getConnectedDrives*(self: VolumeMonitor): seq[Drive] =
+  let resul0 = g_volume_monitor_get_connected_drives(cast[ptr VolumeMonitor00](self.impl))
+  result = glistObjects2seq(Drive, resul0, true)
+  g_list_free(resul0)
 
-proc connectedDrives*(self: VolumeMonitor): ptr pointer =
-  g_volume_monitor_get_connected_drives(cast[ptr VolumeMonitor00](self.impl))
+proc connectedDrives*(self: VolumeMonitor): seq[Drive] =
+  let resul0 = g_volume_monitor_get_connected_drives(cast[ptr VolumeMonitor00](self.impl))
+  result = glistObjects2seq(Drive, resul0, true)
+  g_list_free(resul0)
 
 proc g_volume_monitor_get_mount_for_uuid(self: ptr VolumeMonitor00; uuid: cstring): ptr Mount00 {.
     importc, libprag.}
@@ -24406,31 +24078,18 @@ proc getMountForUuid*(self: VolumeMonitor; uuid: cstring): Mount =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc mountForUuid*(self: VolumeMonitor; uuid: cstring): Mount =
-  let gobj = g_volume_monitor_get_mount_for_uuid(cast[ptr VolumeMonitor00](self.impl), uuid)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc g_volume_monitor_get_mounts(self: ptr VolumeMonitor00): ptr pointer {.
+proc g_volume_monitor_get_mounts(self: ptr VolumeMonitor00): ptr glib.List {.
     importc, libprag.}
 
-proc getMounts*(self: VolumeMonitor): ptr pointer =
-  g_volume_monitor_get_mounts(cast[ptr VolumeMonitor00](self.impl))
+proc getMounts*(self: VolumeMonitor): seq[Mount] =
+  let resul0 = g_volume_monitor_get_mounts(cast[ptr VolumeMonitor00](self.impl))
+  result = glistObjects2seq(Mount, resul0, true)
+  g_list_free(resul0)
 
-proc mounts*(self: VolumeMonitor): ptr pointer =
-  g_volume_monitor_get_mounts(cast[ptr VolumeMonitor00](self.impl))
+proc mounts*(self: VolumeMonitor): seq[Mount] =
+  let resul0 = g_volume_monitor_get_mounts(cast[ptr VolumeMonitor00](self.impl))
+  result = glistObjects2seq(Mount, resul0, true)
+  g_list_free(resul0)
 
 proc g_volume_monitor_get_volume_for_uuid(self: ptr VolumeMonitor00; uuid: cstring): ptr Volume00 {.
     importc, libprag.}
@@ -24452,31 +24111,18 @@ proc getVolumeForUuid*(self: VolumeMonitor; uuid: cstring): Volume =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc volumeForUuid*(self: VolumeMonitor; uuid: cstring): Volume =
-  let gobj = g_volume_monitor_get_volume_for_uuid(cast[ptr VolumeMonitor00](self.impl), uuid)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc g_volume_monitor_get_volumes(self: ptr VolumeMonitor00): ptr pointer {.
+proc g_volume_monitor_get_volumes(self: ptr VolumeMonitor00): ptr glib.List {.
     importc, libprag.}
 
-proc getVolumes*(self: VolumeMonitor): ptr pointer =
-  g_volume_monitor_get_volumes(cast[ptr VolumeMonitor00](self.impl))
+proc getVolumes*(self: VolumeMonitor): seq[Volume] =
+  let resul0 = g_volume_monitor_get_volumes(cast[ptr VolumeMonitor00](self.impl))
+  result = glistObjects2seq(Volume, resul0, true)
+  g_list_free(resul0)
 
-proc volumes*(self: VolumeMonitor): ptr pointer =
-  g_volume_monitor_get_volumes(cast[ptr VolumeMonitor00](self.impl))
+proc volumes*(self: VolumeMonitor): seq[Volume] =
+  let resul0 = g_volume_monitor_get_volumes(cast[ptr VolumeMonitor00](self.impl))
+  result = glistObjects2seq(Volume, resul0, true)
+  g_list_free(resul0)
 
 type
   NativeVolumeMonitor* = ref object of VolumeMonitor
@@ -24511,22 +24157,6 @@ proc g_network_monitor_get_default(): ptr NetworkMonitor00 {.
     importc, libprag.}
 
 proc getDefaultNetworkMonitor*(): NetworkMonitor =
-  let gobj = g_network_monitor_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultNetworkMonitor*(): NetworkMonitor =
   let gobj = g_network_monitor_get_default()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -24752,14 +24382,14 @@ proc isReadable*(self: PollableInputStream | MemoryInputStream | UnixInputStream
   toBool(g_pollable_input_stream_is_readable(cast[ptr PollableInputStream00](self.impl)))
 
 proc g_pollable_input_stream_read_nonblocking(self: ptr PollableInputStream00;
-    buffer: uint8Array; count: uint64; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
+    buffer: ptr uint8; count: uint64; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
 proc readNonblocking*(self: PollableInputStream | MemoryInputStream | UnixInputStream | ConverterInputStream;
     buffer: seq[uint8] | string; cancellable: Cancellable = nil): int64 =
   let count = uint64(buffer.len)
   var gerror: ptr glib.Error
-  let resul0 = g_pollable_input_stream_read_nonblocking(cast[ptr PollableInputStream00](self.impl), unsafeaddr(buffer[0]), count, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_pollable_input_stream_read_nonblocking(cast[ptr PollableInputStream00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -24792,14 +24422,14 @@ proc isWritable*(self: PollableOutputStream | ConverterOutputStream | MemoryOutp
   toBool(g_pollable_output_stream_is_writable(cast[ptr PollableOutputStream00](self.impl)))
 
 proc g_pollable_output_stream_write_nonblocking(self: ptr PollableOutputStream00;
-    buffer: uint8Array; count: uint64; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
+    buffer: ptr uint8; count: uint64; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
 proc writeNonblocking*(self: PollableOutputStream | ConverterOutputStream | MemoryOutputStream | UnixOutputStream;
     buffer: seq[uint8] | string; cancellable: Cancellable = nil): int64 =
   let count = uint64(buffer.len)
   var gerror: ptr glib.Error
-  let resul0 = g_pollable_output_stream_write_nonblocking(cast[ptr PollableOutputStream00](self.impl), unsafeaddr(buffer[0]), count, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_pollable_output_stream_write_nonblocking(cast[ptr PollableOutputStream00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -24807,12 +24437,12 @@ proc writeNonblocking*(self: PollableOutputStream | ConverterOutputStream | Memo
   result = resul0
 
 proc g_pollable_output_stream_writev_nonblocking(self: ptr PollableOutputStream00;
-    vectors: OutputVector00Array; nVectors: uint64; bytesWritten: var uint64;
+    vectors: ptr OutputVector; nVectors: uint64; bytesWritten: var uint64;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): PollableReturn {.
     importc, libprag.}
 
 proc writevNonblocking*(self: PollableOutputStream | ConverterOutputStream | MemoryOutputStream | UnixOutputStream;
-    vectors: OutputVector00Array; nVectors: uint64; bytesWritten: var uint64;
+    vectors: ptr OutputVector; nVectors: uint64; bytesWritten: var uint64 = cast[var uint64](nil);
     cancellable: Cancellable = nil): PollableReturn =
   var gerror: ptr glib.Error
   let resul0 = g_pollable_output_stream_writev_nonblocking(cast[ptr PollableOutputStream00](self.impl), vectors, nVectors, bytesWritten, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
@@ -24971,22 +24601,6 @@ proc getDefaultProxyResolver*(): ProxyResolver =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc defaultProxyResolver*(): ProxyResolver =
-  let gobj = g_proxy_resolver_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 type
   SimpleProxyResolver* = ref object of gobject.Object
   SimpleProxyResolver00* = object of gobject.Object00
@@ -25061,7 +24675,7 @@ proc isSupported*(self: ProxyResolver | SimpleProxyResolver): bool =
   toBool(g_proxy_resolver_is_supported(cast[ptr ProxyResolver00](self.impl)))
 
 proc g_proxy_resolver_lookup(self: ptr ProxyResolver00; uri: cstring; cancellable: ptr Cancellable00;
-    error: ptr ptr glib.Error = nil): cstringArray {.
+    error: ptr ptr glib.Error = nil): ptr cstring {.
     importc, libprag.}
 
 proc lookup*(self: ProxyResolver | SimpleProxyResolver; uri: cstring;
@@ -25084,7 +24698,7 @@ proc lookupAsync*(self: ProxyResolver | SimpleProxyResolver;
   g_proxy_resolver_lookup_async(cast[ptr ProxyResolver00](self.impl), uri, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
 proc g_proxy_resolver_lookup_finish(self: ptr ProxyResolver00; resu: ptr AsyncResult00;
-    error: ptr ptr glib.Error = nil): cstringArray {.
+    error: ptr ptr glib.Error = nil): ptr cstring {.
     importc, libprag.}
 
 proc lookupFinish*(self: ProxyResolver | SimpleProxyResolver;
@@ -25158,23 +24772,6 @@ proc getDefaultResolver*(): Resolver =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc defaultResolver*(): Resolver =
-  let gobj = g_resolver_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc g_resolver_lookup_by_address(self: ptr Resolver00; address: ptr InetAddress00;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
@@ -25212,17 +24809,18 @@ proc lookupByAddressFinish*(self: Resolver; resu: AsyncResult | SimpleAsyncResul
   cogfree(resul0)
 
 proc g_resolver_lookup_by_name(self: ptr Resolver00; hostname: cstring; cancellable: ptr Cancellable00;
-    error: ptr ptr glib.Error = nil): ptr pointer {.
+    error: ptr ptr glib.Error = nil): ptr glib.List {.
     importc, libprag.}
 
-proc lookupByName*(self: Resolver; hostname: cstring; cancellable: Cancellable = nil): ptr pointer =
+proc lookupByName*(self: Resolver; hostname: cstring; cancellable: Cancellable = nil): seq[InetAddress] =
   var gerror: ptr glib.Error
   let resul0 = g_resolver_lookup_by_name(cast[ptr Resolver00](self.impl), hostname, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = resul0
+  result = glistObjects2seq(InetAddress, resul0, true)
+  g_list_free(resul0)
 
 proc g_resolver_lookup_by_name_async(self: ptr Resolver00; hostname: cstring;
     cancellable: ptr Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
@@ -25233,57 +24831,45 @@ proc lookupByNameAsync*(self: Resolver; hostname: cstring; cancellable: Cancella
   g_resolver_lookup_by_name_async(cast[ptr Resolver00](self.impl), hostname, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
 proc g_resolver_lookup_by_name_finish(self: ptr Resolver00; resu: ptr AsyncResult00;
-    error: ptr ptr glib.Error = nil): ptr pointer {.
+    error: ptr ptr glib.Error = nil): ptr glib.List {.
     importc, libprag.}
 
-proc lookupByNameFinish*(self: Resolver; resu: AsyncResult | SimpleAsyncResult | Task): ptr pointer =
+proc lookupByNameFinish*(self: Resolver; resu: AsyncResult | SimpleAsyncResult | Task): seq[InetAddress] =
   var gerror: ptr glib.Error
   let resul0 = g_resolver_lookup_by_name_finish(cast[ptr Resolver00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = resul0
+  result = glistObjects2seq(InetAddress, resul0, true)
+  g_list_free(resul0)
 
 proc g_resolver_lookup_by_name_with_flags_finish(self: ptr Resolver00; resu: ptr AsyncResult00;
-    error: ptr ptr glib.Error = nil): ptr pointer {.
+    error: ptr ptr glib.Error = nil): ptr glib.List {.
     importc, libprag.}
 
-proc lookupByNameWithFlagsFinish*(self: Resolver; resu: AsyncResult | SimpleAsyncResult | Task): ptr pointer =
+proc lookupByNameWithFlagsFinish*(self: Resolver; resu: AsyncResult | SimpleAsyncResult | Task): seq[InetAddress] =
   var gerror: ptr glib.Error
   let resul0 = g_resolver_lookup_by_name_with_flags_finish(cast[ptr Resolver00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = resul0
+  result = glistObjects2seq(InetAddress, resul0, true)
+  g_list_free(resul0)
 
 proc g_resolver_lookup_records_finish(self: ptr Resolver00; resu: ptr AsyncResult00;
-    error: ptr ptr glib.Error = nil): ptr pointer {.
+    error: ptr ptr glib.Error = nil): ptr glib.List {.
     importc, libprag.}
 
-proc lookupRecordsFinish*(self: Resolver; resu: AsyncResult | SimpleAsyncResult | Task): ptr pointer =
+proc lookupRecordsFinish*(self: Resolver; resu: AsyncResult | SimpleAsyncResult | Task): seq[glib.Variant] =
   var gerror: ptr glib.Error
   let resul0 = g_resolver_lookup_records_finish(cast[ptr Resolver00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = resul0
-
-proc g_resolver_lookup_service(self: ptr Resolver00; service: cstring; protocol: cstring;
-    domain: cstring; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr pointer {.
-    importc, libprag.}
-
-proc lookupService*(self: Resolver; service: cstring; protocol: cstring;
-    domain: cstring; cancellable: Cancellable = nil): ptr pointer =
-  var gerror: ptr glib.Error
-  let resul0 = g_resolver_lookup_service(cast[ptr Resolver00](self.impl), service, protocol, domain, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = resul0
+  g_list_free(resul0)
 
 proc g_resolver_lookup_service_async(self: ptr Resolver00; service: cstring;
     protocol: cstring; domain: cstring; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
@@ -25295,26 +24881,10 @@ proc lookupServiceAsync*(self: Resolver; service: cstring; protocol: cstring;
     userData: pointer) =
   g_resolver_lookup_service_async(cast[ptr Resolver00](self.impl), service, protocol, domain, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
 
-proc g_resolver_lookup_service_finish(self: ptr Resolver00; resu: ptr AsyncResult00;
-    error: ptr ptr glib.Error = nil): ptr pointer {.
-    importc, libprag.}
-
-proc lookupServiceFinish*(self: Resolver; resu: AsyncResult | SimpleAsyncResult | Task): ptr pointer =
-  var gerror: ptr glib.Error
-  let resul0 = g_resolver_lookup_service_finish(cast[ptr Resolver00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = resul0
-
 proc g_resolver_set_default(self: ptr Resolver00) {.
     importc, libprag.}
 
 proc setDefault*(self: Resolver) =
-  g_resolver_set_default(cast[ptr Resolver00](self.impl))
-
-proc `default=`*(self: Resolver) =
   g_resolver_set_default(cast[ptr Resolver00](self.impl))
 
 type
@@ -25325,18 +24895,19 @@ type
   ResolverNameLookupFlags* {.size: sizeof(cint).} = set[ResolverNameLookupFlag]
 
 proc g_resolver_lookup_by_name_with_flags(self: ptr Resolver00; hostname: cstring;
-    flags: ResolverNameLookupFlags; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr pointer {.
+    flags: ResolverNameLookupFlags; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr glib.List {.
     importc, libprag.}
 
 proc lookupByNameWithFlags*(self: Resolver; hostname: cstring;
-    flags: ResolverNameLookupFlags; cancellable: Cancellable = nil): ptr pointer =
+    flags: ResolverNameLookupFlags; cancellable: Cancellable = nil): seq[InetAddress] =
   var gerror: ptr glib.Error
   let resul0 = g_resolver_lookup_by_name_with_flags(cast[ptr Resolver00](self.impl), hostname, flags, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = resul0
+  result = glistObjects2seq(InetAddress, resul0, true)
+  g_list_free(resul0)
 
 proc g_resolver_lookup_by_name_with_flags_async(self: ptr Resolver00; hostname: cstring;
     flags: ResolverNameLookupFlags; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
@@ -25357,18 +24928,18 @@ type
     ns = 5
 
 proc g_resolver_lookup_records(self: ptr Resolver00; rrname: cstring; recordType: ResolverRecordType;
-    cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr pointer {.
+    cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr glib.List {.
     importc, libprag.}
 
 proc lookupRecords*(self: Resolver; rrname: cstring; recordType: ResolverRecordType;
-    cancellable: Cancellable = nil): ptr pointer =
+    cancellable: Cancellable = nil): seq[glib.Variant] =
   var gerror: ptr glib.Error
   let resul0 = g_resolver_lookup_records(cast[ptr Resolver00](self.impl), rrname, recordType, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = resul0
+  g_list_free(resul0)
 
 proc g_resolver_lookup_records_async(self: ptr Resolver00; rrname: cstring;
     recordType: ResolverRecordType; cancellable: ptr Cancellable00; callback: AsyncReadyCallback;
@@ -25378,6 +24949,133 @@ proc g_resolver_lookup_records_async(self: ptr Resolver00; rrname: cstring;
 proc lookupRecordsAsync*(self: Resolver; rrname: cstring; recordType: ResolverRecordType;
     cancellable: Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
   g_resolver_lookup_records_async(cast[ptr Resolver00](self.impl), rrname, recordType, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), callback, userData)
+
+type
+  SrvTarget00* {.pure.} = object
+  SrvTarget* = ref object
+    impl*: ptr SrvTarget00
+    ignoreFinalizer*: bool
+
+proc g_srv_target_get_type*(): GType {.importc, libprag.}
+
+proc gBoxedFreeGSrvTarget*(self: SrvTarget) =
+  if not self.ignoreFinalizer:
+    boxedFree(g_srv_target_get_type(), cast[ptr SrvTarget00](self.impl))
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(SrvTarget()[])) =
+    if not self.ignoreFinalizer and self.impl != nil:
+      boxedFree(g_srv_target_get_type(), cast[ptr SrvTarget00](self.impl))
+      self.impl = nil
+
+proc newWithFinalizer*(x: var SrvTarget) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGSrvTarget)
+
+proc g_srv_target_free(self: ptr SrvTarget00) {.
+    importc, libprag.}
+
+proc free*(self: SrvTarget) =
+  g_srv_target_free(cast[ptr SrvTarget00](self.impl))
+
+proc finalizerfree*(self: SrvTarget) =
+  if not self.ignoreFinalizer:
+    g_srv_target_free(self.impl)
+
+proc g_srv_target_copy(self: ptr SrvTarget00): ptr SrvTarget00 {.
+    importc, libprag.}
+
+proc copy*(self: SrvTarget): SrvTarget =
+  fnew(result, gBoxedFreeGSrvTarget)
+  result.impl = g_srv_target_copy(cast[ptr SrvTarget00](self.impl))
+
+proc g_srv_target_new(hostname: cstring; port: uint16; priority: uint16;
+    weight: uint16): ptr SrvTarget00 {.
+    importc, libprag.}
+
+proc newSrvTarget*(hostname: cstring; port: uint16; priority: uint16;
+    weight: uint16): SrvTarget =
+  fnew(result, gBoxedFreeGSrvTarget)
+  result.impl = g_srv_target_new(hostname, port, priority, weight)
+
+proc newSrvTarget*(tdesc: typedesc; hostname: cstring; port: uint16; priority: uint16;
+    weight: uint16): tdesc =
+  assert(result is SrvTarget)
+  fnew(result, gBoxedFreeGSrvTarget)
+  result.impl = g_srv_target_new(hostname, port, priority, weight)
+
+proc initSrvTarget*[T](result: var T; hostname: cstring; port: uint16; priority: uint16;
+    weight: uint16) {.deprecated.} =
+  assert(result is SrvTarget)
+  fnew(result, gBoxedFreeGSrvTarget)
+  result.impl = g_srv_target_new(hostname, port, priority, weight)
+
+proc g_srv_target_get_hostname(self: ptr SrvTarget00): cstring {.
+    importc, libprag.}
+
+proc getHostname*(self: SrvTarget): string =
+  result = $g_srv_target_get_hostname(cast[ptr SrvTarget00](self.impl))
+
+proc hostname*(self: SrvTarget): string =
+  result = $g_srv_target_get_hostname(cast[ptr SrvTarget00](self.impl))
+
+proc g_srv_target_get_port(self: ptr SrvTarget00): uint16 {.
+    importc, libprag.}
+
+proc getPort*(self: SrvTarget): uint16 =
+  g_srv_target_get_port(cast[ptr SrvTarget00](self.impl))
+
+proc port*(self: SrvTarget): uint16 =
+  g_srv_target_get_port(cast[ptr SrvTarget00](self.impl))
+
+proc g_srv_target_get_priority(self: ptr SrvTarget00): uint16 {.
+    importc, libprag.}
+
+proc getPriority*(self: SrvTarget): uint16 =
+  g_srv_target_get_priority(cast[ptr SrvTarget00](self.impl))
+
+proc priority*(self: SrvTarget): uint16 =
+  g_srv_target_get_priority(cast[ptr SrvTarget00](self.impl))
+
+proc g_srv_target_get_weight(self: ptr SrvTarget00): uint16 {.
+    importc, libprag.}
+
+proc getWeight*(self: SrvTarget): uint16 =
+  g_srv_target_get_weight(cast[ptr SrvTarget00](self.impl))
+
+proc weight*(self: SrvTarget): uint16 =
+  g_srv_target_get_weight(cast[ptr SrvTarget00](self.impl))
+
+proc g_resolver_lookup_service(self: ptr Resolver00; service: cstring; protocol: cstring;
+    domain: cstring; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr glib.List {.
+    importc, libprag.}
+
+proc lookupService*(self: Resolver; service: cstring; protocol: cstring;
+    domain: cstring; cancellable: Cancellable = nil): seq[SrvTarget] =
+  var gerror: ptr glib.Error
+  let resul0 = g_resolver_lookup_service(cast[ptr Resolver00](self.impl), service, protocol, domain, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = glistStructs2seq[SrvTarget](resul0, false)
+  g_list_free(resul0)
+
+proc g_resolver_lookup_service_finish(self: ptr Resolver00; resu: ptr AsyncResult00;
+    error: ptr ptr glib.Error = nil): ptr glib.List {.
+    importc, libprag.}
+
+proc lookupServiceFinish*(self: Resolver; resu: AsyncResult | SimpleAsyncResult | Task): seq[SrvTarget] =
+  var gerror: ptr glib.Error
+  let resul0 = g_resolver_lookup_service_finish(cast[ptr Resolver00](self.impl), cast[ptr AsyncResult00](resu.impl), addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = glistStructs2seq[SrvTarget](resul0, false)
+  g_list_free(resul0)
 
 type
   ResolverError* {.size: sizeof(cint), pure.} = enum
@@ -25402,6 +25100,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_resource_get_type(), cast[ptr Resource00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var Resource) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGResource)
 
 proc g_resource_unref(self: ptr Resource00) {.
     importc, libprag.}
@@ -25485,7 +25189,7 @@ type
     none = 0
 
 proc g_resource_enumerate_children(self: ptr Resource00; path: cstring; lookupFlags: ResourceLookupFlags;
-    error: ptr ptr glib.Error = nil): cstringArray {.
+    error: ptr ptr glib.Error = nil): ptr cstring {.
     importc, libprag.}
 
 proc enumerateChildren*(self: Resource; path: cstring; lookupFlags: ResourceLookupFlags): seq[string] =
@@ -25502,28 +25206,17 @@ proc g_resource_get_info(self: ptr Resource00; path: cstring; lookupFlags: Resou
     importc, libprag.}
 
 proc getInfoResource*(self: Resource; path: cstring; lookupFlags: ResourceLookupFlags;
-    size: var uint64; flags: var int): bool =
+    size: var uint64 = cast[var uint64](nil); flags: var int = cast[var int](nil)): bool =
   var gerror: ptr glib.Error
-  var flags_00 = uint32(flags)
+  var flags_00: uint32
   let resul0 = g_resource_get_info(cast[ptr Resource00](self.impl), path, lookupFlags, size, flags_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  flags = int(flags_00)
-
-proc infoResource*(self: Resource; path: cstring; lookupFlags: ResourceLookupFlags;
-    size: var uint64; flags: var int): bool =
-  var gerror: ptr glib.Error
-  var flags_00 = uint32(flags)
-  let resul0 = g_resource_get_info(cast[ptr Resource00](self.impl), path, lookupFlags, size, flags_00, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-  flags = int(flags_00)
+  if flags.addr != nil:
+    flags = int(flags_00)
 
 proc g_resource_lookup_data(self: ptr Resource00; path: cstring; lookupFlags: ResourceLookupFlags;
     error: ptr ptr glib.Error = nil): ptr glib.Bytes00 {.
@@ -25643,7 +25336,7 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc scChangeEvent*(self: Settings;  p: proc (self: ptr Settings00; keys: uint32Array; nKeys: int32; xdata: pointer): gboolean {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scChangeEvent*(self: Settings;  p: proc (self: ptr Settings00; keys: ptr uint32; nKeys: int32; xdata: pointer): gboolean {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "change-event", cast[GCallback](p), xdata, nil, cf)
 
 proc scChanged*(self: Settings;  p: proc (self: ptr Settings00; key: cstring; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
@@ -25767,13 +25460,13 @@ proc initSettingsWithPath*[T](result: var T; schemaId: cstring; path: cstring) {
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_settings_list_relocatable_schemas(): cstringArray {.
+proc g_settings_list_relocatable_schemas(): ptr cstring {.
     importc, libprag.}
 
 proc listRelocatableSchemas*(): seq[string] =
   cstringArrayToSeq(g_settings_list_relocatable_schemas())
 
-proc g_settings_list_schemas(): cstringArray {.
+proc g_settings_list_schemas(): ptr cstring {.
     importc, libprag.}
 
 proc listSchemas*(): seq[string] =
@@ -25834,30 +25527,10 @@ proc g_settings_get_boolean(self: ptr Settings00; key: cstring): gboolean {.
 proc getBoolean*(self: Settings; key: cstring): bool =
   toBool(g_settings_get_boolean(cast[ptr Settings00](self.impl), key))
 
-proc boolean*(self: Settings; key: cstring): bool =
-  toBool(g_settings_get_boolean(cast[ptr Settings00](self.impl), key))
-
 proc g_settings_get_child(self: ptr Settings00; name: cstring): ptr Settings00 {.
     importc, libprag.}
 
 proc getChild*(self: Settings; name: cstring): Settings =
-  let gobj = g_settings_get_child(cast[ptr Settings00](self.impl), name)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc child*(self: Settings; name: cstring): Settings =
   let gobj = g_settings_get_child(cast[ptr Settings00](self.impl), name)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -25884,20 +25557,10 @@ proc getDefaultValue*(self: Settings; key: cstring): glib.Variant =
   fnew(result, finalizerunref)
   result.impl = impl0
 
-proc defaultValue*(self: Settings; key: cstring): glib.Variant =
-  let impl0 = g_settings_get_default_value(cast[ptr Settings00](self.impl), key)
-  if impl0.isNil:
-    return nil
-  fnew(result, finalizerunref)
-  result.impl = impl0
-
 proc g_settings_get_double(self: ptr Settings00; key: cstring): cdouble {.
     importc, libprag.}
 
 proc getDouble*(self: Settings; key: cstring): cdouble =
-  g_settings_get_double(cast[ptr Settings00](self.impl), key)
-
-proc double*(self: Settings; key: cstring): cdouble =
   g_settings_get_double(cast[ptr Settings00](self.impl), key)
 
 proc g_settings_get_enum(self: ptr Settings00; key: cstring): int32 {.
@@ -25910,9 +25573,6 @@ proc g_settings_get_flags(self: ptr Settings00; key: cstring): uint32 {.
     importc, libprag.}
 
 proc getFlags*(self: Settings; key: cstring): int =
-  int(g_settings_get_flags(cast[ptr Settings00](self.impl), key))
-
-proc flags*(self: Settings; key: cstring): int =
   int(g_settings_get_flags(cast[ptr Settings00](self.impl), key))
 
 proc g_settings_get_has_unapplied(self: ptr Settings00): gboolean {.
@@ -25943,10 +25603,6 @@ proc getRange*(self: Settings; key: cstring): glib.Variant =
   fnew(result, finalizerunref)
   result.impl = g_settings_get_range(cast[ptr Settings00](self.impl), key)
 
-proc range*(self: Settings; key: cstring): glib.Variant =
-  fnew(result, finalizerunref)
-  result.impl = g_settings_get_range(cast[ptr Settings00](self.impl), key)
-
 proc g_settings_get_string(self: ptr Settings00; key: cstring): cstring {.
     importc, libprag.}
 
@@ -25955,15 +25611,10 @@ proc getString*(self: Settings; key: cstring): string =
   result = $resul0
   cogfree(resul0)
 
-proc g_settings_get_strv(self: ptr Settings00; key: cstring): cstringArray {.
+proc g_settings_get_strv(self: ptr Settings00; key: cstring): ptr cstring {.
     importc, libprag.}
 
 proc getStrv*(self: Settings; key: cstring): seq[string] =
-  let resul0 = g_settings_get_strv(cast[ptr Settings00](self.impl), key)
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc strv*(self: Settings; key: cstring): seq[string] =
   let resul0 = g_settings_get_strv(cast[ptr Settings00](self.impl), key)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
@@ -25990,21 +25641,10 @@ proc getUserValue*(self: Settings; key: cstring): glib.Variant =
   fnew(result, finalizerunref)
   result.impl = impl0
 
-proc userValue*(self: Settings; key: cstring): glib.Variant =
-  let impl0 = g_settings_get_user_value(cast[ptr Settings00](self.impl), key)
-  if impl0.isNil:
-    return nil
-  fnew(result, finalizerunref)
-  result.impl = impl0
-
 proc g_settings_get_value(self: ptr Settings00; key: cstring): ptr glib.Variant00 {.
     importc, libprag.}
 
 proc getValue*(self: Settings; key: cstring): glib.Variant =
-  fnew(result, finalizerunref)
-  result.impl = g_settings_get_value(cast[ptr Settings00](self.impl), key)
-
-proc value*(self: Settings; key: cstring): glib.Variant =
   fnew(result, finalizerunref)
   result.impl = g_settings_get_value(cast[ptr Settings00](self.impl), key)
 
@@ -26014,7 +25654,7 @@ proc g_settings_is_writable(self: ptr Settings00; name: cstring): gboolean {.
 proc isWritable*(self: Settings; name: cstring): bool =
   toBool(g_settings_is_writable(cast[ptr Settings00](self.impl), name))
 
-proc g_settings_list_children(self: ptr Settings00): cstringArray {.
+proc g_settings_list_children(self: ptr Settings00): ptr cstring {.
     importc, libprag.}
 
 proc listChildren*(self: Settings): seq[string] =
@@ -26022,7 +25662,7 @@ proc listChildren*(self: Settings): seq[string] =
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
-proc g_settings_list_keys(self: ptr Settings00): cstringArray {.
+proc g_settings_list_keys(self: ptr Settings00): ptr cstring {.
     importc, libprag.}
 
 proc listKeys*(self: Settings): seq[string] =
@@ -26090,7 +25730,7 @@ proc g_settings_set_string(self: ptr Settings00; key: cstring; value: cstring): 
 proc setString*(self: Settings; key: cstring; value: cstring): bool =
   toBool(g_settings_set_string(cast[ptr Settings00](self.impl), key, value))
 
-proc g_settings_set_strv(self: ptr Settings00; key: cstring; value: cstringArray): gboolean {.
+proc g_settings_set_strv(self: ptr Settings00; key: cstring; value: ptr cstring): gboolean {.
     importc, libprag.}
 
 proc setStrv*(self: Settings; key: cstring; value: varargs[string, `$`]): bool =
@@ -26134,6 +25774,12 @@ when defined(gcDestructors):
       boxedFree(g_settings_schema_get_type(), cast[ptr SettingsSchema00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var SettingsSchema) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGSettingsSchema)
+
 proc g_settings_schema_unref(self: ptr SettingsSchema00) {.
     importc, libprag.}
 
@@ -26159,7 +25805,7 @@ proc g_settings_schema_has_key(self: ptr SettingsSchema00; name: cstring): gbool
 proc hasKey*(self: SettingsSchema; name: cstring): bool =
   toBool(g_settings_schema_has_key(cast[ptr SettingsSchema00](self.impl), name))
 
-proc g_settings_schema_list_children(self: ptr SettingsSchema00): cstringArray {.
+proc g_settings_schema_list_children(self: ptr SettingsSchema00): ptr cstring {.
     importc, libprag.}
 
 proc listChildren*(self: SettingsSchema): seq[string] =
@@ -26167,7 +25813,7 @@ proc listChildren*(self: SettingsSchema): seq[string] =
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
-proc g_settings_schema_list_keys(self: ptr SettingsSchema00): cstringArray {.
+proc g_settings_schema_list_keys(self: ptr SettingsSchema00): ptr cstring {.
     importc, libprag.}
 
 proc listKeys*(self: SettingsSchema): seq[string] =
@@ -26208,6 +25854,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_settings_schema_key_get_type(), cast[ptr SettingsSchemaKey00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var SettingsSchemaKey) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGSettingsSchemaKey)
 
 proc g_settings_schema_key_unref(self: ptr SettingsSchemaKey00) {.
     importc, libprag.}
@@ -26301,10 +25953,6 @@ proc getKey*(self: SettingsSchema; name: cstring): SettingsSchemaKey =
   fnew(result, gBoxedFreeGSettingsSchemaKey)
   result.impl = g_settings_schema_get_key(cast[ptr SettingsSchema00](self.impl), name)
 
-proc key*(self: SettingsSchema; name: cstring): SettingsSchemaKey =
-  fnew(result, gBoxedFreeGSettingsSchemaKey)
-  result.impl = g_settings_schema_get_key(cast[ptr SettingsSchema00](self.impl), name)
-
 type
   SettingsBackend* = ref object of gobject.Object
   SettingsBackend00* = object of gobject.Object00
@@ -26321,40 +25969,25 @@ when defined(gcDestructors):
       self.impl = nil
 
 proc g_settings_backend_flatten_tree(tree: ptr glib.Tree00; path: var cstring;
-    keys: var cstringArray; values: var ptr glib.Variant00Array) {.
+    keys: var ptr cstring; values: var ptr ptr glib.Variant00) {.
     importc, libprag.}
 
 proc flattenTree*(tree: glib.Tree; path: var string; keys: var seq[string];
-    values: var ptr glib.Variant00Array) =
-  var path_00 = cstring(path)
+    values: var ptr ptr glib.Variant00 = cast[var ptr ptr glib.Variant00](nil)) =
+  var path_00: cstring
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var keys_00 = seq2CstringArray(keys, fs469n23)
   g_settings_backend_flatten_tree(cast[ptr glib.Tree00](tree.impl), path_00, keys_00, values)
-  path = $(path_00)
-  keys = cstringArrayToSeq(keys_00)
+  if path.addr != nil:
+    path = $(path_00)
+  if keys.addr != nil:
+    keys = cstringArrayToSeq(keys_00)
 
 proc g_settings_backend_get_default(): ptr SettingsBackend00 {.
     importc, libprag.}
 
 proc getDefaultSettingsBackend*(): SettingsBackend =
-  let gobj = g_settings_backend_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultSettingsBackend*(): SettingsBackend =
   let gobj = g_settings_backend_get_default()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -26387,7 +26020,7 @@ proc changedTree*(self: SettingsBackend; tree: glib.Tree;
   g_settings_backend_changed_tree(cast[ptr SettingsBackend00](self.impl), cast[ptr glib.Tree00](tree.impl), originTag)
 
 proc g_settings_backend_keys_changed(self: ptr SettingsBackend00; path: cstring;
-    items: cstringArray; originTag: pointer) {.
+    items: ptr cstring; originTag: pointer) {.
     importc, libprag.}
 
 proc keysChanged*(self: SettingsBackend; path: cstring;
@@ -26646,6 +26279,12 @@ when defined(gcDestructors):
       boxedFree(g_settings_schema_source_get_type(), cast[ptr SettingsSchemaSource00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var SettingsSchemaSource) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGSettingsSchemaSource)
+
 proc g_settings_schema_source_unref(self: ptr SettingsSchemaSource00) {.
     importc, libprag.}
 
@@ -26657,7 +26296,7 @@ proc finalizerunref*(self: SettingsSchemaSource) =
     g_settings_schema_source_unref(self.impl)
 
 proc g_settings_schema_source_list_schemas(self: ptr SettingsSchemaSource00;
-    recursive: gboolean; nonRelocatable: var cstringArray; relocatable: var cstringArray) {.
+    recursive: gboolean; nonRelocatable: var ptr cstring; relocatable: var ptr cstring) {.
     importc, libprag.}
 
 proc listSchemas*(self: SettingsSchemaSource; recursive: bool;
@@ -26669,8 +26308,10 @@ proc listSchemas*(self: SettingsSchemaSource; recursive: bool;
   var fs469n231: cstringArray = cast[cstringArray](addr fs469n23x1)
   var relocatable_00 = seq2CstringArray(relocatable, fs469n231)
   g_settings_schema_source_list_schemas(cast[ptr SettingsSchemaSource00](self.impl), gboolean(recursive), nonRelocatable_00, relocatable_00)
-  nonRelocatable = cstringArrayToSeq(nonRelocatable_00)
-  relocatable = cstringArrayToSeq(relocatable_00)
+  if nonRelocatable.addr != nil:
+    nonRelocatable = cstringArrayToSeq(nonRelocatable_00)
+  if relocatable.addr != nil:
+    relocatable = cstringArrayToSeq(relocatable_00)
 
 proc g_settings_schema_source_lookup(self: ptr SettingsSchemaSource00; schemaId: cstring;
     recursive: gboolean): ptr SettingsSchema00 {.
@@ -26734,14 +26375,6 @@ proc g_settings_schema_source_get_default(): ptr SettingsSchemaSource00 {.
     importc, libprag.}
 
 proc getDefaultSettingsSchemaSource*(): SettingsSchemaSource =
-  let impl0 = g_settings_schema_source_get_default()
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreeGSettingsSchemaSource)
-  result.impl = impl0
-  result.ignoreFinalizer = true
-
-proc defaultSettingsSchemaSource*(): SettingsSchemaSource =
   let impl0 = g_settings_schema_source_get_default()
   if impl0.isNil:
     return nil
@@ -27535,10 +27168,10 @@ proc g_socket_listener_accept(self: ptr SocketListener00; sourceObject: var ptr 
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr SocketConnection00 {.
     importc, libprag.}
 
-proc accept*(self: SocketListener; sourceObject: var gobject.Object;
+proc accept*(self: SocketListener; sourceObject: var gobject.Object = cast[var gobject.Object](nil);
     cancellable: Cancellable = nil): SocketConnection =
   var gerror: ptr glib.Error
-  let gobj = g_socket_listener_accept(cast[ptr SocketListener00](self.impl), cast[var ptr gobject.Object00](addr sourceObject.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_socket_listener_accept(cast[ptr SocketListener00](self.impl), cast[var ptr gobject.Object00](if addr(sourceObject) == nil: nil else: addr sourceObject.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -27571,9 +27204,9 @@ proc g_socket_listener_accept_finish(self: ptr SocketListener00; resu: ptr Async
     importc, libprag.}
 
 proc acceptFinish*(self: SocketListener; resu: AsyncResult | SimpleAsyncResult | Task;
-    sourceObject: var gobject.Object): SocketConnection =
+    sourceObject: var gobject.Object = cast[var gobject.Object](nil)): SocketConnection =
   var gerror: ptr glib.Error
-  let gobj = g_socket_listener_accept_finish(cast[ptr SocketListener00](self.impl), cast[ptr AsyncResult00](resu.impl), cast[var ptr gobject.Object00](addr sourceObject.impl), addr gerror)
+  let gobj = g_socket_listener_accept_finish(cast[ptr SocketListener00](self.impl), cast[ptr AsyncResult00](resu.impl), cast[var ptr gobject.Object00](if addr(sourceObject) == nil: nil else: addr sourceObject.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -27597,10 +27230,10 @@ proc g_socket_listener_accept_socket(self: ptr SocketListener00; sourceObject: v
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr Socket00 {.
     importc, libprag.}
 
-proc acceptSocket*(self: SocketListener; sourceObject: var gobject.Object;
+proc acceptSocket*(self: SocketListener; sourceObject: var gobject.Object = cast[var gobject.Object](nil);
     cancellable: Cancellable = nil): Socket =
   var gerror: ptr glib.Error
-  let gobj = g_socket_listener_accept_socket(cast[ptr SocketListener00](self.impl), cast[var ptr gobject.Object00](addr sourceObject.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let gobj = g_socket_listener_accept_socket(cast[ptr SocketListener00](self.impl), cast[var ptr gobject.Object00](if addr(sourceObject) == nil: nil else: addr sourceObject.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -27633,9 +27266,9 @@ proc g_socket_listener_accept_socket_finish(self: ptr SocketListener00; resu: pt
     importc, libprag.}
 
 proc acceptSocketFinish*(self: SocketListener; resu: AsyncResult | SimpleAsyncResult | Task;
-    sourceObject: var gobject.Object): Socket =
+    sourceObject: var gobject.Object = cast[var gobject.Object](nil)): Socket =
   var gerror: ptr glib.Error
-  let gobj = g_socket_listener_accept_socket_finish(cast[ptr SocketListener00](self.impl), cast[ptr AsyncResult00](resu.impl), cast[var ptr gobject.Object00](addr sourceObject.impl), addr gerror)
+  let gobj = g_socket_listener_accept_socket_finish(cast[ptr SocketListener00](self.impl), cast[ptr AsyncResult00](resu.impl), cast[var ptr gobject.Object00](if addr(sourceObject) == nil: nil else: addr sourceObject.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -27662,10 +27295,11 @@ proc g_socket_listener_add_address(self: ptr SocketListener00; address: ptr Sock
 
 proc addAddress*(self: SocketListener; address: SocketAddress;
     `type`: SocketType; protocol: SocketProtocol; sourceObject: gobject.Object = nil;
-    effectiveAddress: var SocketAddress): bool =
-  fnew(effectiveAddress, gio.finalizeGObject)
+    effectiveAddress: var SocketAddress = cast[var SocketAddress](nil)): bool =
+  if addr(effectiveAddress) != nil:
+    fnew(effectiveAddress, gio.finalizeGObject)
   var gerror: ptr glib.Error
-  let resul0 = g_socket_listener_add_address(cast[ptr SocketListener00](self.impl), cast[ptr SocketAddress00](address.impl), `type`, protocol, if sourceObject.isNil: nil else: cast[ptr gobject.Object00](sourceObject.impl), cast[var ptr SocketAddress00](addr effectiveAddress.impl), addr gerror)
+  let resul0 = g_socket_listener_add_address(cast[ptr SocketListener00](self.impl), cast[ptr SocketAddress00](address.impl), `type`, protocol, if sourceObject.isNil: nil else: cast[ptr gobject.Object00](sourceObject.impl), cast[var ptr SocketAddress00](if addr(effectiveAddress) == nil: nil else: addr effectiveAddress.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -27831,127 +27465,37 @@ type
   SocketSourceFunc* = proc (socket: ptr Socket00; condition: glib.IOCondition; userData: pointer): gboolean {.cdecl.}
 
 type
-  SrvTarget00* {.pure.} = object
-  SrvTarget* = ref object
-    impl*: ptr SrvTarget00
-    ignoreFinalizer*: bool
+  StaticResource* {.pure, byRef.} = object
+    data*: ptr uint8
+    dataLen*: uint64
+    resource*: ptr Resource00
+    next*: ptr StaticResource
+    padding*: pointer
 
-proc g_srv_target_get_type*(): GType {.importc, libprag.}
-
-proc gBoxedFreeGSrvTarget*(self: SrvTarget) =
-  if not self.ignoreFinalizer:
-    boxedFree(g_srv_target_get_type(), cast[ptr SrvTarget00](self.impl))
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(SrvTarget()[])) =
-    if not self.ignoreFinalizer and self.impl != nil:
-      boxedFree(g_srv_target_get_type(), cast[ptr SrvTarget00](self.impl))
-      self.impl = nil
-
-proc g_srv_target_free(self: ptr SrvTarget00) {.
-    importc, libprag.}
-
-proc free*(self: SrvTarget) =
-  g_srv_target_free(cast[ptr SrvTarget00](self.impl))
-
-proc finalizerfree*(self: SrvTarget) =
-  if not self.ignoreFinalizer:
-    g_srv_target_free(self.impl)
-
-proc g_srv_target_copy(self: ptr SrvTarget00): ptr SrvTarget00 {.
-    importc, libprag.}
-
-proc copy*(self: SrvTarget): SrvTarget =
-  fnew(result, gBoxedFreeGSrvTarget)
-  result.impl = g_srv_target_copy(cast[ptr SrvTarget00](self.impl))
-
-proc g_srv_target_new(hostname: cstring; port: uint16; priority: uint16;
-    weight: uint16): ptr SrvTarget00 {.
-    importc, libprag.}
-
-proc newSrvTarget*(hostname: cstring; port: uint16; priority: uint16;
-    weight: uint16): SrvTarget =
-  fnew(result, gBoxedFreeGSrvTarget)
-  result.impl = g_srv_target_new(hostname, port, priority, weight)
-
-proc newSrvTarget*(tdesc: typedesc; hostname: cstring; port: uint16; priority: uint16;
-    weight: uint16): tdesc =
-  assert(result is SrvTarget)
-  fnew(result, gBoxedFreeGSrvTarget)
-  result.impl = g_srv_target_new(hostname, port, priority, weight)
-
-proc initSrvTarget*[T](result: var T; hostname: cstring; port: uint16; priority: uint16;
-    weight: uint16) {.deprecated.} =
-  assert(result is SrvTarget)
-  fnew(result, gBoxedFreeGSrvTarget)
-  result.impl = g_srv_target_new(hostname, port, priority, weight)
-
-proc g_srv_target_get_hostname(self: ptr SrvTarget00): cstring {.
-    importc, libprag.}
-
-proc getHostname*(self: SrvTarget): string =
-  result = $g_srv_target_get_hostname(cast[ptr SrvTarget00](self.impl))
-
-proc hostname*(self: SrvTarget): string =
-  result = $g_srv_target_get_hostname(cast[ptr SrvTarget00](self.impl))
-
-proc g_srv_target_get_port(self: ptr SrvTarget00): uint16 {.
-    importc, libprag.}
-
-proc getPort*(self: SrvTarget): uint16 =
-  g_srv_target_get_port(cast[ptr SrvTarget00](self.impl))
-
-proc port*(self: SrvTarget): uint16 =
-  g_srv_target_get_port(cast[ptr SrvTarget00](self.impl))
-
-proc g_srv_target_get_priority(self: ptr SrvTarget00): uint16 {.
-    importc, libprag.}
-
-proc getPriority*(self: SrvTarget): uint16 =
-  g_srv_target_get_priority(cast[ptr SrvTarget00](self.impl))
-
-proc priority*(self: SrvTarget): uint16 =
-  g_srv_target_get_priority(cast[ptr SrvTarget00](self.impl))
-
-proc g_srv_target_get_weight(self: ptr SrvTarget00): uint16 {.
-    importc, libprag.}
-
-proc getWeight*(self: SrvTarget): uint16 =
-  g_srv_target_get_weight(cast[ptr SrvTarget00](self.impl))
-
-proc weight*(self: SrvTarget): uint16 =
-  g_srv_target_get_weight(cast[ptr SrvTarget00](self.impl))
-
-type
-  StaticResource00* {.pure.} = object
-  StaticResource* = ref object
-    impl*: ptr StaticResource00
-    ignoreFinalizer*: bool
-
-proc g_static_resource_fini(self: ptr StaticResource00) {.
+proc g_static_resource_fini(self: StaticResource) {.
     importc, libprag.}
 
 proc fini*(self: StaticResource) =
-  g_static_resource_fini(cast[ptr StaticResource00](self.impl))
+  g_static_resource_fini(self)
 
-proc g_static_resource_get_resource(self: ptr StaticResource00): ptr Resource00 {.
+proc g_static_resource_get_resource(self: StaticResource): ptr Resource00 {.
     importc, libprag.}
 
 proc getResource*(self: StaticResource): Resource =
   fnew(result, gBoxedFreeGResource)
-  result.impl = g_static_resource_get_resource(cast[ptr StaticResource00](self.impl))
+  result.impl = g_static_resource_get_resource(self)
   result.ignoreFinalizer = true
 
 proc resource*(self: StaticResource): Resource =
   fnew(result, gBoxedFreeGResource)
-  result.impl = g_static_resource_get_resource(cast[ptr StaticResource00](self.impl))
+  result.impl = g_static_resource_get_resource(self)
   result.ignoreFinalizer = true
 
-proc g_static_resource_init(self: ptr StaticResource00) {.
+proc g_static_resource_init(self: StaticResource) {.
     importc, libprag.}
 
 proc init*(self: StaticResource) =
-  g_static_resource_init(cast[ptr StaticResource00](self.impl))
+  g_static_resource_init(self)
 
 type
   SubprocessLauncher* = ref object of gobject.Object
@@ -28030,9 +27574,6 @@ proc g_subprocess_launcher_getenv(self: ptr SubprocessLauncher00; variable: cstr
 proc getenv*(self: SubprocessLauncher; variable: cstring): string =
   result = $g_subprocess_launcher_getenv(cast[ptr SubprocessLauncher00](self.impl), variable)
 
-proc env*(self: SubprocessLauncher; variable: cstring): string =
-  result = $g_subprocess_launcher_getenv(cast[ptr SubprocessLauncher00](self.impl), variable)
-
 proc g_subprocess_launcher_set_cwd(self: ptr SubprocessLauncher00; cwd: cstring) {.
     importc, libprag.}
 
@@ -28042,7 +27583,7 @@ proc setCwd*(self: SubprocessLauncher; cwd: cstring) =
 proc `cwd=`*(self: SubprocessLauncher; cwd: cstring) =
   g_subprocess_launcher_set_cwd(cast[ptr SubprocessLauncher00](self.impl), cwd)
 
-proc g_subprocess_launcher_set_environ(self: ptr SubprocessLauncher00; env: cstringArray) {.
+proc g_subprocess_launcher_set_environ(self: ptr SubprocessLauncher00; env: ptr cstring) {.
     importc, libprag.}
 
 proc setEnviron*(self: SubprocessLauncher; env: varargs[string, `$`]) =
@@ -28108,7 +27649,7 @@ proc setenv*(self: SubprocessLauncher; variable: cstring;
     value: cstring; overwrite: bool) =
   g_subprocess_launcher_setenv(cast[ptr SubprocessLauncher00](self.impl), variable, value, gboolean(overwrite))
 
-proc g_subprocess_launcher_spawnv(self: ptr SubprocessLauncher00; argv: cstringArray;
+proc g_subprocess_launcher_spawnv(self: ptr SubprocessLauncher00; argv: ptr cstring;
     error: ptr ptr glib.Error = nil): ptr Subprocess00 {.
     importc, libprag.}
 
@@ -28562,22 +28103,6 @@ proc getDefaultTlsBackend*(): TlsBackend =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc defaultTlsBackend*(): TlsBackend =
-  let gobj = g_tls_backend_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc g_tls_backend_get_certificate_type(self: ptr TlsBackend00): GType {.
     importc, libprag.}
 
@@ -28691,6 +28216,14 @@ proc supportsTls*(self: TlsBackend): bool =
   toBool(g_tls_backend_supports_tls(cast[ptr TlsBackend00](self.impl)))
 
 type
+  TlsChannelBindingError* {.size: sizeof(cint), pure.} = enum
+    notImplemented = 0
+    invalidState = 1
+    notAvailable = 2
+    notSupported = 3
+    generalError = 4
+
+type
   TlsClientConnection00* = object of gobject.Object00
   TlsClientConnection* = ref object of gobject.Object
 
@@ -28728,14 +28261,16 @@ proc copySessionState*(self: TlsClientConnection;
     source: TlsClientConnection) =
   g_tls_client_connection_copy_session_state(cast[ptr TlsClientConnection00](self.impl), cast[ptr TlsClientConnection00](source.impl))
 
-proc g_tls_client_connection_get_accepted_cas(self: ptr TlsClientConnection00): ptr pointer {.
+proc g_tls_client_connection_get_accepted_cas(self: ptr TlsClientConnection00): ptr glib.List {.
     importc, libprag.}
 
-proc getAcceptedCas*(self: TlsClientConnection): ptr pointer =
-  g_tls_client_connection_get_accepted_cas(cast[ptr TlsClientConnection00](self.impl))
+proc getAcceptedCas*(self: TlsClientConnection): seq[ptr ByteArray00] =
+  let resul0 = g_tls_client_connection_get_accepted_cas(cast[ptr TlsClientConnection00](self.impl))
+  g_list_free(resul0)
 
-proc acceptedCas*(self: TlsClientConnection): ptr pointer =
-  g_tls_client_connection_get_accepted_cas(cast[ptr TlsClientConnection00](self.impl))
+proc acceptedCas*(self: TlsClientConnection): seq[ptr ByteArray00] =
+  let resul0 = g_tls_client_connection_get_accepted_cas(cast[ptr TlsClientConnection00](self.impl))
+  g_list_free(resul0)
 
 proc g_tls_client_connection_get_server_identity(self: ptr TlsClientConnection00): ptr SocketConnectable00 {.
     importc, libprag.}
@@ -29371,15 +28906,16 @@ proc fdList*(self: UnixFDMessage): UnixFDList =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_unix_fd_message_steal_fds(self: ptr UnixFDMessage00; length: var int32): int32Array {.
+proc g_unix_fd_message_steal_fds(self: ptr UnixFDMessage00; length: var int32): ptr int32 {.
     importc, libprag.}
 
-proc stealFds*(self: UnixFDMessage; length: var int): seq[int32] =
-  var length_00 = int32(length)
+proc stealFds*(self: UnixFDMessage; length: var int = cast[var int](nil)): seq[int32] =
+  var length_00: int32
   let resul0 = g_unix_fd_message_steal_fds(cast[ptr UnixFDMessage00](self.impl), length_00)
-  result = int32ArrayZT2seq(resul0)
+  result = int32ArrayToSeq(resul0, length.int)
   cogfree(resul0)
-  length = int(length_00)
+  if length.addr != nil:
+    length = int(length_00)
 
 type
   UnixMountEntry00* {.pure.} = object
@@ -29398,6 +28934,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_unix_mount_entry_get_type(), cast[ptr UnixMountEntry00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var UnixMountEntry) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGUnixMountEntry)
 
 type
   UnixMountMonitor* = ref object of gobject.Object
@@ -29496,23 +29038,6 @@ proc getUnixMountMonitor*(): UnixMountMonitor =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc unixMountMonitor*(): UnixMountMonitor =
-  let gobj = g_unix_mount_monitor_get()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc g_unix_mount_monitor_set_rate_limit(self: ptr UnixMountMonitor00; limitMsec: int32) {.
     importc, libprag.}
 
@@ -29539,6 +29064,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_unix_mount_point_get_type(), cast[ptr UnixMountPoint00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var UnixMountPoint) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGUnixMountPoint)
 
 proc g_unix_mount_point_free(self: ptr UnixMountPoint00) {.
     importc, libprag.}
@@ -29671,6 +29202,16 @@ proc g_unix_mount_point_is_user_mountable(self: ptr UnixMountPoint00): gboolean 
 proc isUserMountable*(self: UnixMountPoint): bool =
   toBool(g_unix_mount_point_is_user_mountable(cast[ptr UnixMountPoint00](self.impl)))
 
+proc g_unix_mount_point_at(mountPath: cstring; timeRead: var uint64): ptr UnixMountPoint00 {.
+    importc, libprag.}
+
+proc at*(mountPath: cstring; timeRead: var uint64 = cast[var uint64](nil)): UnixMountPoint =
+  let impl0 = g_unix_mount_point_at(mountPath, timeRead)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGUnixMountPoint)
+  result.impl = impl0
+
 const VFS_EXTENSION_POINT_NAME* = "gio-vfs"
 
 const VOLUME_IDENTIFIER_KIND_CLASS* = "class"
@@ -29721,22 +29262,6 @@ proc getDefaultVfs*(): Vfs =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc defaultVfs*(): Vfs =
-  let gobj = g_vfs_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc g_vfs_get_local(): ptr Vfs00 {.
     importc, libprag.}
 
@@ -29756,43 +29281,10 @@ proc getLocal*(): Vfs =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc local*(): Vfs =
-  let gobj = g_vfs_get_local()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc g_vfs_get_file_for_path(self: ptr Vfs00; path: cstring): ptr GFile00 {.
     importc, libprag.}
 
 proc getFileForPath*(self: Vfs; path: cstring): GFile =
-  let gobj = g_vfs_get_file_for_path(cast[ptr Vfs00](self.impl), path)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc fileForPath*(self: Vfs; path: cstring): GFile =
   let gobj = g_vfs_get_file_for_path(cast[ptr Vfs00](self.impl), path)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -29829,24 +29321,7 @@ proc getFileForUri*(self: Vfs; uri: cstring): GFile =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc fileForUri*(self: Vfs; uri: cstring): GFile =
-  let gobj = g_vfs_get_file_for_uri(cast[ptr Vfs00](self.impl), uri)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc g_vfs_get_supported_uri_schemes(self: ptr Vfs00): cstringArray {.
+proc g_vfs_get_supported_uri_schemes(self: ptr Vfs00): ptr cstring {.
     importc, libprag.}
 
 proc getSupportedUriSchemes*(self: Vfs): seq[string] =
@@ -30068,7 +29543,7 @@ proc contentTypeGetIcon*(`type`: cstring): Icon =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_content_type_get_mime_dirs(): cstringArray {.
+proc g_content_type_get_mime_dirs(): ptr cstring {.
     importc, libprag.}
 
 proc contentTypeGetMimeDirs*(): seq[string] =
@@ -30104,20 +29579,21 @@ proc contentTypeGetSymbolicIcon*(`type`: cstring): Icon =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc g_content_type_guess(filename: cstring; data: uint8Array; dataSize: uint64;
+proc g_content_type_guess(filename: cstring; data: ptr uint8; dataSize: uint64;
     resultUncertain: var gboolean): cstring {.
     importc, libprag.}
 
 proc contentTypeGuess*(filename: cstring = ""; data: seq[uint8] | string;
-    resultUncertain: var bool): string =
+    resultUncertain: var bool = cast[var bool](nil)): string =
   let dataSize = uint64(data.len)
-  var resultUncertain_00 = gboolean(resultUncertain)
-  let resul0 = g_content_type_guess(safeStringToCString(filename), unsafeaddr(data[0]), dataSize, resultUncertain_00)
+  var resultUncertain_00: gboolean
+  let resul0 = g_content_type_guess(safeStringToCString(filename), cast[ptr uint8](unsafeaddr(data[0])), dataSize, resultUncertain_00)
   result = $resul0
   cogfree(resul0)
-  resultUncertain = toBool(resultUncertain_00)
+  if resultUncertain.addr != nil:
+    resultUncertain = toBool(resultUncertain_00)
 
-proc g_content_type_guess_for_tree(root: ptr GFile00): cstringArray {.
+proc g_content_type_guess_for_tree(root: ptr GFile00): ptr cstring {.
     importc, libprag.}
 
 proc contentTypeGuessForTree*(root: GFile): seq[string] =
@@ -30143,7 +29619,7 @@ proc g_content_type_is_unknown(`type`: cstring): gboolean {.
 proc contentTypeIsUnknown*(`type`: cstring): bool =
   toBool(g_content_type_is_unknown(`type`))
 
-proc g_content_type_set_mime_dirs(dirs: cstringArray) {.
+proc g_content_type_set_mime_dirs(dirs: ptr cstring) {.
     importc, libprag.}
 
 proc contentTypeSetMimeDirs*(dirs: varargs[string, `$`]) =
@@ -30151,8 +29627,12 @@ proc contentTypeSetMimeDirs*(dirs: varargs[string, `$`]) =
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   g_content_type_set_mime_dirs(seq2CstringArray(dirs, fs469n23))
 
-proc contentTypesGetRegistered*(): ptr pointer {.
-    importc: "g_content_types_get_registered", libprag.}
+proc g_content_types_get_registered(): ptr glib.List {.
+    importc, libprag.}
+
+proc contentTypesGetRegistered*(): seq[cstring] =
+  let resul0 = g_content_types_get_registered()
+  g_list_free(resul0)
 
 proc g_dbus_address_escape_value(string: cstring): cstring {.
     importc, libprag.}
@@ -30189,7 +29669,7 @@ proc g_dbus_address_get_stream_finish(res: ptr AsyncResult00; outGuid: var cstri
     importc, libprag.}
 
 proc dbusAddressGetStreamFinish*(res: AsyncResult | SimpleAsyncResult | Task;
-    outGuid: var string): IOStream =
+    outGuid: var string = cast[var string](nil)): IOStream =
   var gerror: ptr glib.Error
   var outGuid_00 = cstring(outGuid)
   let gobj = g_dbus_address_get_stream_finish(cast[ptr AsyncResult00](res.impl), outGuid_00, addr gerror)
@@ -30217,7 +29697,7 @@ proc g_dbus_address_get_stream_sync(address: cstring; outGuid: var cstring;
     cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): ptr IOStream00 {.
     importc, libprag.}
 
-proc dbusAddressGetStreamSync*(address: cstring; outGuid: var string;
+proc dbusAddressGetStreamSync*(address: cstring; outGuid: var string = cast[var string](nil);
     cancellable: Cancellable = nil): IOStream =
   var gerror: ptr glib.Error
   var outGuid_00 = cstring(outGuid)
@@ -30323,14 +29803,21 @@ proc g_io_error_quark(): uint32 {.
 proc ioErrorQuark*(): int =
   int(g_io_error_quark())
 
-proc ioModulesLoadAllInDirectory*(dirname: cstring): ptr pointer {.
-    importc: "g_io_modules_load_all_in_directory", libprag.}
-
-proc g_io_modules_load_all_in_directory_with_scope(dirname: cstring; scope: ptr IOModuleScope00): ptr pointer {.
+proc g_io_modules_load_all_in_directory(dirname: cstring): ptr glib.List {.
     importc, libprag.}
 
-proc ioModulesLoadAllInDirectoryWithScope*(dirname: cstring; scope: IOModuleScope): ptr pointer =
-  g_io_modules_load_all_in_directory_with_scope(dirname, cast[ptr IOModuleScope00](scope.impl))
+proc ioModulesLoadAllInDirectory*(dirname: cstring): seq[IOModule] =
+  let resul0 = g_io_modules_load_all_in_directory(dirname)
+  result = glistObjects2seq(IOModule, resul0, true)
+  g_list_free(resul0)
+
+proc g_io_modules_load_all_in_directory_with_scope(dirname: cstring; scope: ptr IOModuleScope00): ptr glib.List {.
+    importc, libprag.}
+
+proc ioModulesLoadAllInDirectoryWithScope*(dirname: cstring; scope: IOModuleScope): seq[IOModule] =
+  let resul0 = g_io_modules_load_all_in_directory_with_scope(dirname, cast[ptr IOModuleScope00](scope.impl))
+  result = glistObjects2seq(IOModule, resul0, true)
+  g_list_free(resul0)
 
 proc ioModulesScanAllInDirectory*(dirname: cstring) {.
     importc: "g_io_modules_scan_all_in_directory", libprag.}
@@ -30356,7 +29843,7 @@ proc g_keyfile_settings_backend_new(filename: cstring; rootPath: cstring;
     rootGroup: cstring): ptr SettingsBackend00 {.
     importc, libprag.}
 
-proc keyfileSettingsBackendNew*(filename: cstring; rootPath: cstring;
+proc newKeyfileSettingsBackend*(filename: cstring; rootPath: cstring;
     rootGroup: cstring = ""): SettingsBackend =
   let gobj = g_keyfile_settings_backend_new(filename, rootPath, safeStringToCString(rootGroup))
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -30377,7 +29864,7 @@ proc keyfileSettingsBackendNew*(filename: cstring; rootPath: cstring;
 proc g_memory_settings_backend_new(): ptr SettingsBackend00 {.
     importc, libprag.}
 
-proc memorySettingsBackendNew*(): SettingsBackend =
+proc newMemorySettingsBackend*(): SettingsBackend =
   let gobj = g_memory_settings_backend_new()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -30400,7 +29887,7 @@ proc networkingInit*() {.
 proc g_null_settings_backend_new(): ptr SettingsBackend00 {.
     importc, libprag.}
 
-proc nullSettingsBackendNew*(): SettingsBackend =
+proc newNullSettingsBackend*(): SettingsBackend =
   let gobj = g_null_settings_backend_new()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -30420,7 +29907,7 @@ proc nullSettingsBackendNew*(): SettingsBackend =
 proc g_pollable_source_new(pollableStream: ptr gobject.Object00): ptr glib.Source00 {.
     importc, libprag.}
 
-proc pollableSourceNew*(pollableStream: gobject.Object): glib.Source =
+proc newPollableSource*(pollableStream: gobject.Object): glib.Source =
   fnew(result, gBoxedFreeGSource)
   result.impl = g_pollable_source_new(cast[ptr gobject.Object00](pollableStream.impl))
 
@@ -30433,7 +29920,7 @@ proc pollableSourceNewFull*(pollableStream: gobject.Object; childSource: glib.So
   fnew(result, gBoxedFreeGSource)
   result.impl = g_pollable_source_new_full(cast[ptr gobject.Object00](pollableStream.impl), if childSource.isNil: nil else: cast[ptr glib.Source00](childSource.impl), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl))
 
-proc g_pollable_stream_read(stream: ptr InputStream00; buffer: uint8Array;
+proc g_pollable_stream_read(stream: ptr InputStream00; buffer: ptr uint8;
     count: uint64; blocking: gboolean; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
@@ -30441,14 +29928,14 @@ proc pollableStreamRead*(stream: InputStream; buffer: seq[uint8] | string;
     blocking: bool; cancellable: Cancellable = nil): int64 =
   let count = uint64(buffer.len)
   var gerror: ptr glib.Error
-  let resul0 = g_pollable_stream_read(cast[ptr InputStream00](stream.impl), unsafeaddr(buffer[0]), count, gboolean(blocking), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_pollable_stream_read(cast[ptr InputStream00](stream.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, gboolean(blocking), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = resul0
 
-proc g_pollable_stream_write(stream: ptr OutputStream00; buffer: uint8Array;
+proc g_pollable_stream_write(stream: ptr OutputStream00; buffer: ptr uint8;
     count: uint64; blocking: gboolean; cancellable: ptr Cancellable00; error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
@@ -30456,14 +29943,14 @@ proc pollableStreamWrite*(stream: OutputStream; buffer: seq[uint8] | string;
     blocking: bool; cancellable: Cancellable = nil): int64 =
   let count = uint64(buffer.len)
   var gerror: ptr glib.Error
-  let resul0 = g_pollable_stream_write(cast[ptr OutputStream00](stream.impl), unsafeaddr(buffer[0]), count, gboolean(blocking), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_pollable_stream_write(cast[ptr OutputStream00](stream.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, gboolean(blocking), if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = resul0
 
-proc g_pollable_stream_write_all(stream: ptr OutputStream00; buffer: uint8Array;
+proc g_pollable_stream_write_all(stream: ptr OutputStream00; buffer: ptr uint8;
     count: uint64; blocking: gboolean; bytesWritten: var uint64; cancellable: ptr Cancellable00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
@@ -30472,7 +29959,7 @@ proc pollableStreamWriteAll*(stream: OutputStream; buffer: seq[uint8] | string;
     blocking: bool; bytesWritten: var uint64; cancellable: Cancellable = nil): bool =
   let count = uint64(buffer.len)
   var gerror: ptr glib.Error
-  let resul0 = g_pollable_stream_write_all(cast[ptr OutputStream00](stream.impl), unsafeaddr(buffer[0]), count, gboolean(blocking), bytesWritten, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
+  let resul0 = g_pollable_stream_write_all(cast[ptr OutputStream00](stream.impl), cast[ptr uint8](unsafeaddr(buffer[0])), count, gboolean(blocking), bytesWritten, if cancellable.isNil: nil else: cast[ptr Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -30480,7 +29967,7 @@ proc pollableStreamWriteAll*(stream: OutputStream; buffer: seq[uint8] | string;
   result = toBool(resul0)
 
 proc g_resources_enumerate_children(path: cstring; lookupFlags: ResourceLookupFlags;
-    error: ptr ptr glib.Error = nil): cstringArray {.
+    error: ptr ptr glib.Error = nil): ptr cstring {.
     importc, libprag.}
 
 proc resourcesEnumerateChildren*(path: cstring; lookupFlags: ResourceLookupFlags): seq[string] =
@@ -30497,16 +29984,17 @@ proc g_resources_get_info(path: cstring; lookupFlags: ResourceLookupFlags;
     importc, libprag.}
 
 proc resourcesGetInfo*(path: cstring; lookupFlags: ResourceLookupFlags;
-    size: var uint64; flags: var int): bool =
+    size: var uint64 = cast[var uint64](nil); flags: var int = cast[var int](nil)): bool =
   var gerror: ptr glib.Error
-  var flags_00 = uint32(flags)
+  var flags_00: uint32
   let resul0 = g_resources_get_info(path, lookupFlags, size, flags_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  flags = int(flags_00)
+  if flags.addr != nil:
+    flags = int(flags_00)
 
 proc g_resources_lookup_data(path: cstring; lookupFlags: ResourceLookupFlags;
     error: ptr ptr glib.Error = nil): ptr glib.Bytes00 {.
@@ -30577,7 +30065,7 @@ proc unixIsSystemFsType*(fsType: cstring): bool =
 proc g_unix_mount_at(mountPath: cstring; timeRead: var uint64): ptr UnixMountEntry00 {.
     importc, libprag.}
 
-proc unixMountAt*(mountPath: cstring; timeRead: var uint64): UnixMountEntry =
+proc unixMountAt*(mountPath: cstring; timeRead: var uint64 = cast[var uint64](nil)): UnixMountEntry =
   fnew(result, gBoxedFreeGUnixMountEntry)
   result.impl = g_unix_mount_at(mountPath, timeRead)
 
@@ -30597,7 +30085,7 @@ proc unixMountCopy*(mountEntry: UnixMountEntry): UnixMountEntry =
 proc g_unix_mount_for(filePath: cstring; timeRead: var uint64): ptr UnixMountEntry00 {.
     importc, libprag.}
 
-proc unixMountFor*(filePath: cstring; timeRead: var uint64): UnixMountEntry =
+proc unixMountFor*(filePath: cstring; timeRead: var uint64 = cast[var uint64](nil)): UnixMountEntry =
   fnew(result, gBoxedFreeGUnixMountEntry)
   result.impl = g_unix_mount_for(filePath, timeRead)
 
@@ -30721,8 +30209,13 @@ proc g_unix_mount_points_changed_since(time: uint64): gboolean {.
 proc unixMountPointsChangedSince*(time: uint64): bool =
   toBool(g_unix_mount_points_changed_since(time))
 
-proc unixMountPointsGet*(timeRead: var uint64): ptr pointer {.
-    importc: "g_unix_mount_points_get", libprag.}
+proc g_unix_mount_points_get(timeRead: var uint64): ptr glib.List {.
+    importc, libprag.}
+
+proc unixMountPointsGet*(timeRead: var uint64 = cast[var uint64](nil)): seq[UnixMountPoint] =
+  let resul0 = g_unix_mount_points_get(timeRead)
+  result = glistStructs2seq[UnixMountPoint](resul0, false)
+  g_list_free(resul0)
 
 proc g_unix_mounts_changed_since(time: uint64): gboolean {.
     importc, libprag.}
@@ -30730,8 +30223,13 @@ proc g_unix_mounts_changed_since(time: uint64): gboolean {.
 proc unixMountsChangedSince*(time: uint64): bool =
   toBool(g_unix_mounts_changed_since(time))
 
-proc unixMountsGet*(timeRead: var uint64): ptr pointer {.
-    importc: "g_unix_mounts_get", libprag.}
+proc g_unix_mounts_get(timeRead: var uint64): ptr glib.List {.
+    importc, libprag.}
+
+proc unixMountsGet*(timeRead: var uint64 = cast[var uint64](nil)): seq[UnixMountEntry] =
+  let resul0 = g_unix_mounts_get(timeRead)
+  result = glistStructs2seq[UnixMountEntry](resul0, false)
+  g_list_free(resul0)
 # === remaining symbols:
 
 # Extern interfaces: (we don't use converters, but explicit procs for now.)
@@ -30741,7 +30239,8 @@ proc typePlugin*(x: gio.IOModule): gobject.TypePlugin = cast[gobject.TypePlugin]
 proc run*(self: GApplication): int =
   int(g_application_run(cast[ptr GApplication00](self.impl), 0, nil))
 
-proc gFile00Array2seq*(p: GFile00Array; l: int32): seq[gio.GFile] =
+#proc gFile00Array2seq*(p: GFile00Array; l: int32): seq[gio.GFile] =
+proc gFile00Array2seq*(p: ptr GFile00; l: int32): seq[gio.GFile] =
   let a = cast[ptr UncheckedArray[ptr GFile00]](p)
   result = newSeq[gio.GFile]()
   var i: int

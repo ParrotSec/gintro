@@ -9,8 +9,6 @@ import glib
 const Lib = "libgmodule-2.0.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
 
-
-
 type
   Module00* {.pure.} = object
   Module* = ref object

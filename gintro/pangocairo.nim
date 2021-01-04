@@ -3,6 +3,7 @@
 # Pango-1.0
 # cairo-1.0
 # GLib-2.0
+# HarfBuzz-0.0
 # immediate dependencies:
 # cairo-1.0
 # Pango-1.0
@@ -10,11 +11,9 @@
 # libraries:
 # libpangocairo-1.0.so.0
 {.warning[UnusedImport]: off.}
-import gobject, pango, cairo, glib
+import gobject, pango, cairo, glib, harfbuzz
 const Lib = "libpangocairo-1.0.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
-
-
 
 proc finalizeGObject*[T](o: ref T) =
   if not o.ignoreFinalizer:
@@ -33,6 +32,7 @@ proc getScaledFont*(self: Font): cairo.ScaledFont =
     return nil
   fnew(result, gBoxedFreeCairoScaledFont)
   result.impl = impl0
+  result.ignoreFinalizer = true
 
 proc scaledFont*(self: Font): cairo.ScaledFont =
   let impl0 = pango_cairo_font_get_scaled_font(cast[ptr Font00](self.impl))
@@ -40,6 +40,7 @@ proc scaledFont*(self: Font): cairo.ScaledFont =
     return nil
   fnew(result, gBoxedFreeCairoScaledFont)
   result.impl = impl0
+  result.ignoreFinalizer = true
 
 type
   FontMap00* = object of gobject.Object00
@@ -49,22 +50,6 @@ proc pango_cairo_font_map_get_default(): ptr pango.FontMap00 {.
     importc, libprag.}
 
 proc getDefaultFontMap*(): pango.FontMap =
-  let gobj = pango_cairo_font_map_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, pango.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultFontMap*(): pango.FontMap =
   let gobj = pango_cairo_font_map_get_default()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -144,9 +129,6 @@ proc pango_cairo_font_map_set_default(self: ptr FontMap00) {.
     importc, libprag.}
 
 proc setDefault*(self: FontMap) =
-  pango_cairo_font_map_set_default(cast[ptr FontMap00](self.impl))
-
-proc `default=`*(self: FontMap) =
   pango_cairo_font_map_set_default(cast[ptr FontMap00](self.impl))
 
 proc pango_cairo_font_map_set_resolution(self: ptr FontMap00; dpi: cdouble) {.

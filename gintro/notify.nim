@@ -14,10 +14,6 @@ import gobject, gdkpixbuf, gio, glib, gmodule
 const Lib = "libnotify.so.4"
 {.pragma: libprag, cdecl, dynlib: Lib.}
 
-type
-  uint8Array* = pointer
-
-
 proc finalizeGObject*[T](o: ref T) =
   if not o.ignoreFinalizer:
     gobject.g_object_remove_toggle_ref(o.impl, gobject.toggleNotify, addr(o[]))
@@ -163,13 +159,13 @@ proc setHintByte*(self: Notification; key: cstring;
   notify_notification_set_hint_byte(cast[ptr Notification00](self.impl), key, value)
 
 proc notify_notification_set_hint_byte_array(self: ptr Notification00; key: cstring;
-    value: uint8Array; len: uint64) {.
+    value: ptr uint8; len: uint64) {.
     importc, libprag.}
 
 proc setHintByteArray*(self: Notification; key: cstring;
     value: seq[uint8] | string) =
   let len = uint64(value.len)
-  notify_notification_set_hint_byte_array(cast[ptr Notification00](self.impl), key, unsafeaddr(value[0]), len)
+  notify_notification_set_hint_byte_array(cast[ptr Notification00](self.impl), key, cast[ptr uint8](unsafeaddr(value[0])), len)
 
 proc notify_notification_set_hint_double(self: ptr Notification00; key: cstring;
     value: cdouble) {.
@@ -293,42 +289,33 @@ proc notify_get_app_name(): cstring {.
 proc getAppName*(): string =
   result = $notify_get_app_name()
 
-proc appName*(): string =
-  result = $notify_get_app_name()
+proc notify_get_server_caps(): ptr glib.List {.
+    importc, libprag.}
 
-proc getServerCaps*(): ptr pointer {.
-    importc: "notify_get_server_caps", libprag.}
-
-proc serverCaps*(): ptr pointer {.
-    importc: "notify_get_server_caps", libprag.}
+proc getServerCaps*(): seq[cstring] =
+  let resul0 = notify_get_server_caps()
+  g_list_free(resul0)
 
 proc notify_get_server_info(retName: var cstring; retVendor: var cstring;
     retVersion: var cstring; retSpecVersion: var cstring): gboolean {.
     importc, libprag.}
 
-proc getServerInfo*(retName: var string; retVendor: var string; retVersion: var string;
-    retSpecVersion: var string): bool =
-  var retVersion_00 = cstring(retVersion)
-  var retName_00 = cstring(retName)
-  var retVendor_00 = cstring(retVendor)
-  var retSpecVersion_00 = cstring(retSpecVersion)
+proc getServerInfo*(retName: var string = cast[var string](nil);
+    retVendor: var string = cast[var string](nil); retVersion: var string = cast[var string](nil);
+    retSpecVersion: var string = cast[var string](nil)): bool =
+  var retVersion_00: cstring
+  var retName_00: cstring
+  var retVendor_00: cstring
+  var retSpecVersion_00: cstring
   result = toBool(notify_get_server_info(retName_00, retVendor_00, retVersion_00, retSpecVersion_00))
-  retVersion = $(retVersion_00)
-  retName = $(retName_00)
-  retVendor = $(retVendor_00)
-  retSpecVersion = $(retSpecVersion_00)
-
-proc serverInfo*(retName: var string; retVendor: var string; retVersion: var string;
-    retSpecVersion: var string): bool =
-  var retVersion_00 = cstring(retVersion)
-  var retName_00 = cstring(retName)
-  var retVendor_00 = cstring(retVendor)
-  var retSpecVersion_00 = cstring(retSpecVersion)
-  result = toBool(notify_get_server_info(retName_00, retVendor_00, retVersion_00, retSpecVersion_00))
-  retVersion = $(retVersion_00)
-  retName = $(retName_00)
-  retVendor = $(retVendor_00)
-  retSpecVersion = $(retSpecVersion_00)
+  if retVersion.addr != nil:
+    retVersion = $(retVersion_00)
+  if retName.addr != nil:
+    retName = $(retName_00)
+  if retVendor.addr != nil:
+    retVendor = $(retVendor_00)
+  if retSpecVersion.addr != nil:
+    retSpecVersion = $(retSpecVersion_00)
 
 proc notify_init(appName: cstring): gboolean {.
     importc, libprag.}
@@ -343,9 +330,6 @@ proc isInitted*(): bool =
   toBool(notify_is_initted())
 
 proc setAppName*(appName: cstring) {.
-    importc: "notify_set_app_name", libprag.}
-
-proc `appName=`*(appName: cstring) {.
     importc: "notify_set_app_name", libprag.}
 
 proc uninit*() {.

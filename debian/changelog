@@ -1,3 +1,9 @@
+gintro (0.8.4+parrot0) rolling-testing; urgency=medium
+
+  * Upstream new release
+
+ -- Nong Hoang Tu <dmknght@parrotsec.org>  Tue, 05 Jan 2021 02:33:32 +0700
+
 gintro (0.8.0+parrot2) rolling-testing; urgency=medium
 
   * Rebuild package

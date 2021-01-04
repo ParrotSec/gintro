@@ -10,12 +10,6 @@ import gobject, glib
 const Lib = "libatk-1.0.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
 
-type
-  StateTypeArray* = pointer
-  Object00Array* = pointer
-  TextRange00Array* = pointer
-
-
 proc finalizeGObject*[T](o: ref T) =
   if not o.ignoreFinalizer:
     gobject.g_object_remove_toggle_ref(o.impl, gobject.toggleNotify, addr(o[]))
@@ -72,14 +66,16 @@ proc getAccessibleId*(self: Object): string =
 proc accessibleId*(self: Object): string =
   result = $atk_object_get_accessible_id(cast[ptr Object00](self.impl))
 
-proc atk_object_get_attributes(self: ptr Object00): ptr pointer {.
+proc atk_object_get_attributes(self: ptr Object00): ptr glib.SList {.
     importc, libprag.}
 
-proc getAttributes*(self: Object): ptr pointer =
-  atk_object_get_attributes(cast[ptr Object00](self.impl))
+proc getAttributes*(self: Object): seq[pointer] =
+  let resul0 = atk_object_get_attributes(cast[ptr Object00](self.impl))
+  g_slist_free(resul0)
 
-proc attributes*(self: Object): ptr pointer =
-  atk_object_get_attributes(cast[ptr Object00](self.impl))
+proc attributes*(self: Object): seq[pointer] =
+  let resul0 = atk_object_get_attributes(cast[ptr Object00](self.impl))
+  g_slist_free(resul0)
 
 proc atk_object_get_description(self: ptr Object00): cstring {.
     importc, libprag.}
@@ -406,11 +402,6 @@ proc getUri*(self: Hyperlink; i: int): string =
   result = $resul0
   cogfree(resul0)
 
-proc uri*(self: Hyperlink; i: int): string =
-  let resul0 = atk_hyperlink_get_uri(cast[ptr Hyperlink00](self.impl), int32(i))
-  result = $resul0
-  cogfree(resul0)
-
 proc atk_hyperlink_is_inline(self: ptr Hyperlink00): gboolean {.
     importc, libprag.}
 
@@ -444,12 +435,6 @@ proc getDescription*(self: Action | NoOpObject | Hyperlink; i: int): string =
     return
   result = $resul0
 
-proc description*(self: Action | NoOpObject | Hyperlink; i: int): string =
-  let resul0 = atk_action_get_description(cast[ptr Action00](self.impl), int32(i))
-  if resul0.isNil:
-    return
-  result = $resul0
-
 proc atk_action_get_keybinding(self: ptr Action00; i: int32): cstring {.
     importc, libprag.}
 
@@ -459,23 +444,10 @@ proc getKeybinding*(self: Action | NoOpObject | Hyperlink; i: int): string =
     return
   result = $resul0
 
-proc keybinding*(self: Action | NoOpObject | Hyperlink; i: int): string =
-  let resul0 = atk_action_get_keybinding(cast[ptr Action00](self.impl), int32(i))
-  if resul0.isNil:
-    return
-  result = $resul0
-
 proc atk_action_get_localized_name(self: ptr Action00; i: int32): cstring {.
     importc, libprag.}
 
 proc getLocalizedName*(self: Action | NoOpObject | Hyperlink;
-    i: int): string =
-  let resul0 = atk_action_get_localized_name(cast[ptr Action00](self.impl), int32(i))
-  if resul0.isNil:
-    return
-  result = $resul0
-
-proc localizedName*(self: Action | NoOpObject | Hyperlink;
     i: int): string =
   let resul0 = atk_action_get_localized_name(cast[ptr Action00](self.impl), int32(i))
   if resul0.isNil:
@@ -495,12 +467,6 @@ proc atk_action_get_name(self: ptr Action00; i: int32): cstring {.
     importc, libprag.}
 
 proc getName*(self: Action | NoOpObject | Hyperlink; i: int): string =
-  let resul0 = atk_action_get_name(cast[ptr Action00](self.impl), int32(i))
-  if resul0.isNil:
-    return
-  result = $resul0
-
-proc name*(self: Action | NoOpObject | Hyperlink; i: int): string =
   let resul0 = atk_action_get_name(cast[ptr Action00](self.impl), int32(i))
   if resul0.isNil:
     return
@@ -679,22 +645,6 @@ proc atk_relation_set_get_relation(self: ptr RelationSet00; i: int32): ptr Relat
     importc, libprag.}
 
 proc getRelation*(self: RelationSet; i: int): Relation =
-  let gobj = atk_relation_set_get_relation(cast[ptr RelationSet00](self.impl), int32(i))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, atk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc relation*(self: RelationSet; i: int): Relation =
   let gobj = atk_relation_set_get_relation(cast[ptr RelationSet00](self.impl), int32(i))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -949,11 +899,11 @@ proc atk_state_set_add_state(self: ptr StateSet00; `type`: StateType): gboolean 
 proc addState*(self: StateSet; `type`: StateType): bool =
   toBool(atk_state_set_add_state(cast[ptr StateSet00](self.impl), `type`))
 
-proc atk_state_set_add_states(self: ptr StateSet00; types: StateTypeArray;
+proc atk_state_set_add_states(self: ptr StateSet00; types: ptr StateType;
     nTypes: int32) {.
     importc, libprag.}
 
-proc addStates*(self: StateSet; types: StateTypeArray; nTypes: int) =
+proc addStates*(self: StateSet; types: ptr StateType; nTypes: int) =
   atk_state_set_add_states(cast[ptr StateSet00](self.impl), types, int32(nTypes))
 
 proc atk_state_set_contains_state(self: ptr StateSet00; `type`: StateType): gboolean {.
@@ -962,11 +912,11 @@ proc atk_state_set_contains_state(self: ptr StateSet00; `type`: StateType): gboo
 proc containsState*(self: StateSet; `type`: StateType): bool =
   toBool(atk_state_set_contains_state(cast[ptr StateSet00](self.impl), `type`))
 
-proc atk_state_set_contains_states(self: ptr StateSet00; types: StateTypeArray;
+proc atk_state_set_contains_states(self: ptr StateSet00; types: ptr StateType;
     nTypes: int32): gboolean {.
     importc, libprag.}
 
-proc containsStates*(self: StateSet; types: StateTypeArray;
+proc containsStates*(self: StateSet; types: ptr StateType;
     nTypes: int): bool =
   toBool(atk_state_set_contains_states(cast[ptr StateSet00](self.impl), types, int32(nTypes)))
 
@@ -1073,26 +1023,10 @@ proc getRelationByType*(self: RelationSet; relationship: RelationType): Relation
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc relationByType*(self: RelationSet; relationship: RelationType): Relation =
-  let gobj = atk_relation_set_get_relation_by_type(cast[ptr RelationSet00](self.impl), relationship)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, atk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc atk_relation_new(targets: ptr Object00Array; nTargets: int32; relationship: RelationType): ptr Relation00 {.
+proc atk_relation_new(targets: ptr ptr Object00; nTargets: int32; relationship: RelationType): ptr Relation00 {.
     importc, libprag.}
 
-proc newRelation*(targets: ptr Object00Array; nTargets: int; relationship: RelationType): Relation =
+proc newRelation*(targets: ptr ptr Object00; nTargets: int; relationship: RelationType): Relation =
   let gobj = atk_relation_new(targets, int32(nTargets), relationship)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -1109,7 +1043,7 @@ proc newRelation*(targets: ptr Object00Array; nTargets: int; relationship: Relat
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newRelation*(tdesc: typedesc; targets: ptr Object00Array; nTargets: int; relationship: RelationType): tdesc =
+proc newRelation*(tdesc: typedesc; targets: ptr ptr Object00; nTargets: int; relationship: RelationType): tdesc =
   assert(result is Relation)
   let gobj = atk_relation_new(targets, int32(nTargets), relationship)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -1127,7 +1061,7 @@ proc newRelation*(tdesc: typedesc; targets: ptr Object00Array; nTargets: int; re
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initRelation*[T](result: var T; targets: ptr Object00Array; nTargets: int; relationship: RelationType) {.deprecated.} =
+proc initRelation*[T](result: var T; targets: ptr ptr Object00; nTargets: int; relationship: RelationType) {.deprecated.} =
   assert(result is Relation)
   let gobj = atk_relation_new(targets, int32(nTargets), relationship)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -1333,10 +1267,7 @@ type
     impl*: ptr Attribute00
     ignoreFinalizer*: bool
 
-proc setFree*(attribSet: ptr pointer) {.
-    importc: "atk_attribute_set_free", libprag.}
-
-proc `free=`*(attribSet: ptr pointer) {.
+proc setFree*(attribSet: ptr glib.SList) {.
     importc: "atk_attribute_set_free", libprag.}
 
 const BINARY_AGE* = 23610'i32
@@ -1564,12 +1495,14 @@ proc atk_component_get_size(self: ptr Component00; width: var int32; height: var
     importc, libprag.}
 
 proc getSize*(self: Component | NoOpObject | Plug | Socket;
-    width: var int; height: var int) =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+    width: var int = cast[var int](nil); height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var height_00: int32
   atk_component_get_size(cast[ptr Component00](self.impl), width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc atk_component_grab_focus(self: ptr Component00): gboolean {.
     importc, libprag.}
@@ -1626,28 +1559,35 @@ proc atk_component_get_extents(self: ptr Component00; x: var int32; y: var int32
     importc, libprag.}
 
 proc getExtents*(self: Component | NoOpObject | Plug | Socket;
-    x: var int; y: var int; width: var int; height: var int; coordType: CoordType) =
-  var width_00 = int32(width)
-  var y_00 = int32(y)
-  var x_00 = int32(x)
-  var height_00 = int32(height)
+    x: var int = cast[var int](nil); y: var int = cast[var int](nil); width: var int = cast[var int](nil);
+    height: var int = cast[var int](nil); coordType: CoordType) =
+  var width_00: int32
+  var y_00: int32
+  var x_00: int32
+  var height_00: int32
   atk_component_get_extents(cast[ptr Component00](self.impl), x_00, y_00, width_00, height_00, coordType)
-  width = int(width_00)
-  y = int(y_00)
-  x = int(x_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc atk_component_get_position(self: ptr Component00; x: var int32; y: var int32;
     coordType: CoordType) {.
     importc, libprag.}
 
 proc getPosition*(self: Component | NoOpObject | Plug | Socket;
-    x: var int; y: var int; coordType: CoordType) =
-  var y_00 = int32(y)
-  var x_00 = int32(x)
+    x: var int = cast[var int](nil); y: var int = cast[var int](nil); coordType: CoordType) =
+  var y_00: int32
+  var x_00: int32
   atk_component_get_position(cast[ptr Component00](self.impl), x_00, y_00, coordType)
-  y = int(y_00)
-  x = int(x_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
 
 proc atk_component_ref_accessible_at_point(self: ptr Component00; x: int32;
     y: int32; coordType: CoordType): ptr Object00 {.
@@ -1722,20 +1662,14 @@ proc getAttributeValue*(self: Document | NoOpObject; attributeName: cstring): st
     return
   result = $resul0
 
-proc attributeValue*(self: Document | NoOpObject; attributeName: cstring): string =
-  let resul0 = atk_document_get_attribute_value(cast[ptr Document00](self.impl), attributeName)
-  if resul0.isNil:
-    return
-  result = $resul0
-
-proc atk_document_get_attributes(self: ptr Document00): ptr pointer {.
+proc atk_document_get_attributes(self: ptr Document00): ptr glib.SList {.
     importc, libprag.}
 
-proc getAttributes*(self: Document | NoOpObject): ptr pointer =
-  atk_document_get_attributes(cast[ptr Document00](self.impl))
+proc getAttributes*(self: Document | NoOpObject): seq[pointer] =
+  discard
 
-proc attributes*(self: Document | NoOpObject): ptr pointer =
-  atk_document_get_attributes(cast[ptr Document00](self.impl))
+proc attributes*(self: Document | NoOpObject): seq[pointer] =
+  discard
 
 proc atk_document_get_current_page_number(self: ptr Document00): int32 {.
     importc, libprag.}
@@ -1829,13 +1763,15 @@ proc atk_editable_text_paste_text(self: ptr EditableText00; position: int32) {.
 proc pasteText*(self: EditableText | NoOpObject; position: int) =
   atk_editable_text_paste_text(cast[ptr EditableText00](self.impl), int32(position))
 
-proc atk_editable_text_set_run_attributes(self: ptr EditableText00; attribSet: ptr pointer;
+proc atk_editable_text_set_run_attributes(self: ptr EditableText00; attribSet: ptr glib.SList;
     startOffset: int32; endOffset: int32): gboolean {.
     importc, libprag.}
 
 proc setRunAttributes*(self: EditableText | NoOpObject;
-    attribSet: ptr pointer; startOffset: int; endOffset: int): bool =
-  toBool(atk_editable_text_set_run_attributes(cast[ptr EditableText00](self.impl), attribSet, int32(startOffset), int32(endOffset)))
+    attribSet: seq[pointer]; startOffset: int; endOffset: int): bool =
+  var tempResGL = seq2GSList(attribSet)
+  result = toBool(atk_editable_text_set_run_attributes(cast[ptr EditableText00](self.impl), tempResGL, int32(startOffset), int32(endOffset)))
+  g_slist_free(tempResGL)
 
 proc atk_editable_text_set_text_contents(self: ptr EditableText00; string: cstring) {.
     importc, libprag.}
@@ -1984,29 +1920,10 @@ proc getLink*(self: Hypertext | NoOpObject; linkIndex: int): Hyperlink =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc link*(self: Hypertext | NoOpObject; linkIndex: int): Hyperlink =
-  let gobj = atk_hypertext_get_link(cast[ptr Hypertext00](self.impl), int32(linkIndex))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, atk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc atk_hypertext_get_link_index(self: ptr Hypertext00; charIndex: int32): int32 {.
     importc, libprag.}
 
 proc getLinkIndex*(self: Hypertext | NoOpObject; charIndex: int): int =
-  int(atk_hypertext_get_link_index(cast[ptr Hypertext00](self.impl), int32(charIndex)))
-
-proc linkIndex*(self: Hypertext | NoOpObject; charIndex: int): int =
   int(atk_hypertext_get_link_index(cast[ptr Hypertext00](self.impl), int32(charIndex)))
 
 proc atk_hypertext_get_n_links(self: ptr Hypertext00): int32 {.
@@ -2052,31 +1969,33 @@ proc atk_image_get_image_position(self: ptr Image00; x: var int32; y: var int32;
     coordType: CoordType) {.
     importc, libprag.}
 
-proc getImagePosition*(self: Image | NoOpObject; x: var int; y: var int;
-    coordType: CoordType) =
-  var y_00 = int32(y)
-  var x_00 = int32(x)
+proc getImagePosition*(self: Image | NoOpObject; x: var int = cast[var int](nil);
+    y: var int = cast[var int](nil); coordType: CoordType) =
+  var y_00: int32
+  var x_00: int32
   atk_image_get_image_position(cast[ptr Image00](self.impl), x_00, y_00, coordType)
-  y = int(y_00)
-  x = int(x_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
 
 proc atk_image_get_image_size(self: ptr Image00; width: var int32; height: var int32) {.
     importc, libprag.}
 
-proc getImageSize*(self: Image | NoOpObject; width: var int; height: var int) =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+proc getImageSize*(self: Image | NoOpObject; width: var int = cast[var int](nil);
+    height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var height_00: int32
   atk_image_get_image_size(cast[ptr Image00](self.impl), width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc atk_image_set_image_description(self: ptr Image00; description: cstring): gboolean {.
     importc, libprag.}
 
 proc setImageDescription*(self: Image | NoOpObject; description: cstring): bool =
-  toBool(atk_image_set_image_description(cast[ptr Image00](self.impl), description))
-
-proc `imageDescription=`*(self: Image | NoOpObject; description: cstring): bool =
   toBool(atk_image_set_image_description(cast[ptr Image00](self.impl), description))
 
 type
@@ -2149,22 +2068,6 @@ proc atk_misc_get_instance(): ptr Misc00 {.
     importc, libprag.}
 
 proc getInstance*(): Misc =
-  let gobj = atk_misc_get_instance()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, atk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc instance*(): Misc =
   let gobj = atk_misc_get_instance()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -2340,6 +2243,12 @@ when defined(gcDestructors):
       boxedFree(atk_range_get_type(), cast[ptr Range00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var Range) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeAtkRange)
+
 proc atk_range_free(self: ptr Range00) {.
     importc, libprag.}
 
@@ -2435,29 +2344,10 @@ proc getFactory*(self: Registry; `type`: GType): ObjectFactory =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc factory*(self: Registry; `type`: GType): ObjectFactory =
-  let gobj = atk_registry_get_factory(cast[ptr Registry00](self.impl), `type`)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, atk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc atk_registry_get_factory_type(self: ptr Registry00; `type`: GType): GType {.
     importc, libprag.}
 
 proc getFactoryType*(self: Registry; `type`: GType): GType =
-  atk_registry_get_factory_type(cast[ptr Registry00](self.impl), `type`)
-
-proc factoryType*(self: Registry; `type`: GType): GType =
   atk_registry_get_factory_type(cast[ptr Registry00](self.impl), `type`)
 
 proc atk_registry_set_factory_type(self: ptr Registry00; `type`: GType; factoryType: GType) {.
@@ -2545,9 +2435,6 @@ proc atk_streamable_content_get_mime_type(self: ptr StreamableContent00;
 proc getMimeType*(self: StreamableContent; i: int): string =
   result = $atk_streamable_content_get_mime_type(cast[ptr StreamableContent00](self.impl), int32(i))
 
-proc mimeType*(self: StreamableContent; i: int): string =
-  result = $atk_streamable_content_get_mime_type(cast[ptr StreamableContent00](self.impl), int32(i))
-
 proc atk_streamable_content_get_n_mime_types(self: ptr StreamableContent00): int32 {.
     importc, libprag.}
 
@@ -2564,20 +2451,10 @@ proc getStream*(self: StreamableContent; mimeType: cstring): glib.IOChannel =
   fnew(result, gBoxedFreeGIOChannel)
   result.impl = atk_streamable_content_get_stream(cast[ptr StreamableContent00](self.impl), mimeType)
 
-proc stream*(self: StreamableContent; mimeType: cstring): glib.IOChannel =
-  fnew(result, gBoxedFreeGIOChannel)
-  result.impl = atk_streamable_content_get_stream(cast[ptr StreamableContent00](self.impl), mimeType)
-
 proc atk_streamable_content_get_uri(self: ptr StreamableContent00; mimeType: cstring): cstring {.
     importc, libprag.}
 
 proc getUri*(self: StreamableContent; mimeType: cstring): string =
-  let resul0 = atk_streamable_content_get_uri(cast[ptr StreamableContent00](self.impl), mimeType)
-  if resul0.isNil:
-    return
-  result = $resul0
-
-proc uri*(self: StreamableContent; mimeType: cstring): string =
   let resul0 = atk_streamable_content_get_uri(cast[ptr StreamableContent00](self.impl), mimeType)
   if resul0.isNil:
     return
@@ -2665,25 +2542,16 @@ proc atk_table_get_column_at_index(self: ptr Table00; index: int32): int32 {.
 proc getColumnAtIndex*(self: Table | NoOpObject; index: int): int =
   int(atk_table_get_column_at_index(cast[ptr Table00](self.impl), int32(index)))
 
-proc columnAtIndex*(self: Table | NoOpObject; index: int): int =
-  int(atk_table_get_column_at_index(cast[ptr Table00](self.impl), int32(index)))
-
 proc atk_table_get_column_description(self: ptr Table00; column: int32): cstring {.
     importc, libprag.}
 
 proc getColumnDescription*(self: Table | NoOpObject; column: int): string =
   result = $atk_table_get_column_description(cast[ptr Table00](self.impl), int32(column))
 
-proc columnDescription*(self: Table | NoOpObject; column: int): string =
-  result = $atk_table_get_column_description(cast[ptr Table00](self.impl), int32(column))
-
 proc atk_table_get_column_extent_at(self: ptr Table00; row: int32; column: int32): int32 {.
     importc, libprag.}
 
 proc getColumnExtentAt*(self: Table | NoOpObject; row: int; column: int): int =
-  int(atk_table_get_column_extent_at(cast[ptr Table00](self.impl), int32(row), int32(column)))
-
-proc columnExtentAt*(self: Table | NoOpObject; row: int; column: int): int =
   int(atk_table_get_column_extent_at(cast[ptr Table00](self.impl), int32(row), int32(column)))
 
 proc atk_table_get_column_header(self: ptr Table00; column: int32): ptr Object00 {.
@@ -2707,31 +2575,10 @@ proc getColumnHeader*(self: Table | NoOpObject; column: int): Object =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc columnHeader*(self: Table | NoOpObject; column: int): Object =
-  let gobj = atk_table_get_column_header(cast[ptr Table00](self.impl), int32(column))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, atk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc atk_table_get_index_at(self: ptr Table00; row: int32; column: int32): int32 {.
     importc, libprag.}
 
 proc getIndexAt*(self: Table | NoOpObject; row: int; column: int): int =
-  int(atk_table_get_index_at(cast[ptr Table00](self.impl), int32(row), int32(column)))
-
-proc indexAt*(self: Table | NoOpObject; row: int; column: int): int =
   int(atk_table_get_index_at(cast[ptr Table00](self.impl), int32(row), int32(column)))
 
 proc atk_table_get_n_columns(self: ptr Table00): int32 {.
@@ -2758,9 +2605,6 @@ proc atk_table_get_row_at_index(self: ptr Table00; index: int32): int32 {.
 proc getRowAtIndex*(self: Table | NoOpObject; index: int): int =
   int(atk_table_get_row_at_index(cast[ptr Table00](self.impl), int32(index)))
 
-proc rowAtIndex*(self: Table | NoOpObject; index: int): int =
-  int(atk_table_get_row_at_index(cast[ptr Table00](self.impl), int32(index)))
-
 proc atk_table_get_row_description(self: ptr Table00; row: int32): cstring {.
     importc, libprag.}
 
@@ -2770,19 +2614,10 @@ proc getRowDescription*(self: Table | NoOpObject; row: int): string =
     return
   result = $resul0
 
-proc rowDescription*(self: Table | NoOpObject; row: int): string =
-  let resul0 = atk_table_get_row_description(cast[ptr Table00](self.impl), int32(row))
-  if resul0.isNil:
-    return
-  result = $resul0
-
 proc atk_table_get_row_extent_at(self: ptr Table00; row: int32; column: int32): int32 {.
     importc, libprag.}
 
 proc getRowExtentAt*(self: Table | NoOpObject; row: int; column: int): int =
-  int(atk_table_get_row_extent_at(cast[ptr Table00](self.impl), int32(row), int32(column)))
-
-proc rowExtentAt*(self: Table | NoOpObject; row: int; column: int): int =
   int(atk_table_get_row_extent_at(cast[ptr Table00](self.impl), int32(row), int32(column)))
 
 proc atk_table_get_row_header(self: ptr Table00; row: int32): ptr Object00 {.
@@ -2806,40 +2641,16 @@ proc getRowHeader*(self: Table | NoOpObject; row: int): Object =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc rowHeader*(self: Table | NoOpObject; row: int): Object =
-  let gobj = atk_table_get_row_header(cast[ptr Table00](self.impl), int32(row))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, atk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc atk_table_get_selected_columns(self: ptr Table00; selected: ptr int32): int32 {.
     importc, libprag.}
 
 proc getSelectedColumns*(self: Table | NoOpObject; selected: ptr int32): int =
   int(atk_table_get_selected_columns(cast[ptr Table00](self.impl), selected))
 
-proc selectedColumns*(self: Table | NoOpObject; selected: ptr int32): int =
-  int(atk_table_get_selected_columns(cast[ptr Table00](self.impl), selected))
-
 proc atk_table_get_selected_rows(self: ptr Table00; selected: ptr int32): int32 {.
     importc, libprag.}
 
 proc getSelectedRows*(self: Table | NoOpObject; selected: ptr int32): int =
-  int(atk_table_get_selected_rows(cast[ptr Table00](self.impl), selected))
-
-proc selectedRows*(self: Table | NoOpObject; selected: ptr int32): int =
   int(atk_table_get_selected_rows(cast[ptr Table00](self.impl), selected))
 
 proc atk_table_get_summary(self: ptr Table00): ptr Object00 {.
@@ -2999,19 +2810,13 @@ proc atk_table_cell_get_position(self: ptr TableCell00; row: var int32; column: 
 
 proc getPosition*(self: TableCell | NoOpObject; row: var int;
     column: var int): bool =
-  var row_00 = int32(row)
-  var column_00 = int32(column)
+  var row_00: int32
+  var column_00: int32
   result = toBool(atk_table_cell_get_position(cast[ptr TableCell00](self.impl), row_00, column_00))
-  row = int(row_00)
-  column = int(column_00)
-
-proc position*(self: TableCell | NoOpObject; row: var int;
-    column: var int): bool =
-  var row_00 = int32(row)
-  var column_00 = int32(column)
-  result = toBool(atk_table_cell_get_position(cast[ptr TableCell00](self.impl), row_00, column_00))
-  row = int(row_00)
-  column = int(column_00)
+  if row.addr != nil:
+    row = int(row_00)
+  if column.addr != nil:
+    column = int(column_00)
 
 proc atk_table_cell_get_row_column_span(self: ptr TableCell00; row: var int32;
     column: var int32; rowSpan: var int32; columnSpan: var int32): gboolean {.
@@ -3019,27 +2824,19 @@ proc atk_table_cell_get_row_column_span(self: ptr TableCell00; row: var int32;
 
 proc getRowColumnSpan*(self: TableCell | NoOpObject; row: var int;
     column: var int; rowSpan: var int; columnSpan: var int): bool =
-  var row_00 = int32(row)
-  var column_00 = int32(column)
-  var columnSpan_00 = int32(columnSpan)
-  var rowSpan_00 = int32(rowSpan)
+  var row_00: int32
+  var column_00: int32
+  var columnSpan_00: int32
+  var rowSpan_00: int32
   result = toBool(atk_table_cell_get_row_column_span(cast[ptr TableCell00](self.impl), row_00, column_00, rowSpan_00, columnSpan_00))
-  row = int(row_00)
-  column = int(column_00)
-  columnSpan = int(columnSpan_00)
-  rowSpan = int(rowSpan_00)
-
-proc rowColumnSpan*(self: TableCell | NoOpObject; row: var int;
-    column: var int; rowSpan: var int; columnSpan: var int): bool =
-  var row_00 = int32(row)
-  var column_00 = int32(column)
-  var columnSpan_00 = int32(columnSpan)
-  var rowSpan_00 = int32(rowSpan)
-  result = toBool(atk_table_cell_get_row_column_span(cast[ptr TableCell00](self.impl), row_00, column_00, rowSpan_00, columnSpan_00))
-  row = int(row_00)
-  column = int(column_00)
-  columnSpan = int(columnSpan_00)
-  rowSpan = int(rowSpan_00)
+  if row.addr != nil:
+    row = int(row_00)
+  if column.addr != nil:
+    column = int(column_00)
+  if columnSpan.addr != nil:
+    columnSpan = int(columnSpan_00)
+  if rowSpan.addr != nil:
+    rowSpan = int(rowSpan_00)
 
 proc atk_table_cell_get_row_header_cells(self: ptr TableCell00): ptr PtrArray00 {.
     importc, libprag.}
@@ -3139,9 +2936,6 @@ proc atk_text_get_character_at_offset(self: ptr Text00; offset: int32): gunichar
 proc getCharacterAtOffset*(self: Text | NoOpObject; offset: int): gunichar =
   atk_text_get_character_at_offset(cast[ptr Text00](self.impl), int32(offset))
 
-proc characterAtOffset*(self: Text | NoOpObject; offset: int): gunichar =
-  atk_text_get_character_at_offset(cast[ptr Text00](self.impl), int32(offset))
-
 proc atk_text_get_character_count(self: ptr Text00): int32 {.
     importc, libprag.}
 
@@ -3156,25 +2950,32 @@ proc atk_text_get_character_extents(self: ptr Text00; offset: int32; x: var int3
     importc, libprag.}
 
 proc getCharacterExtents*(self: Text | NoOpObject; offset: int;
-    x: var int; y: var int; width: var int; height: var int; coords: CoordType) =
-  var width_00 = int32(width)
-  var y_00 = int32(y)
-  var x_00 = int32(x)
-  var height_00 = int32(height)
+    x: var int = cast[var int](nil); y: var int = cast[var int](nil); width: var int = cast[var int](nil);
+    height: var int = cast[var int](nil); coords: CoordType) =
+  var width_00: int32
+  var y_00: int32
+  var x_00: int32
+  var height_00: int32
   atk_text_get_character_extents(cast[ptr Text00](self.impl), int32(offset), x_00, y_00, width_00, height_00, coords)
-  width = int(width_00)
-  y = int(y_00)
-  x = int(x_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
+  if height.addr != nil:
+    height = int(height_00)
 
-proc atk_text_get_default_attributes(self: ptr Text00): ptr pointer {.
+proc atk_text_get_default_attributes(self: ptr Text00): ptr glib.SList {.
     importc, libprag.}
 
-proc getDefaultAttributes*(self: Text | NoOpObject): ptr pointer =
-  atk_text_get_default_attributes(cast[ptr Text00](self.impl))
+proc getDefaultAttributes*(self: Text | NoOpObject): seq[pointer] =
+  let resul0 = atk_text_get_default_attributes(cast[ptr Text00](self.impl))
+  g_slist_free(resul0)
 
-proc defaultAttributes*(self: Text | NoOpObject): ptr pointer =
-  atk_text_get_default_attributes(cast[ptr Text00](self.impl))
+proc defaultAttributes*(self: Text | NoOpObject): seq[pointer] =
+  let resul0 = atk_text_get_default_attributes(cast[ptr Text00](self.impl))
+  g_slist_free(resul0)
 
 proc atk_text_get_n_selections(self: ptr Text00): int32 {.
     importc, libprag.}
@@ -3192,31 +2993,20 @@ proc getOffsetAtPoint*(self: Text | NoOpObject; x: int; y: int;
     coords: CoordType): int =
   int(atk_text_get_offset_at_point(cast[ptr Text00](self.impl), int32(x), int32(y), coords))
 
-proc offsetAtPoint*(self: Text | NoOpObject; x: int; y: int;
-    coords: CoordType): int =
-  int(atk_text_get_offset_at_point(cast[ptr Text00](self.impl), int32(x), int32(y), coords))
-
 proc atk_text_get_run_attributes(self: ptr Text00; offset: int32; startOffset: var int32;
-    endOffset: var int32): ptr pointer {.
+    endOffset: var int32): ptr glib.SList {.
     importc, libprag.}
 
 proc getRunAttributes*(self: Text | NoOpObject; offset: int; startOffset: var int;
-    endOffset: var int): ptr pointer =
-  var startOffset_00 = int32(startOffset)
-  var endOffset_00 = int32(endOffset)
+    endOffset: var int): seq[pointer] =
+  var startOffset_00: int32
+  var endOffset_00: int32
   let resul0 = atk_text_get_run_attributes(cast[ptr Text00](self.impl), int32(offset), startOffset_00, endOffset_00)
-  result = resul0
-  startOffset = int(startOffset_00)
-  endOffset = int(endOffset_00)
-
-proc runAttributes*(self: Text | NoOpObject; offset: int; startOffset: var int;
-    endOffset: var int): ptr pointer =
-  var startOffset_00 = int32(startOffset)
-  var endOffset_00 = int32(endOffset)
-  let resul0 = atk_text_get_run_attributes(cast[ptr Text00](self.impl), int32(offset), startOffset_00, endOffset_00)
-  result = resul0
-  startOffset = int(startOffset_00)
-  endOffset = int(endOffset_00)
+  g_slist_free(resul0)
+  if startOffset.addr != nil:
+    startOffset = int(startOffset_00)
+  if endOffset.addr != nil:
+    endOffset = int(endOffset_00)
 
 proc atk_text_get_selection(self: ptr Text00; selectionNum: int32; startOffset: var int32;
     endOffset: var int32): cstring {.
@@ -3224,33 +3014,20 @@ proc atk_text_get_selection(self: ptr Text00; selectionNum: int32; startOffset: 
 
 proc getSelection*(self: Text | NoOpObject; selectionNum: int; startOffset: var int;
     endOffset: var int): string =
-  var startOffset_00 = int32(startOffset)
-  var endOffset_00 = int32(endOffset)
+  var startOffset_00: int32
+  var endOffset_00: int32
   let resul0 = atk_text_get_selection(cast[ptr Text00](self.impl), int32(selectionNum), startOffset_00, endOffset_00)
   result = $resul0
   cogfree(resul0)
-  startOffset = int(startOffset_00)
-  endOffset = int(endOffset_00)
-
-proc selection*(self: Text | NoOpObject; selectionNum: int; startOffset: var int;
-    endOffset: var int): string =
-  var startOffset_00 = int32(startOffset)
-  var endOffset_00 = int32(endOffset)
-  let resul0 = atk_text_get_selection(cast[ptr Text00](self.impl), int32(selectionNum), startOffset_00, endOffset_00)
-  result = $resul0
-  cogfree(resul0)
-  startOffset = int(startOffset_00)
-  endOffset = int(endOffset_00)
+  if startOffset.addr != nil:
+    startOffset = int(startOffset_00)
+  if endOffset.addr != nil:
+    endOffset = int(endOffset_00)
 
 proc atk_text_get_text(self: ptr Text00; startOffset: int32; endOffset: int32): cstring {.
     importc, libprag.}
 
 proc getText*(self: Text | NoOpObject; startOffset: int; endOffset: int): string =
-  let resul0 = atk_text_get_text(cast[ptr Text00](self.impl), int32(startOffset), int32(endOffset))
-  result = $resul0
-  cogfree(resul0)
-
-proc text*(self: Text | NoOpObject; startOffset: int; endOffset: int): string =
   let resul0 = atk_text_get_text(cast[ptr Text00](self.impl), int32(startOffset), int32(endOffset))
   result = $resul0
   cogfree(resul0)
@@ -3283,9 +3060,6 @@ proc atk_text_set_caret_offset(self: ptr Text00; offset: int32): gboolean {.
 proc setCaretOffset*(self: Text | NoOpObject; offset: int): bool =
   toBool(atk_text_set_caret_offset(cast[ptr Text00](self.impl), int32(offset)))
 
-proc `caretOffset=`*(self: Text | NoOpObject; offset: int): bool =
-  toBool(atk_text_set_caret_offset(cast[ptr Text00](self.impl), int32(offset)))
-
 proc atk_text_set_selection(self: ptr Text00; selectionNum: int32; startOffset: int32;
     endOffset: int32): gboolean {.
     importc, libprag.}
@@ -3312,7 +3086,13 @@ when defined(gcDestructors):
       boxedFree(atk_text_range_get_type(), cast[ptr TextRange00](self.impl))
       self.impl = nil
 
-proc freeRanges*(ranges: ptr TextRange00Array) {.
+proc newWithFinalizer*(x: var TextRange) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeAtkTextRange)
+
+proc freeRanges*(ranges: ptr ptr TextRange00) {.
     importc: "atk_text_free_ranges", libprag.}
 
 type
@@ -3338,15 +3118,11 @@ type
     both = 3
 
 proc atk_text_get_bounded_ranges(self: ptr Text00; rect: TextRectangle; coordType: CoordType;
-    xClipType: TextClipType; yClipType: TextClipType): ptr TextRange00Array {.
+    xClipType: TextClipType; yClipType: TextClipType): ptr ptr TextRange00 {.
     importc, libprag.}
 
 proc getBoundedRanges*(self: Text | NoOpObject; rect: TextRectangle;
-    coordType: CoordType; xClipType: TextClipType; yClipType: TextClipType): ptr TextRange00Array =
-  atk_text_get_bounded_ranges(cast[ptr Text00](self.impl), rect, coordType, xClipType, yClipType)
-
-proc boundedRanges*(self: Text | NoOpObject; rect: TextRectangle;
-    coordType: CoordType; xClipType: TextClipType; yClipType: TextClipType): ptr TextRange00Array =
+    coordType: CoordType; xClipType: TextClipType; yClipType: TextClipType): ptr ptr TextRange00 =
   atk_text_get_bounded_ranges(cast[ptr Text00](self.impl), rect, coordType, xClipType, yClipType)
 
 type
@@ -3363,27 +3139,17 @@ proc atk_text_get_string_at_offset(self: ptr Text00; offset: int32; granularity:
 
 proc getStringAtOffset*(self: Text | NoOpObject; offset: int;
     granularity: TextGranularity; startOffset: var int; endOffset: var int): string =
-  var startOffset_00 = int32(startOffset)
-  var endOffset_00 = int32(endOffset)
+  var startOffset_00: int32
+  var endOffset_00: int32
   let resul0 = atk_text_get_string_at_offset(cast[ptr Text00](self.impl), int32(offset), granularity, startOffset_00, endOffset_00)
   if resul0.isNil:
     return
   result = $resul0
   cogfree(resul0)
-  startOffset = int(startOffset_00)
-  endOffset = int(endOffset_00)
-
-proc stringAtOffset*(self: Text | NoOpObject; offset: int;
-    granularity: TextGranularity; startOffset: var int; endOffset: var int): string =
-  var startOffset_00 = int32(startOffset)
-  var endOffset_00 = int32(endOffset)
-  let resul0 = atk_text_get_string_at_offset(cast[ptr Text00](self.impl), int32(offset), granularity, startOffset_00, endOffset_00)
-  if resul0.isNil:
-    return
-  result = $resul0
-  cogfree(resul0)
-  startOffset = int(startOffset_00)
-  endOffset = int(endOffset_00)
+  if startOffset.addr != nil:
+    startOffset = int(startOffset_00)
+  if endOffset.addr != nil:
+    endOffset = int(endOffset_00)
 
 type
   TextBoundary* {.size: sizeof(cint), pure.} = enum
@@ -3401,23 +3167,15 @@ proc atk_text_get_text_after_offset(self: ptr Text00; offset: int32; boundaryTyp
 
 proc getTextAfterOffset*(self: Text | NoOpObject; offset: int;
     boundaryType: TextBoundary; startOffset: var int; endOffset: var int): string =
-  var startOffset_00 = int32(startOffset)
-  var endOffset_00 = int32(endOffset)
+  var startOffset_00: int32
+  var endOffset_00: int32
   let resul0 = atk_text_get_text_after_offset(cast[ptr Text00](self.impl), int32(offset), boundaryType, startOffset_00, endOffset_00)
   result = $resul0
   cogfree(resul0)
-  startOffset = int(startOffset_00)
-  endOffset = int(endOffset_00)
-
-proc textAfterOffset*(self: Text | NoOpObject; offset: int;
-    boundaryType: TextBoundary; startOffset: var int; endOffset: var int): string =
-  var startOffset_00 = int32(startOffset)
-  var endOffset_00 = int32(endOffset)
-  let resul0 = atk_text_get_text_after_offset(cast[ptr Text00](self.impl), int32(offset), boundaryType, startOffset_00, endOffset_00)
-  result = $resul0
-  cogfree(resul0)
-  startOffset = int(startOffset_00)
-  endOffset = int(endOffset_00)
+  if startOffset.addr != nil:
+    startOffset = int(startOffset_00)
+  if endOffset.addr != nil:
+    endOffset = int(endOffset_00)
 
 proc atk_text_get_text_at_offset(self: ptr Text00; offset: int32; boundaryType: TextBoundary;
     startOffset: var int32; endOffset: var int32): cstring {.
@@ -3425,23 +3183,15 @@ proc atk_text_get_text_at_offset(self: ptr Text00; offset: int32; boundaryType: 
 
 proc getTextAtOffset*(self: Text | NoOpObject; offset: int; boundaryType: TextBoundary;
     startOffset: var int; endOffset: var int): string =
-  var startOffset_00 = int32(startOffset)
-  var endOffset_00 = int32(endOffset)
+  var startOffset_00: int32
+  var endOffset_00: int32
   let resul0 = atk_text_get_text_at_offset(cast[ptr Text00](self.impl), int32(offset), boundaryType, startOffset_00, endOffset_00)
   result = $resul0
   cogfree(resul0)
-  startOffset = int(startOffset_00)
-  endOffset = int(endOffset_00)
-
-proc textAtOffset*(self: Text | NoOpObject; offset: int; boundaryType: TextBoundary;
-    startOffset: var int; endOffset: var int): string =
-  var startOffset_00 = int32(startOffset)
-  var endOffset_00 = int32(endOffset)
-  let resul0 = atk_text_get_text_at_offset(cast[ptr Text00](self.impl), int32(offset), boundaryType, startOffset_00, endOffset_00)
-  result = $resul0
-  cogfree(resul0)
-  startOffset = int(startOffset_00)
-  endOffset = int(endOffset_00)
+  if startOffset.addr != nil:
+    startOffset = int(startOffset_00)
+  if endOffset.addr != nil:
+    endOffset = int(endOffset_00)
 
 proc atk_text_get_text_before_offset(self: ptr Text00; offset: int32; boundaryType: TextBoundary;
     startOffset: var int32; endOffset: var int32): cstring {.
@@ -3449,23 +3199,15 @@ proc atk_text_get_text_before_offset(self: ptr Text00; offset: int32; boundaryTy
 
 proc getTextBeforeOffset*(self: Text | NoOpObject; offset: int;
     boundaryType: TextBoundary; startOffset: var int; endOffset: var int): string =
-  var startOffset_00 = int32(startOffset)
-  var endOffset_00 = int32(endOffset)
+  var startOffset_00: int32
+  var endOffset_00: int32
   let resul0 = atk_text_get_text_before_offset(cast[ptr Text00](self.impl), int32(offset), boundaryType, startOffset_00, endOffset_00)
   result = $resul0
   cogfree(resul0)
-  startOffset = int(startOffset_00)
-  endOffset = int(endOffset_00)
-
-proc textBeforeOffset*(self: Text | NoOpObject; offset: int;
-    boundaryType: TextBoundary; startOffset: var int; endOffset: var int): string =
-  var startOffset_00 = int32(startOffset)
-  var endOffset_00 = int32(endOffset)
-  let resul0 = atk_text_get_text_before_offset(cast[ptr Text00](self.impl), int32(offset), boundaryType, startOffset_00, endOffset_00)
-  result = $resul0
-  cogfree(resul0)
-  startOffset = int(startOffset_00)
-  endOffset = int(endOffset_00)
+  if startOffset.addr != nil:
+    startOffset = int(startOffset_00)
+  if endOffset.addr != nil:
+    endOffset = int(endOffset_00)
 
 type
   TextAttribute* {.size: sizeof(cint), pure.} = enum
@@ -3516,12 +3258,6 @@ proc atk_text_attribute_get_value(attr: TextAttribute; index: int32): cstring {.
     importc, libprag.}
 
 proc getValue*(attr: TextAttribute; index: int): string =
-  let resul0 = atk_text_attribute_get_value(attr, int32(index))
-  if resul0.isNil:
-    return
-  result = $resul0
-
-proc value*(attr: TextAttribute; index: int): string =
   let resul0 = atk_text_attribute_get_value(attr, int32(index))
   if resul0.isNil:
     return
@@ -3604,32 +3340,34 @@ proc range*(self: Value | NoOpObject): Range =
   fnew(result, gBoxedFreeAtkRange)
   result.impl = impl0
 
-proc atk_value_get_sub_ranges(self: ptr Value00): ptr pointer {.
+proc atk_value_get_sub_ranges(self: ptr Value00): ptr glib.SList {.
     importc, libprag.}
 
-proc getSubRanges*(self: Value | NoOpObject): ptr pointer =
-  atk_value_get_sub_ranges(cast[ptr Value00](self.impl))
+proc getSubRanges*(self: Value | NoOpObject): seq[Range] =
+  let resul0 = atk_value_get_sub_ranges(cast[ptr Value00](self.impl))
+  result = gslistStructs2seq[Range](resul0, false)
+  g_slist_free(resul0)
 
-proc subRanges*(self: Value | NoOpObject): ptr pointer =
-  atk_value_get_sub_ranges(cast[ptr Value00](self.impl))
+proc subRanges*(self: Value | NoOpObject): seq[Range] =
+  let resul0 = atk_value_get_sub_ranges(cast[ptr Value00](self.impl))
+  result = gslistStructs2seq[Range](resul0, false)
+  g_slist_free(resul0)
 
 proc atk_value_get_value_and_text(self: ptr Value00; value: var cdouble;
     text: var cstring) {.
     importc, libprag.}
 
 proc getValueAndText*(self: Value | NoOpObject; value: var cdouble;
-    text: var string) =
-  var text_00 = cstring(text)
+    text: var string = cast[var string](nil)) =
+  var text_00: cstring
   atk_value_get_value_and_text(cast[ptr Value00](self.impl), value, text_00)
-  text = $(text_00)
+  if text.addr != nil:
+    text = $(text_00)
 
 proc atk_value_set_current_value(self: ptr Value00; value: gobject.Value): gboolean {.
     importc, libprag.}
 
 proc setCurrentValue*(self: Value | NoOpObject; value: gobject.Value): bool =
-  toBool(atk_value_set_current_value(cast[ptr Value00](self.impl), value))
-
-proc `currentValue=`*(self: Value | NoOpObject; value: gobject.Value): bool =
   toBool(atk_value_set_current_value(cast[ptr Value00](self.impl), value))
 
 proc atk_value_set_value(self: ptr Value00; newValue: cdouble) {.
@@ -3721,30 +3459,10 @@ proc atk_get_binary_age(): uint32 {.
 proc getBinaryAge*(): int =
   int(atk_get_binary_age())
 
-proc binaryAge*(): int =
-  int(atk_get_binary_age())
-
 proc atk_get_default_registry(): ptr Registry00 {.
     importc, libprag.}
 
 proc getDefaultRegistry*(): Registry =
-  let gobj = atk_get_default_registry()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, atk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultRegistry*(): Registry =
   let gobj = atk_get_default_registry()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -3780,29 +3498,10 @@ proc getFocusObject*(): Object =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc focusObject*(): Object =
-  let gobj = atk_get_focus_object()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, atk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc atk_get_interface_age(): uint32 {.
     importc, libprag.}
 
 proc getInterfaceAge*(): int =
-  int(atk_get_interface_age())
-
-proc interfaceAge*(): int =
   int(atk_get_interface_age())
 
 proc atk_get_major_version(): uint32 {.
@@ -3811,25 +3510,16 @@ proc atk_get_major_version(): uint32 {.
 proc getMajorVersion*(): int =
   int(atk_get_major_version())
 
-proc majorVersion*(): int =
-  int(atk_get_major_version())
-
 proc atk_get_micro_version(): uint32 {.
     importc, libprag.}
 
 proc getMicroVersion*(): int =
   int(atk_get_micro_version())
 
-proc microVersion*(): int =
-  int(atk_get_micro_version())
-
 proc atk_get_minor_version(): uint32 {.
     importc, libprag.}
 
 proc getMinorVersion*(): int =
-  int(atk_get_minor_version())
-
-proc minorVersion*(): int =
   int(atk_get_minor_version())
 
 proc atk_get_root(): ptr Object00 {.
@@ -3851,29 +3541,10 @@ proc getRoot*(): Object =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc root*(): Object =
-  let gobj = atk_get_root()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, atk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc atk_get_toolkit_name(): cstring {.
     importc, libprag.}
 
 proc getToolkitName*(): string =
-  result = $atk_get_toolkit_name()
-
-proc toolkitName*(): string =
   result = $atk_get_toolkit_name()
 
 proc atk_get_toolkit_version(): cstring {.
@@ -3882,16 +3553,10 @@ proc atk_get_toolkit_version(): cstring {.
 proc getToolkitVersion*(): string =
   result = $atk_get_toolkit_version()
 
-proc toolkitVersion*(): string =
-  result = $atk_get_toolkit_version()
-
 proc atk_get_version(): cstring {.
     importc, libprag.}
 
 proc getVersion*(): string =
-  result = $atk_get_version()
-
-proc version*(): string =
   result = $atk_get_version()
 
 proc atk_remove_focus_tracker(trackerId: uint32) {.

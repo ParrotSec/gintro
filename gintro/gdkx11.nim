@@ -2,12 +2,13 @@
 # xlib-2.0
 # GLib-2.0
 # GdkPixbuf-2.0
-# Gdk-3.0
+# HarfBuzz-0.0
 # GModule-2.0
 # cairo-1.0
 # GObject-2.0
 # Pango-1.0
 # Gio-2.0
+# Gdk-3.0
 # immediate dependencies:
 # xlib-2.0
 # Pango-1.0
@@ -17,13 +18,9 @@
 # libraries:
 # libgdk-3.so.0
 {.warning[UnusedImport]: off.}
-import xlib, glib, gdkpixbuf, gdk, gmodule, cairo, gobject, pango, gio
+import xlib, glib, gdkpixbuf, harfbuzz, gmodule, cairo, gobject, pango, gio, gdk
 const Lib = "libgdk-3.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
-
-type
-  uint8Array* = pointer
-
 
 proc finalizeGObject*[T](o: ref T) =
   if not o.ignoreFinalizer:
@@ -162,19 +159,13 @@ proc gdk_x11_display_get_glx_version(display: ptr gdk.Display00; major: var int3
 
 proc getGlxVersion*(display: gdk.Display; major: var int;
     minor: var int): bool =
-  var major_00 = int32(major)
-  var minor_00 = int32(minor)
+  var major_00: int32
+  var minor_00: int32
   result = toBool(gdk_x11_display_get_glx_version(cast[ptr gdk.Display00](display.impl), major_00, minor_00))
-  major = int(major_00)
-  minor = int(minor_00)
-
-proc glxVersion*(display: gdk.Display; major: var int;
-    minor: var int): bool =
-  var major_00 = int32(major)
-  var minor_00 = int32(minor)
-  result = toBool(gdk_x11_display_get_glx_version(cast[ptr gdk.Display00](display.impl), major_00, minor_00))
-  major = int(major_00)
-  minor = int(minor_00)
+  if major.addr != nil:
+    major = int(major_00)
+  if minor.addr != nil:
+    minor = int(minor_00)
 
 proc gdk_x11_display_error_trap_pop(self: ptr X11Display00): int32 {.
     importc, libprag.}
@@ -259,30 +250,31 @@ proc `windowScale=`*(self: X11Display; scale: int) =
   gdk_x11_display_set_window_scale(cast[ptr X11Display00](self.impl), int32(scale))
 
 proc gdk_x11_display_string_to_compound_text(self: ptr X11Display00; str: cstring;
-    encoding: var ptr gdk.Atom00; format: var int32; ctext: var uint8Array;
-    length: var int32): int32 {.
+    encoding: var gdk.Atom; format: var int32; ctext: var ptr uint8; length: var int32): int32 {.
     importc, libprag.}
 
 proc stringToCompoundText*(self: X11Display; str: cstring;
-    encoding: var ptr gdk.Atom00; format: var int; ctext: var (seq[uint8] | string);
+    encoding: var gdk.Atom; format: var int; ctext: var (seq[uint8] | string);
     length: var int): int =
-  var length_00 = int32(length)
-  var format_00 = int32(format)
-  var ctext_00: pointer
+  var length_00: int32
+  var format_00: int32
+  var ctext_00: ptr uint8
   result = int(gdk_x11_display_string_to_compound_text(cast[ptr X11Display00](self.impl), str, encoding, format_00, ctext_00, length_00))
-  length = int(length_00)
-  format = int(format_00)
+  if length.addr != nil:
+    length = int(length_00)
+  if format.addr != nil:
+    format = int(format_00)
   ctext.setLen(length)
   copyMem(unsafeaddr ctext[0], ctext_00, length.int * sizeof(ctext[0]))
   cogfree(ctext_00)
 
-proc gdk_x11_display_text_property_to_text_list(self: ptr X11Display00; encoding: ptr gdk.Atom00;
+proc gdk_x11_display_text_property_to_text_list(self: ptr X11Display00; encoding: gdk.Atom;
     format: int32; text: ptr uint8; length: int32; list: cstring): int32 {.
     importc, libprag.}
 
 proc textPropertyToTextList*(self: X11Display; encoding: gdk.Atom;
     format: int; text: ptr uint8; length: int; list: cstring): int =
-  int(gdk_x11_display_text_property_to_text_list(cast[ptr X11Display00](self.impl), cast[ptr gdk.Atom00](encoding.impl), int32(format), text, int32(length), list))
+  int(gdk_x11_display_text_property_to_text_list(cast[ptr X11Display00](self.impl), encoding, int32(format), text, int32(length), list))
 
 proc gdk_x11_display_ungrab(self: ptr X11Display00) {.
     importc, libprag.}
@@ -291,19 +283,20 @@ proc ungrab*(self: X11Display) =
   gdk_x11_display_ungrab(cast[ptr X11Display00](self.impl))
 
 proc gdk_x11_display_utf8_to_compound_text(self: ptr X11Display00; str: cstring;
-    encoding: var ptr gdk.Atom00; format: var int32; ctext: var uint8Array;
-    length: var int32): gboolean {.
+    encoding: var gdk.Atom; format: var int32; ctext: var ptr uint8; length: var int32): gboolean {.
     importc, libprag.}
 
 proc utf8ToCompoundText*(self: X11Display; str: cstring;
-    encoding: var ptr gdk.Atom00; format: var int; ctext: var (seq[uint8] | string);
+    encoding: var gdk.Atom; format: var int; ctext: var (seq[uint8] | string);
     length: var int): bool =
-  var length_00 = int32(length)
-  var format_00 = int32(format)
-  var ctext_00: pointer
+  var length_00: int32
+  var format_00: int32
+  var ctext_00: ptr uint8
   result = toBool(gdk_x11_display_utf8_to_compound_text(cast[ptr X11Display00](self.impl), str, encoding, format_00, ctext_00, length_00))
-  length = int(length_00)
-  format = int(format_00)
+  if length.addr != nil:
+    length = int(length_00)
+  if format.addr != nil:
+    format = int(format_00)
   ctext.setLen(length)
   copyMem(unsafeaddr ctext[0], ctext_00, length.int * sizeof(ctext[0]))
   cogfree(ctext_00)
@@ -374,9 +367,6 @@ proc gdk_x11_keymap_get_group_for_state(self: ptr X11Keymap00; state: uint32): i
 proc getGroupForState*(self: X11Keymap; state: int): int =
   int(gdk_x11_keymap_get_group_for_state(cast[ptr X11Keymap00](self.impl), uint32(state)))
 
-proc groupForState*(self: X11Keymap; state: int): int =
-  int(gdk_x11_keymap_get_group_for_state(cast[ptr X11Keymap00](self.impl), uint32(state)))
-
 proc gdk_x11_keymap_key_is_modifier(self: ptr X11Keymap00; keycode: uint32): gboolean {.
     importc, libprag.}
 
@@ -440,9 +430,6 @@ proc gdk_x11_screen_get_monitor_output(self: ptr X11Screen00; monitorNum: int32)
 proc getMonitorOutput*(self: X11Screen; monitorNum: int): uint64 =
   gdk_x11_screen_get_monitor_output(cast[ptr X11Screen00](self.impl), int32(monitorNum))
 
-proc monitorOutput*(self: X11Screen; monitorNum: int): uint64 =
-  gdk_x11_screen_get_monitor_output(cast[ptr X11Screen00](self.impl), int32(monitorNum))
-
 proc gdk_x11_screen_get_number_of_desktops(self: ptr X11Screen00): uint32 {.
     importc, libprag.}
 
@@ -483,11 +470,11 @@ proc xscreen*(self: X11Screen): xlib.Screen =
   result.impl = gdk_x11_screen_get_xscreen(cast[ptr X11Screen00](self.impl))
   result.ignoreFinalizer = true
 
-proc gdk_x11_screen_supports_net_wm_hint(self: ptr X11Screen00; property: ptr gdk.Atom00): gboolean {.
+proc gdk_x11_screen_supports_net_wm_hint(self: ptr X11Screen00; property: gdk.Atom): gboolean {.
     importc, libprag.}
 
 proc supportsNetWmHint*(self: X11Screen; property: gdk.Atom): bool =
-  toBool(gdk_x11_screen_supports_net_wm_hint(cast[ptr X11Screen00](self.impl), cast[ptr gdk.Atom00](property.impl)))
+  toBool(gdk_x11_screen_supports_net_wm_hint(cast[ptr X11Screen00](self.impl), property))
 
 type
   X11Visual* = ref object of gdk.Visual
@@ -708,17 +695,14 @@ proc gdk_x11_window_set_utf8_property(self: ptr X11Window00; name: cstring;
 proc setUtf8Property*(self: X11Window; name: cstring; value: cstring = "") =
   gdk_x11_window_set_utf8_property(cast[ptr X11Window00](self.impl), name, safeStringToCString(value))
 
-proc gdk_x11_atom_to_xatom(atom: ptr gdk.Atom00): uint64 {.
-    importc, libprag.}
+proc x11AtomToXatom*(atom: gdk.Atom): uint64 {.
+    importc: "gdk_x11_atom_to_xatom", libprag.}
 
-proc x11AtomToXatom*(atom: gdk.Atom): uint64 =
-  gdk_x11_atom_to_xatom(cast[ptr gdk.Atom00](atom.impl))
-
-proc gdk_x11_atom_to_xatom_for_display(display: ptr X11Display00; atom: ptr gdk.Atom00): uint64 {.
+proc gdk_x11_atom_to_xatom_for_display(display: ptr X11Display00; atom: gdk.Atom): uint64 {.
     importc, libprag.}
 
 proc x11AtomToXatomForDisplay*(display: X11Display; atom: gdk.Atom): uint64 =
-  gdk_x11_atom_to_xatom_for_display(cast[ptr X11Display00](display.impl), cast[ptr gdk.Atom00](atom.impl))
+  gdk_x11_atom_to_xatom_for_display(cast[ptr X11Display00](display.impl), atom)
 
 proc gdk_x11_device_get_id(device: ptr X11DeviceCore00): int32 {.
     importc, libprag.}
@@ -841,19 +825,12 @@ proc x11SetSmClientId*(smClientId: cstring) {.
 proc x11UngrabServer*() {.
     importc: "gdk_x11_ungrab_server", libprag.}
 
-proc gdk_x11_xatom_to_atom(xatom: uint64): ptr gdk.Atom00 {.
+proc x11XatomToAtom*(xatom: uint64): ptr gdk.Atom {.
+    importc: "gdk_x11_xatom_to_atom", libprag.}
+
+proc gdk_x11_xatom_to_atom_for_display(display: ptr X11Display00; xatom: uint64): ptr gdk.Atom {.
     importc, libprag.}
 
-proc x11XatomToAtom*(xatom: uint64): gdk.Atom =
-  new(result)
-  result.impl = gdk_x11_xatom_to_atom(xatom)
-  result.ignoreFinalizer = true
-
-proc gdk_x11_xatom_to_atom_for_display(display: ptr X11Display00; xatom: uint64): ptr gdk.Atom00 {.
-    importc, libprag.}
-
-proc x11XatomToAtomForDisplay*(display: X11Display; xatom: uint64): gdk.Atom =
-  new(result)
-  result.impl = gdk_x11_xatom_to_atom_for_display(cast[ptr X11Display00](display.impl), xatom)
-  result.ignoreFinalizer = true
+proc x11XatomToAtomForDisplay*(display: X11Display; xatom: uint64): ptr gdk.Atom =
+  gdk_x11_xatom_to_atom_for_display(cast[ptr X11Display00](display.impl), xatom)
 # === remaining symbols:

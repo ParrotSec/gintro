@@ -7,8 +7,6 @@
 const Lib = ""
 {.pragma: libprag, cdecl, dynlib: Lib.}
 
-
-
 type
   Display00* {.pure.} = object
   Display* = ref object

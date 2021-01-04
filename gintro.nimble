@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.7.9"
+version       = "0.8.4"
 author        = "Stefan Salewski"
 description = "High level GObject-Introspection based GTK3/GTK4 bindings"
 license       = "MIT"
@@ -36,6 +36,7 @@ proc prep =
 
   cpFile(this / "tests" / "gen.nim", td / wd / "gen.nim")
   cpFile(this / "tests" / "combinatorics.nim", td / wd / "combinatorics.nim")
+  cpFile(this / "tests" / "maxby.nim", td / wd / "maxby.nim")
 
   cd(td)
   cd(wd)

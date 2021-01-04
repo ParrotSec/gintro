@@ -7,8 +7,6 @@
 const Lib = "libcairo-gobject.so.2"
 {.pragma: libprag, cdecl, dynlib: Lib.}
 
-
-
 from gobject import boxedFree
 from glib import GType
 
@@ -31,6 +29,12 @@ when defined(gcDestructors):
       boxedFree(cairo_gobject_context_get_type(), cast[ptr Context00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var Context) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeCairoContext)
+
 type
   Device00* {.pure.} = object
   Device* = ref object
@@ -50,6 +54,12 @@ when defined(gcDestructors):
       boxedFree(cairo_gobject_device_get_type(), cast[ptr Device00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var Device) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeCairoDevice)
+
 type
   Surface00* {.pure.} = object
   Surface* = ref object
@@ -68,6 +78,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(cairo_gobject_surface_get_type(), cast[ptr Surface00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var Surface) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeCairoSurface)
 
 type
   Matrix00* {.pure.} = object
@@ -94,6 +110,12 @@ when defined(gcDestructors):
       boxedFree(cairo_gobject_pattern_get_type(), cast[ptr Pattern00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var Pattern) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeCairoPattern)
+
 type
   Region00* {.pure.} = object
   Region* = ref object
@@ -112,6 +134,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(cairo_gobject_region_get_type(), cast[ptr Region00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var Region) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeCairoRegion)
 
 type
   Status* {.size: sizeof(cint), pure.} = enum
@@ -276,6 +304,12 @@ when defined(gcDestructors):
       boxedFree(cairo_gobject_font_options_get_type(), cast[ptr FontOptions00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var FontOptions) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeCairoFontOptions)
+
 type
   FontType* {.size: sizeof(cint), pure.} = enum
     toy = 0
@@ -391,6 +425,12 @@ when defined(gcDestructors):
       boxedFree(cairo_gobject_font_face_get_type(), cast[ptr FontFace00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var FontFace) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeCairoFontFace)
+
 type
   ScaledFont00* {.pure.} = object
   ScaledFont* = ref object
@@ -409,6 +449,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(cairo_gobject_scaled_font_get_type(), cast[ptr ScaledFont00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var ScaledFont) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeCairoScaledFont)
 
 type
   Path00* {.pure.} = object

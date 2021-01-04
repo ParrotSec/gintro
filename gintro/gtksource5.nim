@@ -2,6 +2,7 @@
 # xlib-2.0
 # GLib-2.0
 # Gdk-3.0
+# HarfBuzz-0.0
 # GdkPixbuf-2.0
 # Gtk-3.0
 # cairo-1.0
@@ -14,13 +15,11 @@
 # Gtk-3.0
 # Gdk-3.0
 # libraries:
-# libgtksourceview-4.so.0
+# libgtksourceview-3.0.so.1
 {.warning[UnusedImport]: off.}
-import xlib, glib, gdk, gdkpixbuf, gtk, cairo, gobject, pango, gio, gmodule, atk
-const Lib = "libgtksourceview-4.so.0"
+import xlib, glib, gdk4, harfbuzz, gdkpixbuf, gtk4, cairo, gobject, pango, gio, gmodule, atk
+const Lib = "libgtksourceview-3.0.so.1"
 {.pragma: libprag, cdecl, dynlib: Lib.}
-
-
 import glib
 
 proc finalizeGObject*[T](o: ref T) =
@@ -40,8 +39,8 @@ type
     found = 3
 
 type
-  Buffer* = ref object of gtk.TextBuffer
-  Buffer00* = object of gtk.TextBuffer00
+  Buffer* = ref object of gtk4.TextBuffer
+  Buffer00* = object of gtk4.TextBuffer00
 
 proc gtk_source_buffer_get_type*(): GType {.importc, libprag.}
 
@@ -54,32 +53,32 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc scBracketMatched*(self: Buffer;  p: proc (self: ptr Buffer00; iter: gtk.TextIter; state: BracketMatchType; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scBracketMatched*(self: Buffer;  p: proc (self: ptr Buffer00; iter: gtk4.TextIter; state: BracketMatchType; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "bracket-matched", cast[GCallback](p), xdata, nil, cf)
 
-proc scHighlightUpdated*(self: Buffer;  p: proc (self: ptr Buffer00; start: gtk.TextIter; `end`: gtk.TextIter; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scHighlightUpdated*(self: Buffer;  p: proc (self: ptr Buffer00; start: gtk4.TextIter; `end`: gtk4.TextIter; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "highlight-updated", cast[GCallback](p), xdata, nil, cf)
 
 proc scRedo*(self: Buffer;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "redo", cast[GCallback](p), xdata, nil, cf)
 
-proc scSourceMarkUpdated*(self: Buffer;  p: proc (self: ptr Buffer00; mark: ptr gtk.TextMark00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scSourceMarkUpdated*(self: Buffer;  p: proc (self: ptr Buffer00; mark: ptr gtk4.TextMark00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "source-mark-updated", cast[GCallback](p), xdata, nil, cf)
 
 proc scUndo*(self: Buffer;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "undo", cast[GCallback](p), xdata, nil, cf)
 
-proc gtk_source_buffer_new(table: ptr gtk.TextTagTable00): ptr Buffer00 {.
+proc gtk_source_buffer_new(table: ptr gtk4.TextTagTable00): ptr Buffer00 {.
     importc, libprag.}
 
-proc newBuffer*(table: gtk.TextTagTable = nil): Buffer =
-  let gobj = gtk_source_buffer_new(if table.isNil: nil else: cast[ptr gtk.TextTagTable00](table.impl))
+proc newBuffer*(table: gtk4.TextTagTable = nil): Buffer =
+  let gobj = gtk_source_buffer_new(if table.isNil: nil else: cast[ptr gtk4.TextTagTable00](table.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -89,15 +88,15 @@ proc newBuffer*(table: gtk.TextTagTable = nil): Buffer =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newBuffer*(tdesc: typedesc; table: gtk.TextTagTable = nil): tdesc =
+proc newBuffer*(tdesc: typedesc; table: gtk4.TextTagTable = nil): tdesc =
   assert(result is Buffer)
-  let gobj = gtk_source_buffer_new(if table.isNil: nil else: cast[ptr gtk.TextTagTable00](table.impl))
+  let gobj = gtk_source_buffer_new(if table.isNil: nil else: cast[ptr gtk4.TextTagTable00](table.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -107,15 +106,15 @@ proc newBuffer*(tdesc: typedesc; table: gtk.TextTagTable = nil): tdesc =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initBuffer*[T](result: var T; table: gtk.TextTagTable = nil) {.deprecated.} =
+proc initBuffer*[T](result: var T; table: gtk4.TextTagTable = nil) {.deprecated.} =
   assert(result is Buffer)
-  let gobj = gtk_source_buffer_new(if table.isNil: nil else: cast[ptr gtk.TextTagTable00](table.impl))
+  let gobj = gtk_source_buffer_new(if table.isNil: nil else: cast[ptr gtk4.TextTagTable00](table.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -125,11 +124,11 @@ proc initBuffer*[T](result: var T; table: gtk.TextTagTable = nil) {.deprecated.}
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_buffer_backward_iter_to_source_mark(self: ptr Buffer00; iter: var gtk.TextIter;
+proc gtk_source_buffer_backward_iter_to_source_mark(self: ptr Buffer00; iter: gtk4.TextIter;
     category: cstring): gboolean {.
     importc, libprag.}
 
-proc backwardIterToSourceMark*(self: Buffer; iter: var gtk.TextIter;
+proc backwardIterToSourceMark*(self: Buffer; iter: gtk4.TextIter;
     category: cstring = ""): bool =
   toBool(gtk_source_buffer_backward_iter_to_source_mark(cast[ptr Buffer00](self.impl), iter, safeStringToCString(category)))
 
@@ -157,31 +156,26 @@ proc gtk_source_buffer_end_not_undoable_action(self: ptr Buffer00) {.
 proc endNotUndoableAction*(self: Buffer) =
   gtk_source_buffer_end_not_undoable_action(cast[ptr Buffer00](self.impl))
 
-proc gtk_source_buffer_ensure_highlight(self: ptr Buffer00; start: gtk.TextIter;
-    `end`: gtk.TextIter) {.
+proc gtk_source_buffer_ensure_highlight(self: ptr Buffer00; start: gtk4.TextIter;
+    `end`: gtk4.TextIter) {.
     importc, libprag.}
 
-proc ensureHighlight*(self: Buffer; start: gtk.TextIter;
-    `end`: gtk.TextIter) =
+proc ensureHighlight*(self: Buffer; start: gtk4.TextIter;
+    `end`: gtk4.TextIter) =
   gtk_source_buffer_ensure_highlight(cast[ptr Buffer00](self.impl), start, `end`)
 
-proc gtk_source_buffer_forward_iter_to_source_mark(self: ptr Buffer00; iter: var gtk.TextIter;
+proc gtk_source_buffer_forward_iter_to_source_mark(self: ptr Buffer00; iter: gtk4.TextIter;
     category: cstring): gboolean {.
     importc, libprag.}
 
-proc forwardIterToSourceMark*(self: Buffer; iter: var gtk.TextIter;
+proc forwardIterToSourceMark*(self: Buffer; iter: gtk4.TextIter;
     category: cstring = ""): bool =
   toBool(gtk_source_buffer_forward_iter_to_source_mark(cast[ptr Buffer00](self.impl), iter, safeStringToCString(category)))
 
-proc gtk_source_buffer_get_context_classes_at_iter(self: ptr Buffer00; iter: gtk.TextIter): cstringArray {.
+proc gtk_source_buffer_get_context_classes_at_iter(self: ptr Buffer00; iter: gtk4.TextIter): ptr cstring {.
     importc, libprag.}
 
-proc getContextClassesAtIter*(self: Buffer; iter: gtk.TextIter): seq[string] =
-  let resul0 = gtk_source_buffer_get_context_classes_at_iter(cast[ptr Buffer00](self.impl), iter)
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc contextClassesAtIter*(self: Buffer; iter: gtk.TextIter): seq[string] =
+proc getContextClassesAtIter*(self: Buffer; iter: gtk4.TextIter): seq[string] =
   let resul0 = gtk_source_buffer_get_context_classes_at_iter(cast[ptr Buffer00](self.impl), iter)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
@@ -222,59 +216,35 @@ proc getMaxUndoLevels*(self: Buffer): int =
 proc maxUndoLevels*(self: Buffer): int =
   int(gtk_source_buffer_get_max_undo_levels(cast[ptr Buffer00](self.impl)))
 
-proc gtk_source_buffer_get_source_marks_at_iter(self: ptr Buffer00; iter: gtk.TextIter;
-    category: cstring): ptr pointer {.
-    importc, libprag.}
-
-proc getSourceMarksAtIter*(self: Buffer; iter: gtk.TextIter;
-    category: cstring = ""): ptr pointer =
-  gtk_source_buffer_get_source_marks_at_iter(cast[ptr Buffer00](self.impl), iter, safeStringToCString(category))
-
-proc sourceMarksAtIter*(self: Buffer; iter: gtk.TextIter;
-    category: cstring = ""): ptr pointer =
-  gtk_source_buffer_get_source_marks_at_iter(cast[ptr Buffer00](self.impl), iter, safeStringToCString(category))
-
-proc gtk_source_buffer_get_source_marks_at_line(self: ptr Buffer00; line: int32;
-    category: cstring): ptr pointer {.
-    importc, libprag.}
-
-proc getSourceMarksAtLine*(self: Buffer; line: int;
-    category: cstring = ""): ptr pointer =
-  gtk_source_buffer_get_source_marks_at_line(cast[ptr Buffer00](self.impl), int32(line), safeStringToCString(category))
-
-proc sourceMarksAtLine*(self: Buffer; line: int;
-    category: cstring = ""): ptr pointer =
-  gtk_source_buffer_get_source_marks_at_line(cast[ptr Buffer00](self.impl), int32(line), safeStringToCString(category))
-
 proc gtk_source_buffer_iter_backward_to_context_class_toggle(self: ptr Buffer00;
-    iter: var gtk.TextIter; contextClass: cstring): gboolean {.
+    iter: gtk4.TextIter; contextClass: cstring): gboolean {.
     importc, libprag.}
 
 proc iterBackwardToContextClassToggle*(self: Buffer;
-    iter: var gtk.TextIter; contextClass: cstring): bool =
+    iter: gtk4.TextIter; contextClass: cstring): bool =
   toBool(gtk_source_buffer_iter_backward_to_context_class_toggle(cast[ptr Buffer00](self.impl), iter, contextClass))
 
 proc gtk_source_buffer_iter_forward_to_context_class_toggle(self: ptr Buffer00;
-    iter: var gtk.TextIter; contextClass: cstring): gboolean {.
+    iter: gtk4.TextIter; contextClass: cstring): gboolean {.
     importc, libprag.}
 
 proc iterForwardToContextClassToggle*(self: Buffer;
-    iter: var gtk.TextIter; contextClass: cstring): bool =
+    iter: gtk4.TextIter; contextClass: cstring): bool =
   toBool(gtk_source_buffer_iter_forward_to_context_class_toggle(cast[ptr Buffer00](self.impl), iter, contextClass))
 
-proc gtk_source_buffer_iter_has_context_class(self: ptr Buffer00; iter: gtk.TextIter;
+proc gtk_source_buffer_iter_has_context_class(self: ptr Buffer00; iter: gtk4.TextIter;
     contextClass: cstring): gboolean {.
     importc, libprag.}
 
-proc iterHasContextClass*(self: Buffer; iter: gtk.TextIter;
+proc iterHasContextClass*(self: Buffer; iter: gtk4.TextIter;
     contextClass: cstring): bool =
   toBool(gtk_source_buffer_iter_has_context_class(cast[ptr Buffer00](self.impl), iter, contextClass))
 
-proc gtk_source_buffer_join_lines(self: ptr Buffer00; start: gtk.TextIter;
-    `end`: gtk.TextIter) {.
+proc gtk_source_buffer_join_lines(self: ptr Buffer00; start: gtk4.TextIter;
+    `end`: gtk4.TextIter) {.
     importc, libprag.}
 
-proc joinLines*(self: Buffer; start: gtk.TextIter; `end`: gtk.TextIter) =
+proc joinLines*(self: Buffer; start: gtk4.TextIter; `end`: gtk4.TextIter) =
   gtk_source_buffer_join_lines(cast[ptr Buffer00](self.impl), start, `end`)
 
 proc gtk_source_buffer_redo(self: ptr Buffer00) {.
@@ -283,12 +253,12 @@ proc gtk_source_buffer_redo(self: ptr Buffer00) {.
 proc redo*(self: Buffer) =
   gtk_source_buffer_redo(cast[ptr Buffer00](self.impl))
 
-proc gtk_source_buffer_remove_source_marks(self: ptr Buffer00; start: gtk.TextIter;
-    `end`: gtk.TextIter; category: cstring) {.
+proc gtk_source_buffer_remove_source_marks(self: ptr Buffer00; start: gtk4.TextIter;
+    `end`: gtk4.TextIter; category: cstring) {.
     importc, libprag.}
 
-proc removeSourceMarks*(self: Buffer; start: gtk.TextIter;
-    `end`: gtk.TextIter; category: cstring = "") =
+proc removeSourceMarks*(self: Buffer; start: gtk4.TextIter;
+    `end`: gtk4.TextIter; category: cstring = "") =
   gtk_source_buffer_remove_source_marks(cast[ptr Buffer00](self.impl), start, `end`, safeStringToCString(category))
 
 proc gtk_source_buffer_set_highlight_matching_brackets(self: ptr Buffer00;
@@ -343,16 +313,16 @@ type
     title = 3
 
 proc gtk_source_buffer_change_case(self: ptr Buffer00; caseType: ChangeCaseType;
-    start: gtk.TextIter; `end`: gtk.TextIter) {.
+    start: gtk4.TextIter; `end`: gtk4.TextIter) {.
     importc, libprag.}
 
 proc changeCase*(self: Buffer; caseType: ChangeCaseType;
-    start: gtk.TextIter; `end`: gtk.TextIter) =
+    start: gtk4.TextIter; `end`: gtk4.TextIter) =
   gtk_source_buffer_change_case(cast[ptr Buffer00](self.impl), caseType, start, `end`)
 
 type
-  Mark* = ref object of gtk.TextMark
-  Mark00* = object of gtk.TextMark00
+  Mark* = ref object of gtk4.TextMark
+  Mark00* = object of gtk4.TextMark00
 
 proc gtk_source_mark_get_type*(): GType {.importc, libprag.}
 
@@ -375,7 +345,7 @@ proc newMark*(name: cstring; category: cstring): Mark =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -393,7 +363,7 @@ proc newMark*(tdesc: typedesc; name: cstring; category: cstring): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -411,7 +381,7 @@ proc initMark*[T](result: var T; name: cstring; category: cstring) {.deprecated.
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -442,7 +412,7 @@ proc next*(self: Mark; category: cstring = ""): Mark =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -463,7 +433,7 @@ proc prev*(self: Mark; category: cstring): Mark =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -473,18 +443,18 @@ proc prev*(self: Mark; category: cstring): Mark =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gtk_source_buffer_create_source_mark(self: ptr Buffer00; name: cstring;
-    category: cstring; where: gtk.TextIter): ptr Mark00 {.
+    category: cstring; where: gtk4.TextIter): ptr Mark00 {.
     importc, libprag.}
 
 proc createSourceMark*(self: Buffer; name: cstring = "";
-    category: cstring; where: gtk.TextIter): Mark =
+    category: cstring; where: gtk4.TextIter): Mark =
   let gobj = gtk_source_buffer_create_source_mark(cast[ptr Buffer00](self.impl), safeStringToCString(name), category, where)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -492,6 +462,26 @@ proc createSourceMark*(self: Buffer; name: cstring = "";
     g_object_unref(result.impl)
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc gtk_source_buffer_get_source_marks_at_iter(self: ptr Buffer00; iter: gtk4.TextIter;
+    category: cstring): ptr glib.SList {.
+    importc, libprag.}
+
+proc getSourceMarksAtIter*(self: Buffer; iter: gtk4.TextIter;
+    category: cstring = ""): seq[Mark] =
+  let resul0 = gtk_source_buffer_get_source_marks_at_iter(cast[ptr Buffer00](self.impl), iter, safeStringToCString(category))
+  result = gslistObjects2seq(Mark, resul0, false)
+  g_slist_free(resul0)
+
+proc gtk_source_buffer_get_source_marks_at_line(self: ptr Buffer00; line: int32;
+    category: cstring): ptr glib.SList {.
+    importc, libprag.}
+
+proc getSourceMarksAtLine*(self: Buffer; line: int;
+    category: cstring = ""): seq[Mark] =
+  let resul0 = gtk_source_buffer_get_source_marks_at_line(cast[ptr Buffer00](self.impl), int32(line), safeStringToCString(category))
+  result = gslistObjects2seq(Mark, resul0, false)
+  g_slist_free(resul0)
 
 type
   Language* = ref object of gobject.Object
@@ -508,7 +498,7 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_source_language_get_globs(self: ptr Language00): cstringArray {.
+proc gtk_source_language_get_globs(self: ptr Language00): ptr cstring {.
     importc, libprag.}
 
 proc getGlobs*(self: Language): seq[string] =
@@ -552,13 +542,7 @@ proc getMetadata*(self: Language; name: cstring): string =
     return
   result = $resul0
 
-proc metadata*(self: Language; name: cstring): string =
-  let resul0 = gtk_source_language_get_metadata(cast[ptr Language00](self.impl), name)
-  if resul0.isNil:
-    return
-  result = $resul0
-
-proc gtk_source_language_get_mime_types(self: ptr Language00): cstringArray {.
+proc gtk_source_language_get_mime_types(self: ptr Language00): ptr cstring {.
     importc, libprag.}
 
 proc getMimeTypes*(self: Language): seq[string] =
@@ -602,13 +586,7 @@ proc getStyleFallback*(self: Language; styleId: cstring): string =
     return
   result = $resul0
 
-proc styleFallback*(self: Language; styleId: cstring): string =
-  let resul0 = gtk_source_language_get_style_fallback(cast[ptr Language00](self.impl), styleId)
-  if resul0.isNil:
-    return
-  result = $resul0
-
-proc gtk_source_language_get_style_ids(self: ptr Language00): cstringArray {.
+proc gtk_source_language_get_style_ids(self: ptr Language00): ptr cstring {.
     importc, libprag.}
 
 proc getStyleIds*(self: Language): seq[string] =
@@ -634,12 +612,6 @@ proc getStyleName*(self: Language; styleId: cstring): string =
     return
   result = $resul0
 
-proc styleName*(self: Language; styleId: cstring): string =
-  let resul0 = gtk_source_language_get_style_name(cast[ptr Language00](self.impl), styleId)
-  if resul0.isNil:
-    return
-  result = $resul0
-
 proc gtk_source_buffer_new_with_language(language: ptr Language00): ptr Buffer00 {.
     importc, libprag.}
 
@@ -650,7 +622,7 @@ proc newBufferWithLanguage*(language: Language): Buffer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -668,7 +640,7 @@ proc newBufferWithLanguage*(tdesc: typedesc; language: Language): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -686,7 +658,7 @@ proc initBufferWithLanguage*[T](result: var T; language: Language) {.deprecated.
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -708,7 +680,7 @@ proc getLanguage*(self: Buffer): Language =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -726,7 +698,7 @@ proc language*(self: Buffer): Language =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -759,7 +731,7 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_source_style_scheme_get_authors(self: ptr StyleScheme00): cstringArray {.
+proc gtk_source_style_scheme_get_authors(self: ptr StyleScheme00): ptr cstring {.
     importc, libprag.}
 
 proc getAuthors*(self: StyleScheme): seq[string] =
@@ -834,7 +806,7 @@ proc getStyleScheme*(self: Buffer): StyleScheme =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -852,7 +824,7 @@ proc styleScheme*(self: Buffer): StyleScheme =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -885,11 +857,11 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_source_style_apply(self: ptr Style00; tag: ptr gtk.TextTag00) {.
+proc gtk_source_style_apply(self: ptr Style00; tag: ptr gtk4.TextTag00) {.
     importc, libprag.}
 
-proc apply*(self: Style; tag: gtk.TextTag) =
-  gtk_source_style_apply(cast[ptr Style00](self.impl), cast[ptr gtk.TextTag00](tag.impl))
+proc apply*(self: Style; tag: gtk4.TextTag) =
+  gtk_source_style_apply(cast[ptr Style00](self.impl), cast[ptr gtk4.TextTag00](tag.impl))
 
 proc gtk_source_style_copy(self: ptr Style00): ptr Style00 {.
     importc, libprag.}
@@ -901,7 +873,7 @@ proc copy*(self: Style): Style =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -923,25 +895,7 @@ proc getStyle*(self: StyleScheme; styleId: cstring): Style =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc style*(self: StyleScheme; styleId: cstring): Style =
-  let gobj = gtk_source_style_scheme_get_style(cast[ptr StyleScheme00](self.impl), styleId)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1020,7 +974,7 @@ proc getUndoManager*(self: Buffer): UndoManager =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1038,7 +992,7 @@ proc undoManager*(self: Buffer): UndoManager =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1064,11 +1018,11 @@ type
 
   SortFlags* {.size: sizeof(cint).} = set[SortFlag]
 
-proc gtk_source_buffer_sort_lines(self: ptr Buffer00; start: gtk.TextIter;
-    `end`: gtk.TextIter; flags: SortFlags; column: int32) {.
+proc gtk_source_buffer_sort_lines(self: ptr Buffer00; start: gtk4.TextIter;
+    `end`: gtk4.TextIter; flags: SortFlags; column: int32) {.
     importc, libprag.}
 
-proc sortLines*(self: Buffer; start: gtk.TextIter; `end`: gtk.TextIter;
+proc sortLines*(self: Buffer; start: gtk4.TextIter; `end`: gtk4.TextIter;
     flags: SortFlags; column: int) =
   gtk_source_buffer_sort_lines(cast[ptr Buffer00](self.impl), start, `end`, flags, int32(column))
 
@@ -1091,13 +1045,10 @@ proc scCancelled*(self: CompletionContext;  p: proc (self: ptr gobject.Object00;
   g_signal_connect_data(self.impl, "cancelled", cast[GCallback](p), xdata, nil, cf)
 
 proc gtk_source_completion_context_get_iter(self: ptr CompletionContext00;
-    iter: var gtk.TextIter): gboolean {.
+    iter: var gtk4.TextIter): gboolean {.
     importc, libprag.}
 
-proc getIter*(self: CompletionContext; iter: var gtk.TextIter): bool =
-  toBool(gtk_source_completion_context_get_iter(cast[ptr CompletionContext00](self.impl), iter))
-
-proc iter*(self: CompletionContext; iter: var gtk.TextIter): bool =
+proc getIter*(self: CompletionContext; iter: var gtk4.TextIter): bool =
   toBool(gtk_source_completion_context_get_iter(cast[ptr CompletionContext00](self.impl), iter))
 
 type
@@ -1121,10 +1072,10 @@ proc scActivateProposal*(self: Completion;  p: proc (self: ptr gobject.Object00;
 proc scHide*(self: Completion;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "hide", cast[GCallback](p), xdata, nil, cf)
 
-proc scMoveCursor*(self: Completion;  p: proc (self: ptr Completion00; step: gtk.ScrollStep; num: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scMoveCursor*(self: Completion;  p: proc (self: ptr Completion00; step: gtk4.ScrollStep; num: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "move-cursor", cast[GCallback](p), xdata, nil, cf)
 
-proc scMovePage*(self: Completion;  p: proc (self: ptr Completion00; step: gtk.ScrollStep; num: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scMovePage*(self: Completion;  p: proc (self: ptr Completion00; step: gtk4.ScrollStep; num: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "move-page", cast[GCallback](p), xdata, nil, cf)
 
 proc scPopulateContext*(self: Completion;  p: proc (self: ptr Completion00; context: ptr CompletionContext00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
@@ -1139,17 +1090,17 @@ proc gtk_source_completion_block_interactive(self: ptr Completion00) {.
 proc blockInteractive*(self: Completion) =
   gtk_source_completion_block_interactive(cast[ptr Completion00](self.impl))
 
-proc gtk_source_completion_create_context(self: ptr Completion00; position: gtk.TextIter): ptr CompletionContext00 {.
+proc gtk_source_completion_create_context(self: ptr Completion00; position: gtk4.TextIter): ptr CompletionContext00 {.
     importc, libprag.}
 
-proc createContext*(self: Completion; position: gtk.TextIter = cast[ptr gtk.TextIter](nil)[]): CompletionContext =
+proc createContext*(self: Completion; position: gtk4.TextIter = cast[var gtk4.TextIter](nil)): CompletionContext =
   let gobj = gtk_source_completion_create_context(cast[ptr Completion00](self.impl), position)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1158,28 +1109,17 @@ proc createContext*(self: Completion; position: gtk.TextIter = cast[ptr gtk.Text
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_completion_get_providers(self: ptr Completion00): ptr pointer {.
-    importc, libprag.}
-
-proc getProviders*(self: Completion): ptr pointer =
-  gtk_source_completion_get_providers(cast[ptr Completion00](self.impl))
-
-proc providers*(self: Completion): ptr pointer =
-  gtk_source_completion_get_providers(cast[ptr Completion00](self.impl))
-
 proc gtk_source_completion_hide(self: ptr Completion00) {.
     importc, libprag.}
 
 proc hide*(self: Completion) =
   gtk_source_completion_hide(cast[ptr Completion00](self.impl))
 
-proc gtk_source_completion_start(self: ptr Completion00; providers: ptr pointer;
-    context: ptr CompletionContext00): gboolean {.
+proc gtk_source_completion_move_window(self: ptr Completion00; iter: gtk4.TextIter) {.
     importc, libprag.}
 
-proc start*(self: Completion; providers: ptr pointer;
-    context: CompletionContext): bool =
-  toBool(gtk_source_completion_start(cast[ptr Completion00](self.impl), providers, cast[ptr CompletionContext00](context.impl)))
+proc moveWindow*(self: Completion; iter: gtk4.TextIter) =
+  gtk_source_completion_move_window(cast[ptr Completion00](self.impl), iter)
 
 proc gtk_source_completion_unblock_interactive(self: ptr Completion00) {.
     importc, libprag.}
@@ -1203,8 +1143,8 @@ proc activation*(self: CompletionContext): CompletionActivation =
   gtk_source_completion_context_get_activation(cast[ptr CompletionContext00](self.impl))
 
 type
-  CompletionInfo* = ref object of gtk.Window
-  CompletionInfo00* = object of gtk.Window00
+  CompletionInfo* = ref object of gtk4.Window
+  CompletionInfo00* = object of gtk4.Window00
 
 proc gtk_source_completion_info_get_type*(): GType {.importc, libprag.}
 
@@ -1217,6 +1157,9 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
+proc scBeforeShow*(self: CompletionInfo;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+  g_signal_connect_data(self.impl, "before-show", cast[GCallback](p), xdata, nil, cf)
+
 proc gtk_source_completion_info_new(): ptr CompletionInfo00 {.
     importc, libprag.}
 
@@ -1227,7 +1170,7 @@ proc newCompletionInfo*(): CompletionInfo =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1244,7 +1187,7 @@ proc newCompletionInfo*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1261,7 +1204,42 @@ proc initCompletionInfo*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc gtk_source_completion_info_get_widget(self: ptr CompletionInfo00): ptr gtk4.Widget00 {.
+    importc, libprag.}
+
+proc getWidget*(self: CompletionInfo): gtk4.Widget =
+  let gobj = gtk_source_completion_info_get_widget(cast[ptr CompletionInfo00](self.impl))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtk4.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc widget*(self: CompletionInfo): gtk4.Widget =
+  let gobj = gtk_source_completion_info_get_widget(cast[ptr CompletionInfo00](self.impl))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtk4.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1271,12 +1249,21 @@ proc initCompletionInfo*[T](result: var T) {.deprecated.} =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gtk_source_completion_info_move_to_iter(self: ptr CompletionInfo00;
-    view: ptr gtk.TextView00; iter: gtk.TextIter) {.
+    view: ptr gtk4.TextView00; iter: gtk4.TextIter) {.
     importc, libprag.}
 
-proc moveToIter*(self: CompletionInfo; view: gtk.TextView;
-    iter: gtk.TextIter = cast[ptr gtk.TextIter](nil)[]) =
-  gtk_source_completion_info_move_to_iter(cast[ptr CompletionInfo00](self.impl), cast[ptr gtk.TextView00](view.impl), iter)
+proc moveToIter*(self: CompletionInfo; view: gtk4.TextView;
+    iter: gtk4.TextIter = cast[var gtk4.TextIter](nil)) =
+  gtk_source_completion_info_move_to_iter(cast[ptr CompletionInfo00](self.impl), cast[ptr gtk4.TextView00](view.impl), iter)
+
+proc gtk_source_completion_info_set_widget(self: ptr CompletionInfo00; widget: ptr gtk4.Widget00) {.
+    importc, libprag.}
+
+proc setWidget*(self: CompletionInfo; widget: gtk4.Widget = nil) =
+  gtk_source_completion_info_set_widget(cast[ptr CompletionInfo00](self.impl), if widget.isNil: nil else: cast[ptr gtk4.Widget00](widget.impl))
+
+proc `widget=`*(self: CompletionInfo; widget: gtk4.Widget = nil) =
+  gtk_source_completion_info_set_widget(cast[ptr CompletionInfo00](self.impl), if widget.isNil: nil else: cast[ptr gtk4.Widget00](widget.impl))
 
 proc gtk_source_completion_get_info_window(self: ptr Completion00): ptr CompletionInfo00 {.
     importc, libprag.}
@@ -1288,7 +1275,7 @@ proc getInfoWindow*(self: Completion): CompletionInfo =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1304,7 +1291,7 @@ proc infoWindow*(self: Completion): CompletionInfo =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1314,8 +1301,8 @@ proc infoWindow*(self: Completion): CompletionInfo =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 type
-  View* = ref object of gtk.TextView
-  View00* = object of gtk.TextView00
+  View* = ref object of gtk4.TextView
+  View00* = object of gtk4.TextView00
 
 proc gtk_source_view_get_type*(): GType {.importc, libprag.}
 
@@ -1337,10 +1324,10 @@ proc scChangeNumber*(self: View;  p: proc (self: ptr View00; count: int32; xdata
 proc scJoinLines*(self: View;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "join-lines", cast[GCallback](p), xdata, nil, cf)
 
-proc scLineMarkActivated*(self: View;  p: proc (self: ptr View00; iter: gtk.TextIter; event: ptr gdk.Event00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scLineMarkActivated*(self: View;  p: proc (self: ptr View00; iter: gtk4.TextIter; event: ptr gdk4.Event00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "line-mark-activated", cast[GCallback](p), xdata, nil, cf)
 
-proc scMoveLines*(self: View;  p: proc (self: ptr View00; down: gboolean; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scMoveLines*(self: View;  p: proc (self: ptr View00; copy: gboolean; count: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "move-lines", cast[GCallback](p), xdata, nil, cf)
 
 proc scMoveToMatchingBracket*(self: View;  p: proc (self: ptr View00; extendSelection: gboolean; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
@@ -1355,7 +1342,7 @@ proc scRedo*(self: View;  p: proc (self: ptr gobject.Object00; xdata: pointer) {
 proc scShowCompletion*(self: View;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "show-completion", cast[GCallback](p), xdata, nil, cf)
 
-proc scSmartHomeEnd*(self: View;  p: proc (self: ptr View00; iter: gtk.TextIter; count: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scSmartHomeEnd*(self: View;  p: proc (self: ptr View00; iter: gtk4.TextIter; count: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "smart-home-end", cast[GCallback](p), xdata, nil, cf)
 
 proc scUndo*(self: View;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
@@ -1371,7 +1358,7 @@ proc newView*(): View =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1388,7 +1375,7 @@ proc newView*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1405,7 +1392,7 @@ proc initView*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1424,7 +1411,7 @@ proc newViewWithBuffer*(buffer: Buffer): View =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1441,7 +1428,7 @@ proc newViewWithBuffer*(tdesc: typedesc; buffer: Buffer): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1458,7 +1445,7 @@ proc initViewWithBuffer*[T](result: var T; buffer: Buffer) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1495,7 +1482,7 @@ proc getCompletion*(self: View): Completion =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1511,7 +1498,7 @@ proc completion*(self: View): Completion =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1610,20 +1597,17 @@ proc getTabWidth*(self: View): int =
 proc tabWidth*(self: View): int =
   int(gtk_source_view_get_tab_width(cast[ptr View00](self.impl)))
 
-proc gtk_source_view_get_visual_column(self: ptr View00; iter: gtk.TextIter): uint32 {.
+proc gtk_source_view_get_visual_column(self: ptr View00; iter: gtk4.TextIter): uint32 {.
     importc, libprag.}
 
-proc getVisualColumn*(self: View; iter: gtk.TextIter): int =
+proc getVisualColumn*(self: View; iter: gtk4.TextIter): int =
   int(gtk_source_view_get_visual_column(cast[ptr View00](self.impl), iter))
 
-proc visualColumn*(self: View; iter: gtk.TextIter): int =
-  int(gtk_source_view_get_visual_column(cast[ptr View00](self.impl), iter))
-
-proc gtk_source_view_indent_lines(self: ptr View00; start: gtk.TextIter;
-    `end`: gtk.TextIter) {.
+proc gtk_source_view_indent_lines(self: ptr View00; start: gtk4.TextIter;
+    `end`: gtk4.TextIter) {.
     importc, libprag.}
 
-proc indentLines*(self: View; start: gtk.TextIter; `end`: gtk.TextIter) =
+proc indentLines*(self: View; start: gtk4.TextIter; `end`: gtk4.TextIter) =
   gtk_source_view_indent_lines(cast[ptr View00](self.impl), start, `end`)
 
 proc gtk_source_view_set_auto_indent(self: ptr View00; enable: gboolean) {.
@@ -1735,11 +1719,11 @@ proc setTabWidth*(self: View; width: int) =
 proc `tabWidth=`*(self: View; width: int) =
   gtk_source_view_set_tab_width(cast[ptr View00](self.impl), uint32(width))
 
-proc gtk_source_view_unindent_lines(self: ptr View00; start: gtk.TextIter;
-    `end`: gtk.TextIter) {.
+proc gtk_source_view_unindent_lines(self: ptr View00; start: gtk4.TextIter;
+    `end`: gtk4.TextIter) {.
     importc, libprag.}
 
-proc unindentLines*(self: View; start: gtk.TextIter; `end`: gtk.TextIter) =
+proc unindentLines*(self: View; start: gtk4.TextIter; `end`: gtk4.TextIter) =
   gtk_source_view_unindent_lines(cast[ptr View00](self.impl), start, `end`)
 
 proc gtk_source_completion_get_view(self: ptr Completion00): ptr View00 {.
@@ -1754,7 +1738,7 @@ proc getView*(self: Completion): View =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1772,7 +1756,7 @@ proc view*(self: Completion): View =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1796,6 +1780,12 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
+proc gtk_source_gutter_get_padding(self: ptr Gutter00; xpad: ptr int32; ypad: ptr int32) {.
+    importc, libprag.}
+
+proc getPadding*(self: Gutter; xpad: ptr int32; ypad: ptr int32) =
+  gtk_source_gutter_get_padding(cast[ptr Gutter00](self.impl), xpad, ypad)
+
 proc gtk_source_gutter_get_view(self: ptr Gutter00): ptr View00 {.
     importc, libprag.}
 
@@ -1806,7 +1796,7 @@ proc getView*(self: Gutter): View =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1822,7 +1812,7 @@ proc view*(self: Gutter): View =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1831,13 +1821,48 @@ proc view*(self: Gutter): View =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_gutter_get_window_type(self: ptr Gutter00): gtk.TextWindowType {.
+proc gtk_source_gutter_get_window(self: ptr Gutter00): ptr gdk4.Window00 {.
     importc, libprag.}
 
-proc getWindowType*(self: Gutter): gtk.TextWindowType =
+proc getWindow*(self: Gutter): gdk4.Window =
+  let gobj = gtk_source_gutter_get_window(cast[ptr Gutter00](self.impl))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gdk4.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc window*(self: Gutter): gdk4.Window =
+  let gobj = gtk_source_gutter_get_window(cast[ptr Gutter00](self.impl))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gdk4.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc gtk_source_gutter_get_window_type(self: ptr Gutter00): gtk4.TextWindowType {.
+    importc, libprag.}
+
+proc getWindowType*(self: Gutter): gtk4.TextWindowType =
   gtk_source_gutter_get_window_type(cast[ptr Gutter00](self.impl))
 
-proc windowType*(self: Gutter): gtk.TextWindowType =
+proc windowType*(self: Gutter): gtk4.TextWindowType =
   gtk_source_gutter_get_window_type(cast[ptr Gutter00](self.impl))
 
 proc gtk_source_gutter_queue_draw(self: ptr Gutter00) {.
@@ -1846,33 +1871,23 @@ proc gtk_source_gutter_queue_draw(self: ptr Gutter00) {.
 proc queueDraw*(self: Gutter) =
   gtk_source_gutter_queue_draw(cast[ptr Gutter00](self.impl))
 
-proc gtk_source_view_get_gutter(self: ptr View00; windowType: gtk.TextWindowType): ptr Gutter00 {.
+proc gtk_source_gutter_set_padding(self: ptr Gutter00; xpad: int32; ypad: int32) {.
     importc, libprag.}
 
-proc getGutter*(self: View; windowType: gtk.TextWindowType): Gutter =
-  let gobj = gtk_source_view_get_gutter(cast[ptr View00](self.impl), windowType)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
+proc setPadding*(self: Gutter; xpad: int; ypad: int) =
+  gtk_source_gutter_set_padding(cast[ptr Gutter00](self.impl), int32(xpad), int32(ypad))
 
-proc gutter*(self: View; windowType: gtk.TextWindowType): Gutter =
+proc gtk_source_view_get_gutter(self: ptr View00; windowType: gtk4.TextWindowType): ptr Gutter00 {.
+    importc, libprag.}
+
+proc getGutter*(self: View; windowType: gtk4.TextWindowType): Gutter =
   let gobj = gtk_source_view_get_gutter(cast[ptr View00](self.impl), windowType)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -1903,47 +1918,47 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc scActivate*(self: GutterRenderer;  p: proc (self: ptr GutterRenderer00; iter: gtk.TextIter; area: gdk.Rectangle; event: ptr gdk.Event00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scActivate*(self: GutterRenderer;  p: proc (self: ptr GutterRenderer00; iter: gtk4.TextIter; area: gdk4.Rectangle; event: ptr gdk4.Event00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "activate", cast[GCallback](p), xdata, nil, cf)
 
-proc scQueryActivatable*(self: GutterRenderer;  p: proc (self: ptr GutterRenderer00; iter: gtk.TextIter; area: gdk.Rectangle; event: ptr gdk.Event00; xdata: pointer): gboolean {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scQueryActivatable*(self: GutterRenderer;  p: proc (self: ptr GutterRenderer00; iter: gtk4.TextIter; area: gdk4.Rectangle; event: ptr gdk4.Event00; xdata: pointer): gboolean {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "query-activatable", cast[GCallback](p), xdata, nil, cf)
 
-proc scQueryData*(self: GutterRenderer;  p: proc (self: ptr GutterRenderer00; start: gtk.TextIter; `end`: gtk.TextIter; state: GutterRendererState; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scQueryData*(self: GutterRenderer;  p: proc (self: ptr GutterRenderer00; start: gtk4.TextIter; `end`: gtk4.TextIter; state: GutterRendererState; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "query-data", cast[GCallback](p), xdata, nil, cf)
 
-proc scQueryTooltip*(self: GutterRenderer;  p: proc (self: ptr GutterRenderer00; iter: gtk.TextIter; area: gdk.Rectangle; x: int32; y: int32; tooltip: ptr gtk.Tooltip00; xdata: pointer): gboolean {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scQueryTooltip*(self: GutterRenderer;  p: proc (self: ptr GutterRenderer00; iter: gtk4.TextIter; area: gdk4.Rectangle; x: int32; y: int32; tooltip: ptr gtk4.Tooltip00; xdata: pointer): gboolean {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "query-tooltip", cast[GCallback](p), xdata, nil, cf)
 
 proc scQueueDraw*(self: GutterRenderer;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "queue-draw", cast[GCallback](p), xdata, nil, cf)
 
-proc gtk_source_gutter_renderer_activate(self: ptr GutterRenderer00; iter: gtk.TextIter;
-    area: gdk.Rectangle; event: ptr gdk.Event00) {.
+proc gtk_source_gutter_renderer_activate(self: ptr GutterRenderer00; iter: gtk4.TextIter;
+    area: gdk4.Rectangle; event: ptr gdk4.Event00) {.
     importc, libprag.}
 
-proc activate*(self: GutterRenderer; iter: gtk.TextIter;
-    area: gdk.Rectangle; event: gdk.Event) =
-  gtk_source_gutter_renderer_activate(cast[ptr GutterRenderer00](self.impl), iter, area, cast[ptr gdk.Event00](event.impl))
+proc activate*(self: GutterRenderer; iter: gtk4.TextIter;
+    area: gdk4.Rectangle; event: gdk4.Event) =
+  gtk_source_gutter_renderer_activate(cast[ptr GutterRenderer00](self.impl), iter, area, cast[ptr gdk4.Event00](event.impl))
 
 proc gtk_source_gutter_renderer_begin(self: ptr GutterRenderer00; cr: ptr cairo.Context00;
-    backgroundArea: gdk.Rectangle; cellArea: gdk.Rectangle; start: gtk.TextIter;
-    `end`: gtk.TextIter) {.
+    backgroundArea: gdk4.Rectangle; cellArea: gdk4.Rectangle; start: gtk4.TextIter;
+    `end`: gtk4.TextIter) {.
     importc, libprag.}
 
 proc begin*(self: GutterRenderer; cr: cairo.Context;
-    backgroundArea: gdk.Rectangle; cellArea: gdk.Rectangle; start: gtk.TextIter;
-    `end`: gtk.TextIter) =
+    backgroundArea: gdk4.Rectangle; cellArea: gdk4.Rectangle; start: gtk4.TextIter;
+    `end`: gtk4.TextIter) =
   gtk_source_gutter_renderer_begin(cast[ptr GutterRenderer00](self.impl), cast[ptr cairo.Context00](cr.impl), backgroundArea, cellArea, start, `end`)
 
 proc gtk_source_gutter_renderer_draw(self: ptr GutterRenderer00; cr: ptr cairo.Context00;
-    backgroundArea: gdk.Rectangle; cellArea: gdk.Rectangle; start: gtk.TextIter;
-    `end`: gtk.TextIter; state: GutterRendererState) {.
+    backgroundArea: gdk4.Rectangle; cellArea: gdk4.Rectangle; start: gtk4.TextIter;
+    `end`: gtk4.TextIter; state: GutterRendererState) {.
     importc, libprag.}
 
 proc draw*(self: GutterRenderer; cr: cairo.Context;
-    backgroundArea: gdk.Rectangle; cellArea: gdk.Rectangle; start: gtk.TextIter;
-    `end`: gtk.TextIter; state: GutterRendererState) =
+    backgroundArea: gdk4.Rectangle; cellArea: gdk4.Rectangle; start: gtk4.TextIter;
+    `end`: gtk4.TextIter; state: GutterRendererState) =
   gtk_source_gutter_renderer_draw(cast[ptr GutterRenderer00](self.impl), cast[ptr cairo.Context00](cr.impl), backgroundArea, cellArea, start, `end`, state)
 
 proc gtk_source_gutter_renderer_end(self: ptr GutterRenderer00) {.
@@ -1956,31 +1971,30 @@ proc gtk_source_gutter_renderer_get_alignment(self: ptr GutterRenderer00;
     xalign: var cfloat; yalign: var cfloat) {.
     importc, libprag.}
 
-proc getAlignment*(self: GutterRenderer; xalign: var cfloat;
-    yalign: var cfloat) =
+proc getAlignment*(self: GutterRenderer; xalign: var cfloat = cast[var cfloat](nil);
+    yalign: var cfloat = cast[var cfloat](nil)) =
   gtk_source_gutter_renderer_get_alignment(cast[ptr GutterRenderer00](self.impl), xalign, yalign)
 
 proc gtk_source_gutter_renderer_get_background(self: ptr GutterRenderer00;
-    color: var gdk.RGBA): gboolean {.
+    color: var gdk4.RGBA): gboolean {.
     importc, libprag.}
 
-proc getBackground*(self: GutterRenderer; color: var gdk.RGBA): bool =
-  toBool(gtk_source_gutter_renderer_get_background(cast[ptr GutterRenderer00](self.impl), color))
-
-proc background*(self: GutterRenderer; color: var gdk.RGBA): bool =
+proc getBackground*(self: GutterRenderer; color: var gdk4.RGBA = cast[var gdk4.RGBA](nil)): bool =
   toBool(gtk_source_gutter_renderer_get_background(cast[ptr GutterRenderer00](self.impl), color))
 
 proc gtk_source_gutter_renderer_get_padding(self: ptr GutterRenderer00; xpad: var int32;
     ypad: var int32) {.
     importc, libprag.}
 
-proc getPadding*(self: GutterRenderer; xpad: var int;
-    ypad: var int) =
-  var ypad_00 = int32(ypad)
-  var xpad_00 = int32(xpad)
+proc getPadding*(self: GutterRenderer; xpad: var int = cast[var int](nil);
+    ypad: var int = cast[var int](nil)) =
+  var ypad_00: int32
+  var xpad_00: int32
   gtk_source_gutter_renderer_get_padding(cast[ptr GutterRenderer00](self.impl), xpad_00, ypad_00)
-  ypad = int(ypad_00)
-  xpad = int(xpad_00)
+  if ypad.addr != nil:
+    ypad = int(ypad_00)
+  if xpad.addr != nil:
+    xpad = int(xpad_00)
 
 proc gtk_source_gutter_renderer_get_size(self: ptr GutterRenderer00): int32 {.
     importc, libprag.}
@@ -1991,17 +2005,17 @@ proc getSize*(self: GutterRenderer): int =
 proc size*(self: GutterRenderer): int =
   int(gtk_source_gutter_renderer_get_size(cast[ptr GutterRenderer00](self.impl)))
 
-proc gtk_source_gutter_renderer_get_view(self: ptr GutterRenderer00): ptr gtk.TextView00 {.
+proc gtk_source_gutter_renderer_get_view(self: ptr GutterRenderer00): ptr gtk4.TextView00 {.
     importc, libprag.}
 
-proc getView*(self: GutterRenderer): gtk.TextView =
+proc getView*(self: GutterRenderer): gtk4.TextView =
   let gobj = gtk_source_gutter_renderer_get_view(cast[ptr GutterRenderer00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtk.finalizeGObject)
+    fnew(result, gtk4.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -2010,14 +2024,14 @@ proc getView*(self: GutterRenderer): gtk.TextView =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc view*(self: GutterRenderer): gtk.TextView =
+proc view*(self: GutterRenderer): gtk4.TextView =
   let gobj = gtk_source_gutter_renderer_get_view(cast[ptr GutterRenderer00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtk.finalizeGObject)
+    fnew(result, gtk4.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -2035,38 +2049,38 @@ proc getVisible*(self: GutterRenderer): bool =
 proc visible*(self: GutterRenderer): bool =
   toBool(gtk_source_gutter_renderer_get_visible(cast[ptr GutterRenderer00](self.impl)))
 
-proc gtk_source_gutter_renderer_get_window_type(self: ptr GutterRenderer00): gtk.TextWindowType {.
+proc gtk_source_gutter_renderer_get_window_type(self: ptr GutterRenderer00): gtk4.TextWindowType {.
     importc, libprag.}
 
-proc getWindowType*(self: GutterRenderer): gtk.TextWindowType =
+proc getWindowType*(self: GutterRenderer): gtk4.TextWindowType =
   gtk_source_gutter_renderer_get_window_type(cast[ptr GutterRenderer00](self.impl))
 
-proc windowType*(self: GutterRenderer): gtk.TextWindowType =
+proc windowType*(self: GutterRenderer): gtk4.TextWindowType =
   gtk_source_gutter_renderer_get_window_type(cast[ptr GutterRenderer00](self.impl))
 
 proc gtk_source_gutter_renderer_query_activatable(self: ptr GutterRenderer00;
-    iter: gtk.TextIter; area: gdk.Rectangle; event: ptr gdk.Event00): gboolean {.
+    iter: gtk4.TextIter; area: gdk4.Rectangle; event: ptr gdk4.Event00): gboolean {.
     importc, libprag.}
 
-proc queryActivatable*(self: GutterRenderer; iter: gtk.TextIter;
-    area: gdk.Rectangle; event: gdk.Event): bool =
-  toBool(gtk_source_gutter_renderer_query_activatable(cast[ptr GutterRenderer00](self.impl), iter, area, cast[ptr gdk.Event00](event.impl)))
+proc queryActivatable*(self: GutterRenderer; iter: gtk4.TextIter;
+    area: gdk4.Rectangle; event: gdk4.Event): bool =
+  toBool(gtk_source_gutter_renderer_query_activatable(cast[ptr GutterRenderer00](self.impl), iter, area, cast[ptr gdk4.Event00](event.impl)))
 
-proc gtk_source_gutter_renderer_query_data(self: ptr GutterRenderer00; start: gtk.TextIter;
-    `end`: gtk.TextIter; state: GutterRendererState) {.
+proc gtk_source_gutter_renderer_query_data(self: ptr GutterRenderer00; start: gtk4.TextIter;
+    `end`: gtk4.TextIter; state: GutterRendererState) {.
     importc, libprag.}
 
-proc queryData*(self: GutterRenderer; start: gtk.TextIter;
-    `end`: gtk.TextIter; state: GutterRendererState) =
+proc queryData*(self: GutterRenderer; start: gtk4.TextIter;
+    `end`: gtk4.TextIter; state: GutterRendererState) =
   gtk_source_gutter_renderer_query_data(cast[ptr GutterRenderer00](self.impl), start, `end`, state)
 
 proc gtk_source_gutter_renderer_query_tooltip(self: ptr GutterRenderer00;
-    iter: gtk.TextIter; area: gdk.Rectangle; x: int32; y: int32; tooltip: ptr gtk.Tooltip00): gboolean {.
+    iter: gtk4.TextIter; area: gdk4.Rectangle; x: int32; y: int32; tooltip: ptr gtk4.Tooltip00): gboolean {.
     importc, libprag.}
 
-proc queryTooltip*(self: GutterRenderer; iter: gtk.TextIter;
-    area: gdk.Rectangle; x: int; y: int; tooltip: gtk.Tooltip): bool =
-  toBool(gtk_source_gutter_renderer_query_tooltip(cast[ptr GutterRenderer00](self.impl), iter, area, int32(x), int32(y), cast[ptr gtk.Tooltip00](tooltip.impl)))
+proc queryTooltip*(self: GutterRenderer; iter: gtk4.TextIter;
+    area: gdk4.Rectangle; x: int; y: int; tooltip: gtk4.Tooltip): bool =
+  toBool(gtk_source_gutter_renderer_query_tooltip(cast[ptr GutterRenderer00](self.impl), iter, area, int32(x), int32(y), cast[ptr gtk4.Tooltip00](tooltip.impl)))
 
 proc gtk_source_gutter_renderer_queue_draw(self: ptr GutterRenderer00) {.
     importc, libprag.}
@@ -2083,13 +2097,13 @@ proc setAlignment*(self: GutterRenderer; xalign: cfloat;
   gtk_source_gutter_renderer_set_alignment(cast[ptr GutterRenderer00](self.impl), xalign, yalign)
 
 proc gtk_source_gutter_renderer_set_background(self: ptr GutterRenderer00;
-    color: gdk.RGBA) {.
+    color: gdk4.RGBA) {.
     importc, libprag.}
 
-proc setBackground*(self: GutterRenderer; color: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc setBackground*(self: GutterRenderer; color: gdk4.RGBA = cast[var gdk4.RGBA](nil)) =
   gtk_source_gutter_renderer_set_background(cast[ptr GutterRenderer00](self.impl), color)
 
-proc `background=`*(self: GutterRenderer; color: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc `background=`*(self: GutterRenderer; color: gdk4.RGBA = cast[var gdk4.RGBA](nil)) =
   gtk_source_gutter_renderer_set_background(cast[ptr GutterRenderer00](self.impl), color)
 
 proc gtk_source_gutter_renderer_set_padding(self: ptr GutterRenderer00; xpad: int32;
@@ -2131,25 +2145,7 @@ proc getRendererAtPos*(self: Gutter; x: int; y: int): GutterRenderer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc rendererAtPos*(self: Gutter; x: int; y: int): GutterRenderer =
-  let gobj = gtk_source_gutter_get_renderer_at_pos(cast[ptr Gutter00](self.impl), int32(x), int32(y))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -2230,7 +2226,7 @@ proc newSpaceDrawer*(): SpaceDrawer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -2248,7 +2244,7 @@ proc newSpaceDrawer*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -2266,7 +2262,7 @@ proc initSpaceDrawer*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -2332,7 +2328,7 @@ proc getSpaceDrawer*(self: View): SpaceDrawer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -2348,7 +2344,7 @@ proc spaceDrawer*(self: View): SpaceDrawer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -2381,9 +2377,6 @@ proc gtk_source_space_drawer_get_types_for_locations(self: ptr SpaceDrawer00;
 proc getTypesForLocations*(self: SpaceDrawer; locations: SpaceLocationFlags): SpaceTypeFlags =
   gtk_source_space_drawer_get_types_for_locations(cast[ptr SpaceDrawer00](self.impl), locations)
 
-proc typesForLocations*(self: SpaceDrawer; locations: SpaceLocationFlags): SpaceTypeFlags =
-  gtk_source_space_drawer_get_types_for_locations(cast[ptr SpaceDrawer00](self.impl), locations)
-
 proc gtk_source_space_drawer_set_types_for_locations(self: ptr SpaceDrawer00;
     locations: SpaceLocationFlags; types: SpaceTypeFlags) {.
     importc, libprag.}
@@ -2391,6 +2384,35 @@ proc gtk_source_space_drawer_set_types_for_locations(self: ptr SpaceDrawer00;
 proc setTypesForLocations*(self: SpaceDrawer; locations: SpaceLocationFlags;
     types: SpaceTypeFlags) =
   gtk_source_space_drawer_set_types_for_locations(cast[ptr SpaceDrawer00](self.impl), locations, types)
+
+type
+  DrawSpacesFlags* {.size: sizeof(cint), pure.} = enum
+    space = 1
+    tab = 2
+    newline = 4
+    nbsp = 8
+    leading = 16
+    text = 32
+    trailing = 64
+    all = 127
+
+proc gtk_source_view_get_draw_spaces(self: ptr View00): DrawSpacesFlags {.
+    importc, libprag.}
+
+proc getDrawSpaces*(self: View): DrawSpacesFlags =
+  gtk_source_view_get_draw_spaces(cast[ptr View00](self.impl))
+
+proc drawSpaces*(self: View): DrawSpacesFlags =
+  gtk_source_view_get_draw_spaces(cast[ptr View00](self.impl))
+
+proc gtk_source_view_set_draw_spaces(self: ptr View00; flags: DrawSpacesFlags) {.
+    importc, libprag.}
+
+proc setDrawSpaces*(self: View; flags: DrawSpacesFlags) =
+  gtk_source_view_set_draw_spaces(cast[ptr View00](self.impl), flags)
+
+proc `drawSpaces=`*(self: View; flags: DrawSpacesFlags) =
+  gtk_source_view_set_draw_spaces(cast[ptr View00](self.impl), flags)
 
 type
   MarkAttributes* = ref object of gobject.Object
@@ -2423,7 +2445,7 @@ proc newMarkAttributes*(): MarkAttributes =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -2441,7 +2463,7 @@ proc newMarkAttributes*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -2459,7 +2481,7 @@ proc initMarkAttributes*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -2470,13 +2492,10 @@ proc initMarkAttributes*[T](result: var T) {.deprecated.} =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gtk_source_mark_attributes_get_background(self: ptr MarkAttributes00;
-    background: var gdk.RGBA): gboolean {.
+    background: var gdk4.RGBA): gboolean {.
     importc, libprag.}
 
-proc getBackground*(self: MarkAttributes; background: var gdk.RGBA): bool =
-  toBool(gtk_source_mark_attributes_get_background(cast[ptr MarkAttributes00](self.impl), background))
-
-proc background*(self: MarkAttributes; background: var gdk.RGBA): bool =
+proc getBackground*(self: MarkAttributes; background: var gdk4.RGBA): bool =
   toBool(gtk_source_mark_attributes_get_background(cast[ptr MarkAttributes00](self.impl), background))
 
 proc gtk_source_mark_attributes_get_gicon(self: ptr MarkAttributes00): ptr gio.Icon00 {.
@@ -2558,17 +2577,20 @@ proc pixbuf*(self: MarkAttributes): gdkpixbuf.Pixbuf =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
+proc gtk_source_mark_attributes_get_stock_id(self: ptr MarkAttributes00): cstring {.
+    importc, libprag.}
+
+proc getStockId*(self: MarkAttributes): string =
+  result = $gtk_source_mark_attributes_get_stock_id(cast[ptr MarkAttributes00](self.impl))
+
+proc stockId*(self: MarkAttributes): string =
+  result = $gtk_source_mark_attributes_get_stock_id(cast[ptr MarkAttributes00](self.impl))
+
 proc gtk_source_mark_attributes_get_tooltip_markup(self: ptr MarkAttributes00;
     mark: ptr Mark00): cstring {.
     importc, libprag.}
 
 proc getTooltipMarkup*(self: MarkAttributes;
-    mark: Mark): string =
-  let resul0 = gtk_source_mark_attributes_get_tooltip_markup(cast[ptr MarkAttributes00](self.impl), cast[ptr Mark00](mark.impl))
-  result = $resul0
-  cogfree(resul0)
-
-proc tooltipMarkup*(self: MarkAttributes;
     mark: Mark): string =
   let resul0 = gtk_source_mark_attributes_get_tooltip_markup(cast[ptr MarkAttributes00](self.impl), cast[ptr Mark00](mark.impl))
   result = $resul0
@@ -2583,18 +2605,13 @@ proc getTooltipText*(self: MarkAttributes; mark: Mark): string =
   result = $resul0
   cogfree(resul0)
 
-proc tooltipText*(self: MarkAttributes; mark: Mark): string =
-  let resul0 = gtk_source_mark_attributes_get_tooltip_text(cast[ptr MarkAttributes00](self.impl), cast[ptr Mark00](mark.impl))
-  result = $resul0
-  cogfree(resul0)
-
-proc gtk_source_mark_attributes_render_icon(self: ptr MarkAttributes00; widget: ptr gtk.Widget00;
+proc gtk_source_mark_attributes_render_icon(self: ptr MarkAttributes00; widget: ptr gtk4.Widget00;
     size: int32): ptr gdkpixbuf.Pixbuf00 {.
     importc, libprag.}
 
-proc renderIcon*(self: MarkAttributes; widget: gtk.Widget;
+proc renderIcon*(self: MarkAttributes; widget: gtk4.Widget;
     size: int): gdkpixbuf.Pixbuf =
-  let gobj = gtk_source_mark_attributes_render_icon(cast[ptr MarkAttributes00](self.impl), cast[ptr gtk.Widget00](widget.impl), int32(size))
+  let gobj = gtk_source_mark_attributes_render_icon(cast[ptr MarkAttributes00](self.impl), cast[ptr gtk4.Widget00](widget.impl), int32(size))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -2610,13 +2627,13 @@ proc renderIcon*(self: MarkAttributes; widget: gtk.Widget;
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gtk_source_mark_attributes_set_background(self: ptr MarkAttributes00;
-    background: gdk.RGBA) {.
+    background: gdk4.RGBA) {.
     importc, libprag.}
 
-proc setBackground*(self: MarkAttributes; background: gdk.RGBA) =
+proc setBackground*(self: MarkAttributes; background: gdk4.RGBA) =
   gtk_source_mark_attributes_set_background(cast[ptr MarkAttributes00](self.impl), background)
 
-proc `background=`*(self: MarkAttributes; background: gdk.RGBA) =
+proc `background=`*(self: MarkAttributes; background: gdk4.RGBA) =
   gtk_source_mark_attributes_set_background(cast[ptr MarkAttributes00](self.impl), background)
 
 proc gtk_source_mark_attributes_set_gicon(self: ptr MarkAttributes00; gicon: ptr gio.Icon00) {.
@@ -2647,6 +2664,16 @@ proc setPixbuf*(self: MarkAttributes; pixbuf: gdkpixbuf.Pixbuf) =
 proc `pixbuf=`*(self: MarkAttributes; pixbuf: gdkpixbuf.Pixbuf) =
   gtk_source_mark_attributes_set_pixbuf(cast[ptr MarkAttributes00](self.impl), cast[ptr gdkpixbuf.Pixbuf00](pixbuf.impl))
 
+proc gtk_source_mark_attributes_set_stock_id(self: ptr MarkAttributes00;
+    stockId: cstring) {.
+    importc, libprag.}
+
+proc setStockId*(self: MarkAttributes; stockId: cstring) =
+  gtk_source_mark_attributes_set_stock_id(cast[ptr MarkAttributes00](self.impl), stockId)
+
+proc `stockId=`*(self: MarkAttributes; stockId: cstring) =
+  gtk_source_mark_attributes_set_stock_id(cast[ptr MarkAttributes00](self.impl), stockId)
+
 proc gtk_source_view_get_mark_attributes(self: ptr View00; category: cstring;
     priority: ptr int32): ptr MarkAttributes00 {.
     importc, libprag.}
@@ -2658,23 +2685,7 @@ proc getMarkAttributes*(self: View; category: cstring; priority: ptr int32): Mar
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc markAttributes*(self: View; category: cstring; priority: ptr int32): MarkAttributes =
-  let gobj = gtk_source_view_get_mark_attributes(cast[ptr View00](self.impl), category, priority)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -2720,6 +2731,25 @@ type
   CompletionProvider00* = object of gobject.Object00
   CompletionProvider* = ref object of gobject.Object
 
+proc gtk_source_completion_get_providers(self: ptr Completion00): ptr glib.List {.
+    importc, libprag.}
+
+proc getProviders*(self: Completion): seq[CompletionProvider] =
+  result = glistObjects2seq(CompletionProvider, gtk_source_completion_get_providers(cast[ptr Completion00](self.impl)), false)
+
+proc providers*(self: Completion): seq[CompletionProvider] =
+  result = glistObjects2seq(CompletionProvider, gtk_source_completion_get_providers(cast[ptr Completion00](self.impl)), false)
+
+proc gtk_source_completion_show(self: ptr Completion00; providers: ptr glib.List;
+    context: ptr CompletionContext00): gboolean {.
+    importc, libprag.}
+
+proc show*(self: Completion; providers: seq[CompletionProvider];
+    context: CompletionContext): bool =
+  var tempResGL = seq2GList(providers)
+  result = toBool(gtk_source_completion_show(cast[ptr Completion00](self.impl), tempResGL, cast[ptr CompletionContext00](context.impl)))
+  g_list_free(tempResGL)
+
 type
   CompletionWords* = ref object of gobject.Object
   CompletionWords00* = object of gobject.Object00
@@ -2745,7 +2775,7 @@ proc newCompletionWords*(name: cstring = ""; icon: gdkpixbuf.Pixbuf = nil): Comp
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -2763,7 +2793,7 @@ proc newCompletionWords*(tdesc: typedesc; name: cstring = ""; icon: gdkpixbuf.Pi
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -2781,7 +2811,7 @@ proc initCompletionWords*[T](result: var T; name: cstring = ""; icon: gdkpixbuf.
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -2791,27 +2821,18 @@ proc initCompletionWords*[T](result: var T; name: cstring = ""; icon: gdkpixbuf.
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_completion_words_register(self: ptr CompletionWords00; buffer: ptr gtk.TextBuffer00) {.
+proc gtk_source_completion_words_register(self: ptr CompletionWords00; buffer: ptr gtk4.TextBuffer00) {.
     importc, libprag.}
 
-proc registerCompletionWords*(self: CompletionWords; buffer: gtk.TextBuffer) =
-  gtk_source_completion_words_register(cast[ptr CompletionWords00](self.impl), cast[ptr gtk.TextBuffer00](buffer.impl))
+proc registerCompletionWords*(self: CompletionWords; buffer: gtk4.TextBuffer) =
+  gtk_source_completion_words_register(cast[ptr CompletionWords00](self.impl), cast[ptr gtk4.TextBuffer00](buffer.impl))
 
 proc gtk_source_completion_words_unregister(self: ptr CompletionWords00;
-    buffer: ptr gtk.TextBuffer00) {.
+    buffer: ptr gtk4.TextBuffer00) {.
     importc, libprag.}
 
-proc unregister*(self: CompletionWords; buffer: gtk.TextBuffer) =
-  gtk_source_completion_words_unregister(cast[ptr CompletionWords00](self.impl), cast[ptr gtk.TextBuffer00](buffer.impl))
-
-proc gtk_source_completion_context_add_proposals(self: ptr CompletionContext00;
-    provider: ptr CompletionProvider00; proposals: ptr pointer; finished: gboolean) {.
-    importc, libprag.}
-
-proc addProposals*(self: CompletionContext;
-    provider: CompletionProvider | CompletionWords; proposals: ptr pointer;
-    finished: bool) =
-  gtk_source_completion_context_add_proposals(cast[ptr CompletionContext00](self.impl), cast[ptr CompletionProvider00](provider.impl), proposals, gboolean(finished))
+proc unregister*(self: CompletionWords; buffer: gtk4.TextBuffer) =
+  gtk_source_completion_words_unregister(cast[ptr CompletionWords00](self.impl), cast[ptr gtk4.TextBuffer00](buffer.impl))
 
 proc gtk_source_completion_add_provider(self: ptr Completion00; provider: ptr CompletionProvider00;
     error: ptr ptr glib.Error = nil): gboolean {.
@@ -3003,17 +3024,19 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_source_completion_item_new(): ptr CompletionItem00 {.
+proc gtk_source_completion_item_new(label: cstring; text: cstring; icon: ptr gdkpixbuf.Pixbuf00;
+    info: cstring): ptr CompletionItem00 {.
     importc, libprag.}
 
-proc newCompletionItem*(): CompletionItem =
-  let gobj = gtk_source_completion_item_new()
+proc newCompletionItem*(label: cstring; text: cstring; icon: gdkpixbuf.Pixbuf = nil;
+    info: cstring = ""): CompletionItem {.deprecated.}  =
+  let gobj = gtk_source_completion_item_new(label, text, if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl), safeStringToCString(info))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -3023,15 +3046,16 @@ proc newCompletionItem*(): CompletionItem =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newCompletionItem*(tdesc: typedesc): tdesc =
+proc newCompletionItem*(tdesc: typedesc; label: cstring; text: cstring; icon: gdkpixbuf.Pixbuf = nil;
+    info: cstring = ""): tdesc {.deprecated.}  =
   assert(result is CompletionItem)
-  let gobj = gtk_source_completion_item_new()
+  let gobj = gtk_source_completion_item_new(label, text, if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl), safeStringToCString(info))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -3041,15 +3065,156 @@ proc newCompletionItem*(tdesc: typedesc): tdesc =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initCompletionItem*[T](result: var T) {.deprecated.} =
+proc initCompletionItem*[T](result: var T; label: cstring; text: cstring; icon: gdkpixbuf.Pixbuf = nil;
+    info: cstring = "") {.deprecated.} =
   assert(result is CompletionItem)
-  let gobj = gtk_source_completion_item_new()
+  let gobj = gtk_source_completion_item_new(label, text, if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl), safeStringToCString(info))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc gtk_source_completion_item_new_from_stock(label: cstring; text: cstring;
+    stock: cstring; info: cstring): ptr CompletionItem00 {.
+    importc, libprag.}
+
+proc newCompletionItemFromStock*(label: cstring = ""; text: cstring;
+    stock: cstring; info: cstring = ""): CompletionItem {.deprecated.}  =
+  let gobj = gtk_source_completion_item_new_from_stock(safeStringToCString(label), text, stock, safeStringToCString(info))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtksource5.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc newCompletionItemFromStock*(tdesc: typedesc; label: cstring = ""; text: cstring;
+    stock: cstring; info: cstring = ""): tdesc {.deprecated.}  =
+  assert(result is CompletionItem)
+  let gobj = gtk_source_completion_item_new_from_stock(safeStringToCString(label), text, stock, safeStringToCString(info))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtksource5.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc initCompletionItemFromStock*[T](result: var T; label: cstring = ""; text: cstring;
+    stock: cstring; info: cstring = "") {.deprecated.} =
+  assert(result is CompletionItem)
+  let gobj = gtk_source_completion_item_new_from_stock(safeStringToCString(label), text, stock, safeStringToCString(info))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtksource5.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc gtk_source_completion_item_new_with_markup(markup: cstring; text: cstring;
+    icon: ptr gdkpixbuf.Pixbuf00; info: cstring): ptr CompletionItem00 {.
+    importc, libprag.}
+
+proc newCompletionItemWithMarkup*(markup: cstring; text: cstring;
+    icon: gdkpixbuf.Pixbuf = nil; info: cstring = ""): CompletionItem {.deprecated.}  =
+  let gobj = gtk_source_completion_item_new_with_markup(markup, text, if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl), safeStringToCString(info))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtksource5.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc newCompletionItemWithMarkup*(tdesc: typedesc; markup: cstring; text: cstring;
+    icon: gdkpixbuf.Pixbuf = nil; info: cstring = ""): tdesc {.deprecated.}  =
+  assert(result is CompletionItem)
+  let gobj = gtk_source_completion_item_new_with_markup(markup, text, if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl), safeStringToCString(info))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtksource5.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc initCompletionItemWithMarkup*[T](result: var T; markup: cstring; text: cstring;
+    icon: gdkpixbuf.Pixbuf = nil; info: cstring = "") {.deprecated.} =
+  assert(result is CompletionItem)
+  let gobj = gtk_source_completion_item_new_with_markup(markup, text, if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl), safeStringToCString(info))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtksource5.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc gtk_source_completion_item_new2(): ptr CompletionItem00 {.
+    importc, libprag.}
+
+proc newCompletionItem2*(): CompletionItem =
+  let gobj = gtk_source_completion_item_new2()
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -3299,20 +3464,31 @@ proc gtk_source_completion_proposal_hash(self: ptr CompletionProposal00): uint32
 proc hash*(self: CompletionProposal | CompletionItem): int =
   int(gtk_source_completion_proposal_hash(cast[ptr CompletionProposal00](self.impl)))
 
+proc gtk_source_completion_context_add_proposals(self: ptr CompletionContext00;
+    provider: ptr CompletionProvider00; proposals: ptr glib.List; finished: gboolean) {.
+    importc, libprag.}
+
+proc addProposals*(self: CompletionContext;
+    provider: CompletionProvider | CompletionWords; proposals: seq[CompletionProposal];
+    finished: bool) =
+  var tempResGL = seq2GList(proposals)
+  gtk_source_completion_context_add_proposals(cast[ptr CompletionContext00](self.impl), cast[ptr CompletionProvider00](provider.impl), tempResGL, gboolean(finished))
+  g_list_free(tempResGL)
+
 proc gtk_source_completion_provider_activate_proposal(self: ptr CompletionProvider00;
-    proposal: ptr CompletionProposal00; iter: gtk.TextIter): gboolean {.
+    proposal: ptr CompletionProposal00; iter: gtk4.TextIter): gboolean {.
     importc, libprag.}
 
 proc activateProposal*(self: CompletionProvider | CompletionWords;
-    proposal: CompletionProposal | CompletionItem; iter: gtk.TextIter): bool =
+    proposal: CompletionProposal | CompletionItem; iter: gtk4.TextIter): bool =
   toBool(gtk_source_completion_provider_activate_proposal(cast[ptr CompletionProvider00](self.impl), cast[ptr CompletionProposal00](proposal.impl), iter))
 
 proc gtk_source_completion_provider_get_info_widget(self: ptr CompletionProvider00;
-    proposal: ptr CompletionProposal00): ptr gtk.Widget00 {.
+    proposal: ptr CompletionProposal00): ptr gtk4.Widget00 {.
     importc, libprag.}
 
 proc getInfoWidget*(self: CompletionProvider | CompletionWords;
-    proposal: CompletionProposal | CompletionItem): gtk.Widget =
+    proposal: CompletionProposal | CompletionItem): gtk4.Widget =
   let gobj = gtk_source_completion_provider_get_info_widget(cast[ptr CompletionProvider00](self.impl), cast[ptr CompletionProposal00](proposal.impl))
   if gobj.isNil:
     return nil
@@ -3321,26 +3497,7 @@ proc getInfoWidget*(self: CompletionProvider | CompletionWords;
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc infoWidget*(self: CompletionProvider | CompletionWords;
-    proposal: CompletionProposal | CompletionItem): gtk.Widget =
-  let gobj = gtk_source_completion_provider_get_info_widget(cast[ptr CompletionProvider00](self.impl), cast[ptr CompletionProposal00](proposal.impl))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
+    fnew(result, gtk4.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -3350,17 +3507,12 @@ proc infoWidget*(self: CompletionProvider | CompletionWords;
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gtk_source_completion_provider_get_start_iter(self: ptr CompletionProvider00;
-    context: ptr CompletionContext00; proposal: ptr CompletionProposal00; iter: var gtk.TextIter): gboolean {.
+    context: ptr CompletionContext00; proposal: ptr CompletionProposal00; iter: var gtk4.TextIter): gboolean {.
     importc, libprag.}
 
 proc getStartIter*(self: CompletionProvider | CompletionWords;
     context: CompletionContext; proposal: CompletionProposal | CompletionItem;
-    iter: var gtk.TextIter): bool =
-  toBool(gtk_source_completion_provider_get_start_iter(cast[ptr CompletionProvider00](self.impl), cast[ptr CompletionContext00](context.impl), cast[ptr CompletionProposal00](proposal.impl), iter))
-
-proc startIter*(self: CompletionProvider | CompletionWords;
-    context: CompletionContext; proposal: CompletionProposal | CompletionItem;
-    iter: var gtk.TextIter): bool =
+    iter: var gtk4.TextIter): bool =
   toBool(gtk_source_completion_provider_get_start_iter(cast[ptr CompletionProvider00](self.impl), cast[ptr CompletionContext00](context.impl), cast[ptr CompletionProposal00](proposal.impl), iter))
 
 proc gtk_source_completion_provider_update_info(self: ptr CompletionProvider00;
@@ -3398,6 +3550,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(gtk_source_encoding_get_type(), cast[ptr Encoding00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var Encoding) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkSourceEncoding)
 
 proc gtk_source_encoding_free(self: ptr Encoding00) {.
     importc, libprag.}
@@ -3442,10 +3600,7 @@ proc toString*(self: Encoding): string =
   result = $resul0
   cogfree(resul0)
 
-proc getAll*(): ptr pointer {.
-    importc: "gtk_source_encoding_get_all", libprag.}
-
-proc all*(): ptr pointer {.
+proc getAll*(): ptr glib.SList {.
     importc: "gtk_source_encoding_get_all", libprag.}
 
 proc gtk_source_encoding_get_current(): ptr Encoding00 {.
@@ -3456,15 +3611,7 @@ proc getCurrent*(): Encoding =
   result.impl = gtk_source_encoding_get_current()
   result.ignoreFinalizer = true
 
-proc current*(): Encoding =
-  fnew(result, gBoxedFreeGtkSourceEncoding)
-  result.impl = gtk_source_encoding_get_current()
-  result.ignoreFinalizer = true
-
-proc getDefaultCandidates*(): ptr pointer {.
-    importc: "gtk_source_encoding_get_default_candidates", libprag.}
-
-proc defaultCandidates*(): ptr pointer {.
+proc getDefaultCandidates*(): ptr glib.SList {.
     importc: "gtk_source_encoding_get_default_candidates", libprag.}
 
 proc gtk_source_encoding_get_from_charset(charset: cstring): ptr Encoding00 {.
@@ -3494,11 +3641,6 @@ proc getUtf8*(): Encoding =
   result.impl = gtk_source_encoding_get_utf8()
   result.ignoreFinalizer = true
 
-proc utf8*(): Encoding =
-  fnew(result, gBoxedFreeGtkSourceEncoding)
-  result.impl = gtk_source_encoding_get_utf8()
-  result.ignoreFinalizer = true
-
 type
   File* = ref object of gobject.Object
   File00* = object of gobject.Object00
@@ -3524,7 +3666,7 @@ proc newFile*(): File =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -3542,7 +3684,7 @@ proc newFile*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -3560,7 +3702,7 @@ proc initFile*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -3706,7 +3848,7 @@ proc newFileLoader*(buffer: Buffer; file: File): FileLoader =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -3724,7 +3866,7 @@ proc newFileLoader*(tdesc: typedesc; buffer: Buffer; file: File): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -3742,7 +3884,7 @@ proc initFileLoader*[T](result: var T; buffer: Buffer; file: File) {.deprecated.
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -3763,7 +3905,7 @@ proc newFileLoaderFromStream*(buffer: Buffer; file: File; stream: gio.InputStrea
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -3781,7 +3923,7 @@ proc newFileLoaderFromStream*(tdesc: typedesc; buffer: Buffer; file: File; strea
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -3799,7 +3941,7 @@ proc initFileLoaderFromStream*[T](result: var T; buffer: Buffer; file: File; str
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -3819,7 +3961,7 @@ proc getBuffer*(self: FileLoader): Buffer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -3835,7 +3977,7 @@ proc buffer*(self: FileLoader): Buffer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -3876,7 +4018,7 @@ proc getFile*(self: FileLoader): File =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -3892,7 +4034,7 @@ proc file*(self: FileLoader): File =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -4014,14 +4156,18 @@ proc loadFinish*(self: FileLoader; resu: gio.AsyncResult): bool =
   result = toBool(resul0)
 
 proc gtk_source_file_loader_set_candidate_encodings(self: ptr FileLoader00;
-    candidateEncodings: ptr pointer) {.
+    candidateEncodings: ptr glib.SList) {.
     importc, libprag.}
 
-proc setCandidateEncodings*(self: FileLoader; candidateEncodings: ptr pointer) =
-  gtk_source_file_loader_set_candidate_encodings(cast[ptr FileLoader00](self.impl), candidateEncodings)
+proc setCandidateEncodings*(self: FileLoader; candidateEncodings: seq[Encoding]) =
+  var tempResGL = seq2GSList(candidateEncodings)
+  gtk_source_file_loader_set_candidate_encodings(cast[ptr FileLoader00](self.impl), tempResGL)
+  g_slist_free(tempResGL)
 
-proc `candidateEncodings=`*(self: FileLoader; candidateEncodings: ptr pointer) =
-  gtk_source_file_loader_set_candidate_encodings(cast[ptr FileLoader00](self.impl), candidateEncodings)
+proc `candidateEncodings=`*(self: FileLoader; candidateEncodings: seq[Encoding]) =
+  var tempResGL = seq2GSList(candidateEncodings)
+  gtk_source_file_loader_set_candidate_encodings(cast[ptr FileLoader00](self.impl), tempResGL)
+  g_slist_free(tempResGL)
 
 type
   FileLoaderError* {.size: sizeof(cint), pure.} = enum
@@ -4054,7 +4200,7 @@ proc newFileSaver*(buffer: Buffer; file: File): FileSaver =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4072,7 +4218,7 @@ proc newFileSaver*(tdesc: typedesc; buffer: Buffer; file: File): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4090,7 +4236,7 @@ proc initFileSaver*[T](result: var T; buffer: Buffer; file: File) {.deprecated.}
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4111,7 +4257,7 @@ proc newFileSaverWithTarget*(buffer: Buffer; file: File; targetLocation: gio.GFi
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4129,7 +4275,7 @@ proc newFileSaverWithTarget*(tdesc: typedesc; buffer: Buffer; file: File; target
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4147,7 +4293,7 @@ proc initFileSaverWithTarget*[T](result: var T; buffer: Buffer; file: File; targ
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4167,7 +4313,7 @@ proc getBuffer*(self: FileSaver): Buffer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -4183,7 +4329,7 @@ proc buffer*(self: FileSaver): Buffer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -4224,7 +4370,7 @@ proc getFile*(self: FileSaver): File =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -4240,7 +4386,7 @@ proc file*(self: FileSaver): File =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -4400,7 +4546,7 @@ proc newGutterRendererPixbuf*(): GutterRendererPixbuf =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4418,7 +4564,7 @@ proc newGutterRendererPixbuf*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4436,7 +4582,7 @@ proc initGutterRendererPixbuf*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4525,6 +4671,15 @@ proc pixbuf*(self: GutterRendererPixbuf): gdkpixbuf.Pixbuf =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
+proc gtk_source_gutter_renderer_pixbuf_get_stock_id(self: ptr GutterRendererPixbuf00): cstring {.
+    importc, libprag.}
+
+proc getStockId*(self: GutterRendererPixbuf): string =
+  result = $gtk_source_gutter_renderer_pixbuf_get_stock_id(cast[ptr GutterRendererPixbuf00](self.impl))
+
+proc stockId*(self: GutterRendererPixbuf): string =
+  result = $gtk_source_gutter_renderer_pixbuf_get_stock_id(cast[ptr GutterRendererPixbuf00](self.impl))
+
 proc gtk_source_gutter_renderer_pixbuf_set_gicon(self: ptr GutterRendererPixbuf00;
     icon: ptr gio.Icon00) {.
     importc, libprag.}
@@ -4561,6 +4716,18 @@ proc `pixbuf=`*(self: GutterRendererPixbuf;
     pixbuf: gdkpixbuf.Pixbuf = nil) =
   gtk_source_gutter_renderer_pixbuf_set_pixbuf(cast[ptr GutterRendererPixbuf00](self.impl), if pixbuf.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](pixbuf.impl))
 
+proc gtk_source_gutter_renderer_pixbuf_set_stock_id(self: ptr GutterRendererPixbuf00;
+    stockId: cstring) {.
+    importc, libprag.}
+
+proc setStockId*(self: GutterRendererPixbuf;
+    stockId: cstring = "") =
+  gtk_source_gutter_renderer_pixbuf_set_stock_id(cast[ptr GutterRendererPixbuf00](self.impl), safeStringToCString(stockId))
+
+proc `stockId=`*(self: GutterRendererPixbuf;
+    stockId: cstring = "") =
+  gtk_source_gutter_renderer_pixbuf_set_stock_id(cast[ptr GutterRendererPixbuf00](self.impl), safeStringToCString(stockId))
+
 type
   GutterRendererText* = ref object of GutterRenderer
   GutterRendererText00* = object of GutterRenderer00
@@ -4586,7 +4753,7 @@ proc newGutterRendererText*(): GutterRendererText =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4604,7 +4771,7 @@ proc newGutterRendererText*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4622,7 +4789,7 @@ proc initGutterRendererText*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4637,24 +4804,28 @@ proc gtk_source_gutter_renderer_text_measure(self: ptr GutterRendererText00;
     importc, libprag.}
 
 proc measure*(self: GutterRendererText; text: cstring;
-    width: var int; height: var int) =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+    width: var int = cast[var int](nil); height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var height_00: int32
   gtk_source_gutter_renderer_text_measure(cast[ptr GutterRendererText00](self.impl), text, width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_source_gutter_renderer_text_measure_markup(self: ptr GutterRendererText00;
     markup: cstring; width: var int32; height: var int32) {.
     importc, libprag.}
 
 proc measureMarkup*(self: GutterRendererText;
-    markup: cstring; width: var int; height: var int) =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+    markup: cstring; width: var int = cast[var int](nil); height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var height_00: int32
   gtk_source_gutter_renderer_text_measure_markup(cast[ptr GutterRendererText00](self.impl), markup, width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_source_gutter_renderer_text_set_markup(self: ptr GutterRendererText00;
     markup: cstring; length: int32) {.
@@ -4697,7 +4868,7 @@ proc newLanguageManager*(): LanguageManager =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4715,7 +4886,7 @@ proc newLanguageManager*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4733,7 +4904,7 @@ proc initLanguageManager*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -4753,23 +4924,7 @@ proc getDefaultLanguageManager*(): LanguageManager =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultLanguageManager*(): LanguageManager =
-  let gobj = gtk_source_language_manager_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -4791,7 +4946,7 @@ proc getLanguage*(self: LanguageManager; id: cstring): Language =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -4800,25 +4955,7 @@ proc getLanguage*(self: LanguageManager; id: cstring): Language =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc language*(self: LanguageManager; id: cstring): Language =
-  let gobj = gtk_source_language_manager_get_language(cast[ptr LanguageManager00](self.impl), id)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_source_language_manager_get_language_ids(self: ptr LanguageManager00): cstringArray {.
+proc gtk_source_language_manager_get_language_ids(self: ptr LanguageManager00): ptr cstring {.
     importc, libprag.}
 
 proc getLanguageIds*(self: LanguageManager): seq[string] =
@@ -4833,7 +4970,7 @@ proc languageIds*(self: LanguageManager): seq[string] =
     return
   cstringArrayToSeq(resul0)
 
-proc gtk_source_language_manager_get_search_path(self: ptr LanguageManager00): cstringArray {.
+proc gtk_source_language_manager_get_search_path(self: ptr LanguageManager00): ptr cstring {.
     importc, libprag.}
 
 proc getSearchPath*(self: LanguageManager): seq[string] =
@@ -4856,7 +4993,7 @@ proc guessLanguage*(self: LanguageManager; filename: cstring = "";
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -4866,7 +5003,7 @@ proc guessLanguage*(self: LanguageManager; filename: cstring = "";
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gtk_source_language_manager_set_search_path(self: ptr LanguageManager00;
-    dirs: cstringArray) {.
+    dirs: ptr cstring) {.
     importc, libprag.}
 
 proc setSearchPath*(self: LanguageManager; dirs: varargs[string, `$`]) =
@@ -4904,7 +5041,7 @@ proc newMap*(): Map =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -4921,7 +5058,7 @@ proc newMap*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -4938,7 +5075,7 @@ proc initMap*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -4959,7 +5096,7 @@ proc getView*(self: Map): View =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -4977,7 +5114,7 @@ proc view*(self: Map): View =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -5020,7 +5157,7 @@ proc newPrintCompositor*(buffer: Buffer): PrintCompositor =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -5038,7 +5175,7 @@ proc newPrintCompositor*(tdesc: typedesc; buffer: Buffer): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -5056,7 +5193,7 @@ proc initPrintCompositor*[T](result: var T; buffer: Buffer) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -5076,7 +5213,7 @@ proc newPrintCompositorFromView*(view: View): PrintCompositor =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -5094,7 +5231,7 @@ proc newPrintCompositorFromView*(tdesc: typedesc; view: View): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -5112,7 +5249,7 @@ proc initPrintCompositorFromView*[T](result: var T; view: View) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -5122,13 +5259,13 @@ proc initPrintCompositorFromView*[T](result: var T; view: View) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_print_compositor_draw_page(self: ptr PrintCompositor00; context: ptr gtk.PrintContext00;
+proc gtk_source_print_compositor_draw_page(self: ptr PrintCompositor00; context: ptr gtk4.PrintContext00;
     pageNr: int32) {.
     importc, libprag.}
 
-proc drawPage*(self: PrintCompositor; context: gtk.PrintContext;
+proc drawPage*(self: PrintCompositor; context: gtk4.PrintContext;
     pageNr: int) =
-  gtk_source_print_compositor_draw_page(cast[ptr PrintCompositor00](self.impl), cast[ptr gtk.PrintContext00](context.impl), int32(pageNr))
+  gtk_source_print_compositor_draw_page(cast[ptr PrintCompositor00](self.impl), cast[ptr gtk4.PrintContext00](context.impl), int32(pageNr))
 
 proc gtk_source_print_compositor_get_body_font_name(self: ptr PrintCompositor00): cstring {.
     importc, libprag.}
@@ -5144,15 +5281,11 @@ proc bodyFontName*(self: PrintCompositor): string =
   cogfree(resul0)
 
 proc gtk_source_print_compositor_get_bottom_margin(self: ptr PrintCompositor00;
-    unit: gtk.Unit): cdouble {.
+    unit: gtk4.Unit): cdouble {.
     importc, libprag.}
 
 proc getBottomMargin*(self: PrintCompositor;
-    unit: gtk.Unit): cdouble =
-  gtk_source_print_compositor_get_bottom_margin(cast[ptr PrintCompositor00](self.impl), unit)
-
-proc bottomMargin*(self: PrintCompositor;
-    unit: gtk.Unit): cdouble =
+    unit: gtk4.Unit): cdouble =
   gtk_source_print_compositor_get_bottom_margin(cast[ptr PrintCompositor00](self.impl), unit)
 
 proc gtk_source_print_compositor_get_buffer(self: ptr PrintCompositor00): ptr Buffer00 {.
@@ -5165,7 +5298,7 @@ proc getBuffer*(self: PrintCompositor): Buffer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -5181,7 +5314,7 @@ proc buffer*(self: PrintCompositor): Buffer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -5226,13 +5359,10 @@ proc highlightSyntax*(self: PrintCompositor): bool =
   toBool(gtk_source_print_compositor_get_highlight_syntax(cast[ptr PrintCompositor00](self.impl)))
 
 proc gtk_source_print_compositor_get_left_margin(self: ptr PrintCompositor00;
-    unit: gtk.Unit): cdouble {.
+    unit: gtk4.Unit): cdouble {.
     importc, libprag.}
 
-proc getLeftMargin*(self: PrintCompositor; unit: gtk.Unit): cdouble =
-  gtk_source_print_compositor_get_left_margin(cast[ptr PrintCompositor00](self.impl), unit)
-
-proc leftMargin*(self: PrintCompositor; unit: gtk.Unit): cdouble =
+proc getLeftMargin*(self: PrintCompositor; unit: gtk4.Unit): cdouble =
   gtk_source_print_compositor_get_left_margin(cast[ptr PrintCompositor00](self.impl), unit)
 
 proc gtk_source_print_compositor_get_line_numbers_font_name(self: ptr PrintCompositor00): cstring {.
@@ -5294,15 +5424,11 @@ proc printLineNumbers*(self: PrintCompositor): int =
   int(gtk_source_print_compositor_get_print_line_numbers(cast[ptr PrintCompositor00](self.impl)))
 
 proc gtk_source_print_compositor_get_right_margin(self: ptr PrintCompositor00;
-    unit: gtk.Unit): cdouble {.
+    unit: gtk4.Unit): cdouble {.
     importc, libprag.}
 
 proc getRightMargin*(self: PrintCompositor;
-    unit: gtk.Unit): cdouble =
-  gtk_source_print_compositor_get_right_margin(cast[ptr PrintCompositor00](self.impl), unit)
-
-proc rightMargin*(self: PrintCompositor;
-    unit: gtk.Unit): cdouble =
+    unit: gtk4.Unit): cdouble =
   gtk_source_print_compositor_get_right_margin(cast[ptr PrintCompositor00](self.impl), unit)
 
 proc gtk_source_print_compositor_get_tab_width(self: ptr PrintCompositor00): uint32 {.
@@ -5315,29 +5441,26 @@ proc tabWidth*(self: PrintCompositor): int =
   int(gtk_source_print_compositor_get_tab_width(cast[ptr PrintCompositor00](self.impl)))
 
 proc gtk_source_print_compositor_get_top_margin(self: ptr PrintCompositor00;
-    unit: gtk.Unit): cdouble {.
+    unit: gtk4.Unit): cdouble {.
     importc, libprag.}
 
-proc getTopMargin*(self: PrintCompositor; unit: gtk.Unit): cdouble =
+proc getTopMargin*(self: PrintCompositor; unit: gtk4.Unit): cdouble =
   gtk_source_print_compositor_get_top_margin(cast[ptr PrintCompositor00](self.impl), unit)
 
-proc topMargin*(self: PrintCompositor; unit: gtk.Unit): cdouble =
-  gtk_source_print_compositor_get_top_margin(cast[ptr PrintCompositor00](self.impl), unit)
-
-proc gtk_source_print_compositor_get_wrap_mode(self: ptr PrintCompositor00): gtk.WrapMode {.
+proc gtk_source_print_compositor_get_wrap_mode(self: ptr PrintCompositor00): gtk4.WrapMode {.
     importc, libprag.}
 
-proc getWrapMode*(self: PrintCompositor): gtk.WrapMode =
+proc getWrapMode*(self: PrintCompositor): gtk4.WrapMode =
   gtk_source_print_compositor_get_wrap_mode(cast[ptr PrintCompositor00](self.impl))
 
-proc wrapMode*(self: PrintCompositor): gtk.WrapMode =
+proc wrapMode*(self: PrintCompositor): gtk4.WrapMode =
   gtk_source_print_compositor_get_wrap_mode(cast[ptr PrintCompositor00](self.impl))
 
-proc gtk_source_print_compositor_paginate(self: ptr PrintCompositor00; context: ptr gtk.PrintContext00): gboolean {.
+proc gtk_source_print_compositor_paginate(self: ptr PrintCompositor00; context: ptr gtk4.PrintContext00): gboolean {.
     importc, libprag.}
 
-proc paginate*(self: PrintCompositor; context: gtk.PrintContext): bool =
-  toBool(gtk_source_print_compositor_paginate(cast[ptr PrintCompositor00](self.impl), cast[ptr gtk.PrintContext00](context.impl)))
+proc paginate*(self: PrintCompositor; context: gtk4.PrintContext): bool =
+  toBool(gtk_source_print_compositor_paginate(cast[ptr PrintCompositor00](self.impl), cast[ptr gtk4.PrintContext00](context.impl)))
 
 proc gtk_source_print_compositor_set_body_font_name(self: ptr PrintCompositor00;
     fontName: cstring) {.
@@ -5352,11 +5475,11 @@ proc `bodyFontName=`*(self: PrintCompositor;
   gtk_source_print_compositor_set_body_font_name(cast[ptr PrintCompositor00](self.impl), fontName)
 
 proc gtk_source_print_compositor_set_bottom_margin(self: ptr PrintCompositor00;
-    margin: cdouble; unit: gtk.Unit) {.
+    margin: cdouble; unit: gtk4.Unit) {.
     importc, libprag.}
 
 proc setBottomMargin*(self: PrintCompositor;
-    margin: cdouble; unit: gtk.Unit) =
+    margin: cdouble; unit: gtk4.Unit) =
   gtk_source_print_compositor_set_bottom_margin(cast[ptr PrintCompositor00](self.impl), margin, unit)
 
 proc gtk_source_print_compositor_set_footer_font_name(self: ptr PrintCompositor00;
@@ -5412,11 +5535,11 @@ proc `highlightSyntax=`*(self: PrintCompositor;
   gtk_source_print_compositor_set_highlight_syntax(cast[ptr PrintCompositor00](self.impl), gboolean(highlight))
 
 proc gtk_source_print_compositor_set_left_margin(self: ptr PrintCompositor00;
-    margin: cdouble; unit: gtk.Unit) {.
+    margin: cdouble; unit: gtk4.Unit) {.
     importc, libprag.}
 
 proc setLeftMargin*(self: PrintCompositor; margin: cdouble;
-    unit: gtk.Unit) =
+    unit: gtk4.Unit) =
   gtk_source_print_compositor_set_left_margin(cast[ptr PrintCompositor00](self.impl), margin, unit)
 
 proc gtk_source_print_compositor_set_line_numbers_font_name(self: ptr PrintCompositor00;
@@ -5468,11 +5591,11 @@ proc `printLineNumbers=`*(self: PrintCompositor;
   gtk_source_print_compositor_set_print_line_numbers(cast[ptr PrintCompositor00](self.impl), uint32(interval))
 
 proc gtk_source_print_compositor_set_right_margin(self: ptr PrintCompositor00;
-    margin: cdouble; unit: gtk.Unit) {.
+    margin: cdouble; unit: gtk4.Unit) {.
     importc, libprag.}
 
 proc setRightMargin*(self: PrintCompositor;
-    margin: cdouble; unit: gtk.Unit) =
+    margin: cdouble; unit: gtk4.Unit) =
   gtk_source_print_compositor_set_right_margin(cast[ptr PrintCompositor00](self.impl), margin, unit)
 
 proc gtk_source_print_compositor_set_tab_width(self: ptr PrintCompositor00;
@@ -5486,21 +5609,21 @@ proc `tabWidth=`*(self: PrintCompositor; width: int) =
   gtk_source_print_compositor_set_tab_width(cast[ptr PrintCompositor00](self.impl), uint32(width))
 
 proc gtk_source_print_compositor_set_top_margin(self: ptr PrintCompositor00;
-    margin: cdouble; unit: gtk.Unit) {.
+    margin: cdouble; unit: gtk4.Unit) {.
     importc, libprag.}
 
 proc setTopMargin*(self: PrintCompositor; margin: cdouble;
-    unit: gtk.Unit) =
+    unit: gtk4.Unit) =
   gtk_source_print_compositor_set_top_margin(cast[ptr PrintCompositor00](self.impl), margin, unit)
 
 proc gtk_source_print_compositor_set_wrap_mode(self: ptr PrintCompositor00;
-    wrapMode: gtk.WrapMode) {.
+    wrapMode: gtk4.WrapMode) {.
     importc, libprag.}
 
-proc setWrapMode*(self: PrintCompositor; wrapMode: gtk.WrapMode) =
+proc setWrapMode*(self: PrintCompositor; wrapMode: gtk4.WrapMode) =
   gtk_source_print_compositor_set_wrap_mode(cast[ptr PrintCompositor00](self.impl), wrapMode)
 
-proc `wrapMode=`*(self: PrintCompositor; wrapMode: gtk.WrapMode) =
+proc `wrapMode=`*(self: PrintCompositor; wrapMode: gtk4.WrapMode) =
   gtk_source_print_compositor_set_wrap_mode(cast[ptr PrintCompositor00](self.impl), wrapMode)
 
 type
@@ -5518,17 +5641,17 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_source_region_new(buffer: ptr gtk.TextBuffer00): ptr Region00 {.
+proc gtk_source_region_new(buffer: ptr gtk4.TextBuffer00): ptr Region00 {.
     importc, libprag.}
 
-proc newRegion*(buffer: gtk.TextBuffer): Region =
-  let gobj = gtk_source_region_new(cast[ptr gtk.TextBuffer00](buffer.impl))
+proc newRegion*(buffer: gtk4.TextBuffer): Region =
+  let gobj = gtk_source_region_new(cast[ptr gtk4.TextBuffer00](buffer.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -5538,15 +5661,15 @@ proc newRegion*(buffer: gtk.TextBuffer): Region =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newRegion*(tdesc: typedesc; buffer: gtk.TextBuffer): tdesc =
+proc newRegion*(tdesc: typedesc; buffer: gtk4.TextBuffer): tdesc =
   assert(result is Region)
-  let gobj = gtk_source_region_new(cast[ptr gtk.TextBuffer00](buffer.impl))
+  let gobj = gtk_source_region_new(cast[ptr gtk4.TextBuffer00](buffer.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -5556,15 +5679,15 @@ proc newRegion*(tdesc: typedesc; buffer: gtk.TextBuffer): tdesc =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initRegion*[T](result: var T; buffer: gtk.TextBuffer) {.deprecated.} =
+proc initRegion*[T](result: var T; buffer: gtk4.TextBuffer) {.deprecated.} =
   assert(result is Region)
-  let gobj = gtk_source_region_new(cast[ptr gtk.TextBuffer00](buffer.impl))
+  let gobj = gtk_source_region_new(cast[ptr gtk4.TextBuffer00](buffer.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -5580,29 +5703,26 @@ proc gtk_source_region_add_region(self: ptr Region00; regionToAdd: ptr Region00)
 proc addRegion*(self: Region; regionToAdd: Region = nil) =
   gtk_source_region_add_region(cast[ptr Region00](self.impl), if regionToAdd.isNil: nil else: cast[ptr Region00](regionToAdd.impl))
 
-proc gtk_source_region_add_subregion(self: ptr Region00; start: gtk.TextIter;
-    `end`: gtk.TextIter) {.
+proc gtk_source_region_add_subregion(self: ptr Region00; start: gtk4.TextIter;
+    `end`: gtk4.TextIter) {.
     importc, libprag.}
 
-proc addSubregion*(self: Region; start: gtk.TextIter; `end`: gtk.TextIter) =
+proc addSubregion*(self: Region; start: gtk4.TextIter;
+    `end`: gtk4.TextIter) =
   gtk_source_region_add_subregion(cast[ptr Region00](self.impl), start, `end`)
 
-proc gtk_source_region_get_bounds(self: ptr Region00; start: var gtk.TextIter;
-    `end`: var gtk.TextIter): gboolean {.
+proc gtk_source_region_get_bounds(self: ptr Region00; start: var gtk4.TextIter;
+    `end`: var gtk4.TextIter): gboolean {.
     importc, libprag.}
 
-proc getBounds*(self: Region; start: var gtk.TextIter;
-    `end`: var gtk.TextIter): bool =
+proc getBounds*(self: Region; start: var gtk4.TextIter = cast[var gtk4.TextIter](nil);
+    `end`: var gtk4.TextIter = cast[var gtk4.TextIter](nil)): bool =
   toBool(gtk_source_region_get_bounds(cast[ptr Region00](self.impl), start, `end`))
 
-proc bounds*(self: Region; start: var gtk.TextIter;
-    `end`: var gtk.TextIter): bool =
-  toBool(gtk_source_region_get_bounds(cast[ptr Region00](self.impl), start, `end`))
-
-proc gtk_source_region_get_buffer(self: ptr Region00): ptr gtk.TextBuffer00 {.
+proc gtk_source_region_get_buffer(self: ptr Region00): ptr gtk4.TextBuffer00 {.
     importc, libprag.}
 
-proc getBuffer*(self: Region): gtk.TextBuffer =
+proc getBuffer*(self: Region): gtk4.TextBuffer =
   let gobj = gtk_source_region_get_buffer(cast[ptr Region00](self.impl))
   if gobj.isNil:
     return nil
@@ -5611,7 +5731,7 @@ proc getBuffer*(self: Region): gtk.TextBuffer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtk.finalizeGObject)
+    fnew(result, gtk4.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -5620,7 +5740,7 @@ proc getBuffer*(self: Region): gtk.TextBuffer =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc buffer*(self: Region): gtk.TextBuffer =
+proc buffer*(self: Region): gtk4.TextBuffer =
   let gobj = gtk_source_region_get_buffer(cast[ptr Region00](self.impl))
   if gobj.isNil:
     return nil
@@ -5629,7 +5749,7 @@ proc buffer*(self: Region): gtk.TextBuffer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtk.finalizeGObject)
+    fnew(result, gtk4.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -5650,7 +5770,7 @@ proc intersectRegion*(self: Region; region2: Region = nil): Region =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -5660,12 +5780,12 @@ proc intersectRegion*(self: Region; region2: Region = nil): Region =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_source_region_intersect_subregion(self: ptr Region00; start: gtk.TextIter;
-    `end`: gtk.TextIter): ptr Region00 {.
+proc gtk_source_region_intersect_subregion(self: ptr Region00; start: gtk4.TextIter;
+    `end`: gtk4.TextIter): ptr Region00 {.
     importc, libprag.}
 
-proc intersectSubregion*(self: Region; start: gtk.TextIter;
-    `end`: gtk.TextIter): Region =
+proc intersectSubregion*(self: Region; start: gtk4.TextIter;
+    `end`: gtk4.TextIter): Region =
   let gobj = gtk_source_region_intersect_subregion(cast[ptr Region00](self.impl), start, `end`)
   if gobj.isNil:
     return nil
@@ -5674,7 +5794,7 @@ proc intersectSubregion*(self: Region; start: gtk.TextIter;
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -5696,12 +5816,12 @@ proc gtk_source_region_subtract_region(self: ptr Region00; regionToSubtract: ptr
 proc subtractRegion*(self: Region; regionToSubtract: Region = nil) =
   gtk_source_region_subtract_region(cast[ptr Region00](self.impl), if regionToSubtract.isNil: nil else: cast[ptr Region00](regionToSubtract.impl))
 
-proc gtk_source_region_subtract_subregion(self: ptr Region00; start: gtk.TextIter;
-    `end`: gtk.TextIter) {.
+proc gtk_source_region_subtract_subregion(self: ptr Region00; start: gtk4.TextIter;
+    `end`: gtk4.TextIter) {.
     importc, libprag.}
 
-proc subtractSubregion*(self: Region; start: gtk.TextIter;
-    `end`: gtk.TextIter) =
+proc subtractSubregion*(self: Region; start: gtk4.TextIter;
+    `end`: gtk4.TextIter) =
   gtk_source_region_subtract_subregion(cast[ptr Region00](self.impl), start, `end`)
 
 proc gtk_source_region_to_string(self: ptr Region00): cstring {.
@@ -5715,39 +5835,35 @@ proc toString*(self: Region): string =
   cogfree(resul0)
 
 type
-  RegionIter00* {.pure.} = object
-  RegionIter* = ref object
-    impl*: ptr RegionIter00
-    ignoreFinalizer*: bool
+  RegionIter* {.pure, byRef.} = object
+    dummy1*: pointer
+    dummy2*: uint32
+    dummy3*: pointer
 
-proc gtk_source_region_iter_get_subregion(self: ptr RegionIter00; start: var gtk.TextIter;
-    `end`: var gtk.TextIter): gboolean {.
+proc gtk_source_region_iter_get_subregion(self: RegionIter; start: var gtk4.TextIter;
+    `end`: var gtk4.TextIter): gboolean {.
     importc, libprag.}
 
-proc getSubregion*(self: RegionIter; start: var gtk.TextIter;
-    `end`: var gtk.TextIter): bool =
-  toBool(gtk_source_region_iter_get_subregion(cast[ptr RegionIter00](self.impl), start, `end`))
+proc getSubregion*(self: RegionIter; start: var gtk4.TextIter = cast[var gtk4.TextIter](nil);
+    `end`: var gtk4.TextIter = cast[var gtk4.TextIter](nil)): bool =
+  toBool(gtk_source_region_iter_get_subregion(self, start, `end`))
 
-proc subregion*(self: RegionIter; start: var gtk.TextIter;
-    `end`: var gtk.TextIter): bool =
-  toBool(gtk_source_region_iter_get_subregion(cast[ptr RegionIter00](self.impl), start, `end`))
-
-proc gtk_source_region_iter_is_end(self: ptr RegionIter00): gboolean {.
+proc gtk_source_region_iter_is_end(self: RegionIter): gboolean {.
     importc, libprag.}
 
 proc isEnd*(self: RegionIter): bool =
-  toBool(gtk_source_region_iter_is_end(cast[ptr RegionIter00](self.impl)))
+  toBool(gtk_source_region_iter_is_end(self))
 
-proc gtk_source_region_iter_next(self: ptr RegionIter00): gboolean {.
+proc gtk_source_region_iter_next(self: RegionIter): gboolean {.
     importc, libprag.}
 
 proc next*(self: RegionIter): bool =
-  toBool(gtk_source_region_iter_next(cast[ptr RegionIter00](self.impl)))
+  toBool(gtk_source_region_iter_next(self))
 
-proc gtk_source_region_get_start_region_iter(self: ptr Region00; iter: var RegionIter00) {.
+proc gtk_source_region_get_start_region_iter(self: ptr Region00; iter: var RegionIter) {.
     importc, libprag.}
 
-proc getStartRegionIter*(self: Region; iter: var RegionIter00) =
+proc getStartRegionIter*(self: Region; iter: var RegionIter) =
   gtk_source_region_get_start_region_iter(cast[ptr Region00](self.impl), iter)
 
 type
@@ -5765,76 +5881,130 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_source_search_context_backward(self: ptr SearchContext00; iter: gtk.TextIter;
-    matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter; hasWrappedAround: var gboolean): gboolean {.
+proc gtk_source_search_context_backward(self: ptr SearchContext00; iter: gtk4.TextIter;
+    matchStart: var gtk4.TextIter; matchEnd: var gtk4.TextIter): gboolean {.
     importc, libprag.}
 
-proc backward*(self: SearchContext; iter: gtk.TextIter;
-    matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter; hasWrappedAround: var bool): bool =
-  var hasWrappedAround_00 = gboolean(hasWrappedAround)
-  result = toBool(gtk_source_search_context_backward(cast[ptr SearchContext00](self.impl), iter, matchStart, matchEnd, hasWrappedAround_00))
-  hasWrappedAround = toBool(hasWrappedAround_00)
+proc backward*(self: SearchContext; iter: gtk4.TextIter;
+    matchStart: var gtk4.TextIter = cast[var gtk4.TextIter](nil); matchEnd: var gtk4.TextIter = cast[var gtk4.TextIter](nil)): bool =
+  toBool(gtk_source_search_context_backward(cast[ptr SearchContext00](self.impl), iter, matchStart, matchEnd))
+
+proc gtk_source_search_context_backward2(self: ptr SearchContext00; iter: gtk4.TextIter;
+    matchStart: var gtk4.TextIter; matchEnd: var gtk4.TextIter; hasWrappedAround: var gboolean): gboolean {.
+    importc, libprag.}
+
+proc backward2*(self: SearchContext; iter: gtk4.TextIter;
+    matchStart: var gtk4.TextIter = cast[var gtk4.TextIter](nil); matchEnd: var gtk4.TextIter = cast[var gtk4.TextIter](nil);
+    hasWrappedAround: var bool = cast[var bool](nil)): bool =
+  var hasWrappedAround_00: gboolean
+  result = toBool(gtk_source_search_context_backward2(cast[ptr SearchContext00](self.impl), iter, matchStart, matchEnd, hasWrappedAround_00))
+  if hasWrappedAround.addr != nil:
+    hasWrappedAround = toBool(hasWrappedAround_00)
 
 proc gtk_source_search_context_backward_async(self: ptr SearchContext00;
-    iter: gtk.TextIter; cancellable: ptr gio.Cancellable00; callback: AsyncReadyCallback;
+    iter: gtk4.TextIter; cancellable: ptr gio.Cancellable00; callback: AsyncReadyCallback;
     userData: pointer) {.
     importc, libprag.}
 
-proc backwardAsync*(self: SearchContext; iter: gtk.TextIter;
+proc backwardAsync*(self: SearchContext; iter: gtk4.TextIter;
     cancellable: gio.Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
   gtk_source_search_context_backward_async(cast[ptr SearchContext00](self.impl), iter, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), callback, userData)
 
 proc gtk_source_search_context_backward_finish(self: ptr SearchContext00;
-    resu: ptr gio.AsyncResult00; matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter;
-    hasWrappedAround: var gboolean; error: ptr ptr glib.Error = nil): gboolean {.
+    resu: ptr gio.AsyncResult00; matchStart: var gtk4.TextIter; matchEnd: var gtk4.TextIter;
+    error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc backwardFinish*(self: SearchContext; resu: gio.AsyncResult;
-    matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter; hasWrappedAround: var bool): bool =
+    matchStart: var gtk4.TextIter = cast[var gtk4.TextIter](nil); matchEnd: var gtk4.TextIter = cast[var gtk4.TextIter](nil)): bool =
   var gerror: ptr glib.Error
-  var hasWrappedAround_00 = gboolean(hasWrappedAround)
-  let resul0 = gtk_source_search_context_backward_finish(cast[ptr SearchContext00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), matchStart, matchEnd, hasWrappedAround_00, addr gerror)
+  let resul0 = gtk_source_search_context_backward_finish(cast[ptr SearchContext00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), matchStart, matchEnd, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  hasWrappedAround = toBool(hasWrappedAround_00)
 
-proc gtk_source_search_context_forward(self: ptr SearchContext00; iter: gtk.TextIter;
-    matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter; hasWrappedAround: var gboolean): gboolean {.
+proc gtk_source_search_context_backward_finish2(self: ptr SearchContext00;
+    resu: ptr gio.AsyncResult00; matchStart: var gtk4.TextIter; matchEnd: var gtk4.TextIter;
+    hasWrappedAround: var gboolean; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc forward*(self: SearchContext; iter: gtk.TextIter;
-    matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter; hasWrappedAround: var bool): bool =
-  var hasWrappedAround_00 = gboolean(hasWrappedAround)
-  result = toBool(gtk_source_search_context_forward(cast[ptr SearchContext00](self.impl), iter, matchStart, matchEnd, hasWrappedAround_00))
-  hasWrappedAround = toBool(hasWrappedAround_00)
+proc backwardFinish2*(self: SearchContext; resu: gio.AsyncResult;
+    matchStart: var gtk4.TextIter = cast[var gtk4.TextIter](nil); matchEnd: var gtk4.TextIter = cast[var gtk4.TextIter](nil);
+    hasWrappedAround: var bool = cast[var bool](nil)): bool =
+  var gerror: ptr glib.Error
+  var hasWrappedAround_00: gboolean
+  let resul0 = gtk_source_search_context_backward_finish2(cast[ptr SearchContext00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), matchStart, matchEnd, hasWrappedAround_00, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+  if hasWrappedAround.addr != nil:
+    hasWrappedAround = toBool(hasWrappedAround_00)
 
-proc gtk_source_search_context_forward_async(self: ptr SearchContext00; iter: gtk.TextIter;
+proc gtk_source_search_context_forward(self: ptr SearchContext00; iter: gtk4.TextIter;
+    matchStart: var gtk4.TextIter; matchEnd: var gtk4.TextIter): gboolean {.
+    importc, libprag.}
+
+proc forward*(self: SearchContext; iter: gtk4.TextIter;
+    matchStart: var gtk4.TextIter = cast[var gtk4.TextIter](nil); matchEnd: var gtk4.TextIter = cast[var gtk4.TextIter](nil)): bool =
+  toBool(gtk_source_search_context_forward(cast[ptr SearchContext00](self.impl), iter, matchStart, matchEnd))
+
+proc gtk_source_search_context_forward2(self: ptr SearchContext00; iter: gtk4.TextIter;
+    matchStart: var gtk4.TextIter; matchEnd: var gtk4.TextIter; hasWrappedAround: var gboolean): gboolean {.
+    importc, libprag.}
+
+proc forward2*(self: SearchContext; iter: gtk4.TextIter;
+    matchStart: var gtk4.TextIter = cast[var gtk4.TextIter](nil); matchEnd: var gtk4.TextIter = cast[var gtk4.TextIter](nil);
+    hasWrappedAround: var bool = cast[var bool](nil)): bool =
+  var hasWrappedAround_00: gboolean
+  result = toBool(gtk_source_search_context_forward2(cast[ptr SearchContext00](self.impl), iter, matchStart, matchEnd, hasWrappedAround_00))
+  if hasWrappedAround.addr != nil:
+    hasWrappedAround = toBool(hasWrappedAround_00)
+
+proc gtk_source_search_context_forward_async(self: ptr SearchContext00; iter: gtk4.TextIter;
     cancellable: ptr gio.Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc forwardAsync*(self: SearchContext; iter: gtk.TextIter;
+proc forwardAsync*(self: SearchContext; iter: gtk4.TextIter;
     cancellable: gio.Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
   gtk_source_search_context_forward_async(cast[ptr SearchContext00](self.impl), iter, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), callback, userData)
 
 proc gtk_source_search_context_forward_finish(self: ptr SearchContext00;
-    resu: ptr gio.AsyncResult00; matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter;
-    hasWrappedAround: var gboolean; error: ptr ptr glib.Error = nil): gboolean {.
+    resu: ptr gio.AsyncResult00; matchStart: var gtk4.TextIter; matchEnd: var gtk4.TextIter;
+    error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc forwardFinish*(self: SearchContext; resu: gio.AsyncResult;
-    matchStart: var gtk.TextIter; matchEnd: var gtk.TextIter; hasWrappedAround: var bool): bool =
+    matchStart: var gtk4.TextIter = cast[var gtk4.TextIter](nil); matchEnd: var gtk4.TextIter = cast[var gtk4.TextIter](nil)): bool =
   var gerror: ptr glib.Error
-  var hasWrappedAround_00 = gboolean(hasWrappedAround)
-  let resul0 = gtk_source_search_context_forward_finish(cast[ptr SearchContext00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), matchStart, matchEnd, hasWrappedAround_00, addr gerror)
+  let resul0 = gtk_source_search_context_forward_finish(cast[ptr SearchContext00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), matchStart, matchEnd, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  hasWrappedAround = toBool(hasWrappedAround_00)
+
+proc gtk_source_search_context_forward_finish2(self: ptr SearchContext00;
+    resu: ptr gio.AsyncResult00; matchStart: var gtk4.TextIter; matchEnd: var gtk4.TextIter;
+    hasWrappedAround: var gboolean; error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc forwardFinish2*(self: SearchContext; resu: gio.AsyncResult;
+    matchStart: var gtk4.TextIter = cast[var gtk4.TextIter](nil); matchEnd: var gtk4.TextIter = cast[var gtk4.TextIter](nil);
+    hasWrappedAround: var bool = cast[var bool](nil)): bool =
+  var gerror: ptr glib.Error
+  var hasWrappedAround_00: gboolean
+  let resul0 = gtk_source_search_context_forward_finish2(cast[ptr SearchContext00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), matchStart, matchEnd, hasWrappedAround_00, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+  if hasWrappedAround.addr != nil:
+    hasWrappedAround = toBool(hasWrappedAround_00)
 
 proc gtk_source_search_context_get_buffer(self: ptr SearchContext00): ptr Buffer00 {.
     importc, libprag.}
@@ -5846,7 +6016,7 @@ proc getBuffer*(self: SearchContext): Buffer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -5862,7 +6032,7 @@ proc buffer*(self: SearchContext): Buffer =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -5890,7 +6060,7 @@ proc getMatchStyle*(self: SearchContext): Style =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -5906,7 +6076,7 @@ proc matchStyle*(self: SearchContext): Style =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -5916,15 +6086,11 @@ proc matchStyle*(self: SearchContext): Style =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gtk_source_search_context_get_occurrence_position(self: ptr SearchContext00;
-    matchStart: gtk.TextIter; matchEnd: gtk.TextIter): int32 {.
+    matchStart: gtk4.TextIter; matchEnd: gtk4.TextIter): int32 {.
     importc, libprag.}
 
 proc getOccurrencePosition*(self: SearchContext;
-    matchStart: gtk.TextIter; matchEnd: gtk.TextIter): int =
-  int(gtk_source_search_context_get_occurrence_position(cast[ptr SearchContext00](self.impl), matchStart, matchEnd))
-
-proc occurrencePosition*(self: SearchContext;
-    matchStart: gtk.TextIter; matchEnd: gtk.TextIter): int =
+    matchStart: gtk4.TextIter; matchEnd: gtk4.TextIter): int =
   int(gtk_source_search_context_get_occurrence_position(cast[ptr SearchContext00](self.impl), matchStart, matchEnd))
 
 proc gtk_source_search_context_get_occurrences_count(self: ptr SearchContext00): int32 {.
@@ -5945,14 +6111,28 @@ proc getRegexError*(self: SearchContext): ptr glib.Error =
 proc regexError*(self: SearchContext): ptr glib.Error =
   gtk_source_search_context_get_regex_error(cast[ptr SearchContext00](self.impl))
 
-proc gtk_source_search_context_replace(self: ptr SearchContext00; matchStart: gtk.TextIter;
-    matchEnd: gtk.TextIter; replace: cstring; replaceLength: int32; error: ptr ptr glib.Error = nil): gboolean {.
+proc gtk_source_search_context_replace(self: ptr SearchContext00; matchStart: gtk4.TextIter;
+    matchEnd: gtk4.TextIter; replace: cstring; replaceLength: int32; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc replace*(self: SearchContext; matchStart: gtk.TextIter;
-    matchEnd: gtk.TextIter; replace: cstring; replaceLength: int): bool =
+proc replace*(self: SearchContext; matchStart: gtk4.TextIter;
+    matchEnd: gtk4.TextIter; replace: cstring; replaceLength: int): bool =
   var gerror: ptr glib.Error
   let resul0 = gtk_source_search_context_replace(cast[ptr SearchContext00](self.impl), matchStart, matchEnd, replace, int32(replaceLength), addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+
+proc gtk_source_search_context_replace2(self: ptr SearchContext00; matchStart: gtk4.TextIter;
+    matchEnd: gtk4.TextIter; replace: cstring; replaceLength: int32; error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc replace2*(self: SearchContext; matchStart: gtk4.TextIter;
+    matchEnd: gtk4.TextIter; replace: cstring; replaceLength: int): bool =
+  var gerror: ptr glib.Error
+  let resul0 = gtk_source_search_context_replace2(cast[ptr SearchContext00](self.impl), matchStart, matchEnd, replace, int32(replaceLength), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -6017,7 +6197,7 @@ proc newSearchSettings*(): SearchSettings =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -6035,7 +6215,7 @@ proc newSearchSettings*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -6053,7 +6233,7 @@ proc initSearchSettings*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -6178,7 +6358,7 @@ proc newSearchContext*(buffer: Buffer; settings: SearchSettings = nil): SearchCo
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -6196,7 +6376,7 @@ proc newSearchContext*(tdesc: typedesc; buffer: Buffer; settings: SearchSettings
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -6214,7 +6394,7 @@ proc initSearchContext*[T](result: var T; buffer: Buffer; settings: SearchSettin
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -6234,7 +6414,7 @@ proc getSettings*(self: SearchContext): SearchSettings =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -6243,13 +6423,22 @@ proc getSettings*(self: SearchContext): SearchSettings =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
+proc gtk_source_search_context_set_settings(self: ptr SearchContext00; settings: ptr SearchSettings00) {.
+    importc, libprag.}
+
+proc setSettings*(self: SearchContext; settings: SearchSettings = nil) =
+  gtk_source_search_context_set_settings(cast[ptr SearchContext00](self.impl), if settings.isNil: nil else: cast[ptr SearchSettings00](settings.impl))
+
+proc `settings=`*(self: SearchContext; settings: SearchSettings = nil) =
+  gtk_source_search_context_set_settings(cast[ptr SearchContext00](self.impl), if settings.isNil: nil else: cast[ptr SearchSettings00](settings.impl))
+
 type
   StyleSchemeChooser00* = object of gobject.Object00
   StyleSchemeChooser* = ref object of gobject.Object
 
 type
-  StyleSchemeChooserWidget* = ref object of gtk.Bin
-  StyleSchemeChooserWidget00* = object of gtk.Bin00
+  StyleSchemeChooserWidget* = ref object of gtk4.Bin
+  StyleSchemeChooserWidget00* = object of gtk4.Bin00
 
 proc gtk_source_style_scheme_chooser_widget_get_type*(): GType {.importc, libprag.}
 
@@ -6272,7 +6461,7 @@ proc newStyleSchemeChooserWidget*(): StyleSchemeChooserWidget =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -6289,7 +6478,7 @@ proc newStyleSchemeChooserWidget*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -6306,7 +6495,7 @@ proc initStyleSchemeChooserWidget*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -6316,8 +6505,8 @@ proc initStyleSchemeChooserWidget*[T](result: var T) {.deprecated.} =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 type
-  StyleSchemeChooserButton* = ref object of gtk.Button
-  StyleSchemeChooserButton00* = object of gtk.Button00
+  StyleSchemeChooserButton* = ref object of gtk4.Button
+  StyleSchemeChooserButton00* = object of gtk4.Button00
 
 proc gtk_source_style_scheme_chooser_button_get_type*(): GType {.importc, libprag.}
 
@@ -6340,7 +6529,7 @@ proc newStyleSchemeChooserButton*(): StyleSchemeChooserButton =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -6357,7 +6546,7 @@ proc newStyleSchemeChooserButton*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -6374,7 +6563,7 @@ proc initStyleSchemeChooserButton*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -6393,7 +6582,7 @@ proc getStyleScheme*(self: StyleSchemeChooser | StyleSchemeChooserWidget | Style
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -6409,7 +6598,7 @@ proc styleScheme*(self: StyleSchemeChooser | StyleSchemeChooserWidget | StyleSch
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -6455,7 +6644,7 @@ proc newStyleSchemeManager*(): StyleSchemeManager =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -6473,7 +6662,7 @@ proc newStyleSchemeManager*(tdesc: typedesc): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -6491,7 +6680,7 @@ proc initStyleSchemeManager*[T](result: var T) {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -6511,23 +6700,7 @@ proc getDefaultStyleSchemeManager*(): StyleSchemeManager =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultStyleSchemeManager*(): StyleSchemeManager =
-  let gobj = gtk_source_style_scheme_manager_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -6557,14 +6730,12 @@ proc gtk_source_style_scheme_manager_get_scheme(self: ptr StyleSchemeManager00;
 proc getScheme*(self: StyleSchemeManager;
     schemeId: cstring): StyleScheme =
   let gobj = gtk_source_style_scheme_manager_get_scheme(cast[ptr StyleSchemeManager00](self.impl), schemeId)
-  if gobj.isNil:
-    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     discard g_object_ref_sink(result.impl)
@@ -6573,26 +6744,7 @@ proc getScheme*(self: StyleSchemeManager;
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc scheme*(self: StyleSchemeManager;
-    schemeId: cstring): StyleScheme =
-  let gobj = gtk_source_style_scheme_manager_get_scheme(cast[ptr StyleSchemeManager00](self.impl), schemeId)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtksource.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_source_style_scheme_manager_get_scheme_ids(self: ptr StyleSchemeManager00): cstringArray {.
+proc gtk_source_style_scheme_manager_get_scheme_ids(self: ptr StyleSchemeManager00): ptr cstring {.
     importc, libprag.}
 
 proc getSchemeIds*(self: StyleSchemeManager): seq[string] =
@@ -6607,7 +6759,7 @@ proc schemeIds*(self: StyleSchemeManager): seq[string] =
     return
   cstringArrayToSeq(resul0)
 
-proc gtk_source_style_scheme_manager_get_search_path(self: ptr StyleSchemeManager00): cstringArray {.
+proc gtk_source_style_scheme_manager_get_search_path(self: ptr StyleSchemeManager00): ptr cstring {.
     importc, libprag.}
 
 proc getSearchPath*(self: StyleSchemeManager): seq[string] =
@@ -6625,7 +6777,7 @@ proc prependSearchPath*(self: StyleSchemeManager;
   gtk_source_style_scheme_manager_prepend_search_path(cast[ptr StyleSchemeManager00](self.impl), path)
 
 proc gtk_source_style_scheme_manager_set_search_path(self: ptr StyleSchemeManager00;
-    path: cstringArray) {.
+    path: ptr cstring) {.
     importc, libprag.}
 
 proc setSearchPath*(self: StyleSchemeManager;
@@ -6641,8 +6793,8 @@ proc `searchPath=`*(self: StyleSchemeManager;
   gtk_source_style_scheme_manager_set_search_path(cast[ptr StyleSchemeManager00](self.impl), seq2CstringArray(path, fs469n23))
 
 type
-  Tag* = ref object of gtk.TextTag
-  Tag00* = object of gtk.TextTag00
+  Tag* = ref object of gtk4.TextTag
+  Tag00* = object of gtk4.TextTag00
 
 proc gtk_source_tag_get_type*(): GType {.importc, libprag.}
 
@@ -6665,7 +6817,7 @@ proc newTag*(name: cstring = ""): Tag =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -6683,7 +6835,7 @@ proc newTag*(tdesc: typedesc; name: cstring = ""): tdesc =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -6701,7 +6853,7 @@ proc initTag*[T](result: var T; name: cstring = "") {.deprecated.} =
     result = cast[type(result)](qdata)
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     GC_ref(result)
     if g_object_is_floating(result.impl).int != 0:
@@ -6715,12 +6867,6 @@ type
   ViewGutterPosition* {.size: sizeof(cint), pure.} = enum
     lines = -30
     marks = -20
-
-proc finalize*() {.
-    importc: "gtk_source_finalize", libprag.}
-
-proc init*() {.
-    importc: "gtk_source_init", libprag.}
 
 proc gtk_source_utils_escape_search_text(text: cstring): cstring {.
     importc, libprag.}
@@ -6741,39 +6887,37 @@ proc utilsUnescapeSearchText*(text: cstring): string =
 
 # Extern interfaces: (we don't use converters, but explicit procs for now.)
 
-proc buildable*(x: gtksource.Completion): gtk.Buildable = cast[gtk.Buildable](x)
+proc buildable*(x: gtksource5.Completion): gtk4.Buildable = cast[gtk4.Buildable](x)
 
-proc implementorIface*(x: gtksource.CompletionInfo): atk.ImplementorIface = cast[atk.ImplementorIface](x)
+proc implementorIface*(x: gtksource5.CompletionInfo): atk.ImplementorIface = cast[atk.ImplementorIface](x)
 
-proc buildable*(x: gtksource.CompletionInfo): gtk.Buildable = cast[gtk.Buildable](x)
+proc buildable*(x: gtksource5.CompletionInfo): gtk4.Buildable = cast[gtk4.Buildable](x)
 
-proc implementorIface*(x: gtksource.Map): atk.ImplementorIface = cast[atk.ImplementorIface](x)
+proc implementorIface*(x: gtksource5.Map): atk.ImplementorIface = cast[atk.ImplementorIface](x)
 
-proc buildable*(x: gtksource.Map): gtk.Buildable = cast[gtk.Buildable](x)
+proc buildable*(x: gtksource5.Map): gtk4.Buildable = cast[gtk4.Buildable](x)
 
-proc scrollable*(x: gtksource.Map): gtk.Scrollable = cast[gtk.Scrollable](x)
+proc scrollable*(x: gtksource5.Map): gtk4.Scrollable = cast[gtk4.Scrollable](x)
 
-proc implementorIface*(x: gtksource.StyleSchemeChooserButton): atk.ImplementorIface = cast[atk.ImplementorIface](x)
+proc implementorIface*(x: gtksource5.StyleSchemeChooserButton): atk.ImplementorIface = cast[atk.ImplementorIface](x)
 
-proc actionable*(x: gtksource.StyleSchemeChooserButton): gtk.Actionable = cast[gtk.Actionable](x)
+proc actionable*(x: gtksource5.StyleSchemeChooserButton): gtk4.Actionable = cast[gtk4.Actionable](x)
 
-proc activatable*(x: gtksource.StyleSchemeChooserButton): gtk.Activatable = cast[gtk.Activatable](x)
+proc activatable*(x: gtksource5.StyleSchemeChooserButton): gtk4.Activatable = cast[gtk4.Activatable](x)
 
-proc buildable*(x: gtksource.StyleSchemeChooserButton): gtk.Buildable = cast[gtk.Buildable](x)
+proc buildable*(x: gtksource5.StyleSchemeChooserButton): gtk4.Buildable = cast[gtk4.Buildable](x)
 
-proc implementorIface*(x: gtksource.StyleSchemeChooserWidget): atk.ImplementorIface = cast[atk.ImplementorIface](x)
+proc implementorIface*(x: gtksource5.StyleSchemeChooserWidget): atk.ImplementorIface = cast[atk.ImplementorIface](x)
 
-proc buildable*(x: gtksource.StyleSchemeChooserWidget): gtk.Buildable = cast[gtk.Buildable](x)
+proc buildable*(x: gtksource5.StyleSchemeChooserWidget): gtk4.Buildable = cast[gtk4.Buildable](x)
 
-proc implementorIface*(x: gtksource.View): atk.ImplementorIface = cast[atk.ImplementorIface](x)
+proc implementorIface*(x: gtksource5.View): atk.ImplementorIface = cast[atk.ImplementorIface](x)
 
-proc buildable*(x: gtksource.View): gtk.Buildable = cast[gtk.Buildable](x)
+proc buildable*(x: gtksource5.View): gtk4.Buildable = cast[gtk4.Buildable](x)
 
-proc scrollable*(x: gtksource.View): gtk.Scrollable = cast[gtk.Scrollable](x)
+proc scrollable*(x: gtksource5.View): gtk4.Scrollable = cast[gtk4.Scrollable](x)
 
 proc getView*(builder: Builder; name: string): View =
-  #let gt = g_type_from_name("Gtk$1") # this worked also!
-  #let gt = $2
   let gt = g_type_from_name("GSource")
   assert(gt != g_type_invalid_get_type())
   let gobj = gtk_builder_get_object(cast[ptr Builder00](builder.impl), name)
@@ -6782,7 +6926,7 @@ proc getView*(builder: Builder; name: string): View =
     result = cast[type(result)](g_object_get_qdata(gobj, Quark))
     assert(result.impl == gobj)
   else:
-    fnew(result, gtksource.finalizeGObject)
+    fnew(result, gtksource5.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
     g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))

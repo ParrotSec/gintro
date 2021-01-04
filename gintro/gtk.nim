@@ -2,6 +2,7 @@
 # xlib-2.0
 # GLib-2.0
 # Gdk-3.0
+# HarfBuzz-0.0
 # GdkPixbuf-2.0
 # cairo-1.0
 # GObject-2.0
@@ -16,21 +17,9 @@
 # libraries:
 # libgtk-3.so.0,libgdk-3.so.0
 {.warning[UnusedImport]: off.}
-import xlib, glib, gdk, gdkpixbuf, cairo, gobject, pango, gio, gmodule, atk
+import xlib, glib, gdk, harfbuzz, gdkpixbuf, cairo, gobject, pango, gio, gmodule, atk
 const Lib = "libgtk-3.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
-
-type
-  uint8Array* = pointer
-  GTypeArray* = pointer
-  cdoubleArray* = pointer
-  AccelGroupEntry00Array* = pointer
-  PadActionEntry00Array* = pointer
-  StockItemArray* = pointer
-  TargetEntry00Array* = pointer
-  int32Array* = pointer
-  PageRangeArray* = pointer
-
 
 proc finalizeGObject*[T](o: ref T) =
   if not o.ignoreFinalizer:
@@ -60,6 +49,12 @@ when defined(gcDestructors):
       boxedFree(gtk_selection_data_get_type(), cast[ptr SelectionData00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var SelectionData) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkSelectionData)
+
 proc gtk_selection_data_free(self: ptr SelectionData00) {.
     importc, libprag.}
 
@@ -77,31 +72,23 @@ proc copy*(self: SelectionData): SelectionData =
   fnew(result, gBoxedFreeGtkSelectionData)
   result.impl = gtk_selection_data_copy(cast[ptr SelectionData00](self.impl))
 
-proc gtk_selection_data_get_data_type(self: ptr SelectionData00): ptr gdk.Atom00 {.
+proc gtk_selection_data_get_data_type(self: ptr SelectionData00): ptr gdk.Atom {.
     importc, libprag.}
 
-proc getDataType*(self: SelectionData): gdk.Atom =
-  new(result)
-  result.impl = gtk_selection_data_get_data_type(cast[ptr SelectionData00](self.impl))
-  result.ignoreFinalizer = true
+proc getDataType*(self: SelectionData): ptr gdk.Atom =
+  gtk_selection_data_get_data_type(cast[ptr SelectionData00](self.impl))
 
-proc dataType*(self: SelectionData): gdk.Atom =
-  new(result)
-  result.impl = gtk_selection_data_get_data_type(cast[ptr SelectionData00](self.impl))
-  result.ignoreFinalizer = true
+proc dataType*(self: SelectionData): ptr gdk.Atom =
+  gtk_selection_data_get_data_type(cast[ptr SelectionData00](self.impl))
 
-proc gtk_selection_data_get_data_with_length(self: ptr SelectionData00; length: var int32): uint8Array {.
+proc gtk_selection_data_get_data_with_length(self: ptr SelectionData00; length: var int32): ptr uint8 {.
     importc, libprag.}
 
 proc getData*(self: SelectionData; length: var int): seq[uint8] =
-  var length_00 = int32(length)
-  result = uint8ArrayZT2seq(gtk_selection_data_get_data_with_length(cast[ptr SelectionData00](self.impl), length_00))
-  length = int(length_00)
-
-proc data*(self: SelectionData; length: var int): seq[uint8] =
-  var length_00 = int32(length)
-  result = uint8ArrayZT2seq(gtk_selection_data_get_data_with_length(cast[ptr SelectionData00](self.impl), length_00))
-  length = int(length_00)
+  var length_00: int32
+  result = uint8ArrayToSeq(gtk_selection_data_get_data_with_length(cast[ptr SelectionData00](self.impl), length_00), length.int)
+  if length.addr != nil:
+    length = int(length_00)
 
 proc gtk_selection_data_get_display(self: ptr SelectionData00): ptr gdk.Display00 {.
     importc, libprag.}
@@ -197,31 +184,23 @@ proc pixbuf*(self: SelectionData): gdkpixbuf.Pixbuf =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_selection_data_get_selection(self: ptr SelectionData00): ptr gdk.Atom00 {.
+proc gtk_selection_data_get_selection(self: ptr SelectionData00): ptr gdk.Atom {.
     importc, libprag.}
 
-proc getSelection*(self: SelectionData): gdk.Atom =
-  new(result)
-  result.impl = gtk_selection_data_get_selection(cast[ptr SelectionData00](self.impl))
-  result.ignoreFinalizer = true
+proc getSelection*(self: SelectionData): ptr gdk.Atom =
+  gtk_selection_data_get_selection(cast[ptr SelectionData00](self.impl))
 
-proc selection*(self: SelectionData): gdk.Atom =
-  new(result)
-  result.impl = gtk_selection_data_get_selection(cast[ptr SelectionData00](self.impl))
-  result.ignoreFinalizer = true
+proc selection*(self: SelectionData): ptr gdk.Atom =
+  gtk_selection_data_get_selection(cast[ptr SelectionData00](self.impl))
 
-proc gtk_selection_data_get_target(self: ptr SelectionData00): ptr gdk.Atom00 {.
+proc gtk_selection_data_get_target(self: ptr SelectionData00): ptr gdk.Atom {.
     importc, libprag.}
 
-proc getTarget*(self: SelectionData): gdk.Atom =
-  new(result)
-  result.impl = gtk_selection_data_get_target(cast[ptr SelectionData00](self.impl))
-  result.ignoreFinalizer = true
+proc getTarget*(self: SelectionData): ptr gdk.Atom =
+  gtk_selection_data_get_target(cast[ptr SelectionData00](self.impl))
 
-proc target*(self: SelectionData): gdk.Atom =
-  new(result)
-  result.impl = gtk_selection_data_get_target(cast[ptr SelectionData00](self.impl))
-  result.ignoreFinalizer = true
+proc target*(self: SelectionData): ptr gdk.Atom =
+  gtk_selection_data_get_target(cast[ptr SelectionData00](self.impl))
 
 proc gtk_selection_data_get_text(self: ptr SelectionData00): cstring {.
     importc, libprag.}
@@ -240,7 +219,7 @@ proc text*(self: SelectionData): string =
   result = $resul0
   cogfree(resul0)
 
-proc gtk_selection_data_get_uris(self: ptr SelectionData00): cstringArray {.
+proc gtk_selection_data_get_uris(self: ptr SelectionData00): ptr cstring {.
     importc, libprag.}
 
 proc getUris*(self: SelectionData): seq[string] =
@@ -253,22 +232,19 @@ proc uris*(self: SelectionData): seq[string] =
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
-proc gtk_selection_data_set(self: ptr SelectionData00; `type`: ptr gdk.Atom00;
-    format: int32; data: uint8Array; length: int32) {.
+proc gtk_selection_data_set(self: ptr SelectionData00; `type`: gdk.Atom;
+    format: int32; data: ptr uint8; length: int32) {.
     importc, libprag.}
 
 proc set*(self: SelectionData; `type`: gdk.Atom; format: int;
     data: seq[uint8] | string) =
   let length = int(data.len)
-  gtk_selection_data_set(cast[ptr SelectionData00](self.impl), cast[ptr gdk.Atom00](`type`.impl), int32(format), unsafeaddr(data[0]), int32(length))
+  gtk_selection_data_set(cast[ptr SelectionData00](self.impl), `type`, int32(format), cast[ptr uint8](unsafeaddr(data[0])), int32(length))
 
 proc gtk_selection_data_set_pixbuf(self: ptr SelectionData00; pixbuf: ptr gdkpixbuf.Pixbuf00): gboolean {.
     importc, libprag.}
 
 proc setPixbuf*(self: SelectionData; pixbuf: gdkpixbuf.Pixbuf): bool =
-  toBool(gtk_selection_data_set_pixbuf(cast[ptr SelectionData00](self.impl), cast[ptr gdkpixbuf.Pixbuf00](pixbuf.impl)))
-
-proc `pixbuf=`*(self: SelectionData; pixbuf: gdkpixbuf.Pixbuf): bool =
   toBool(gtk_selection_data_set_pixbuf(cast[ptr SelectionData00](self.impl), cast[ptr gdkpixbuf.Pixbuf00](pixbuf.impl)))
 
 proc gtk_selection_data_set_text(self: ptr SelectionData00; str: cstring;
@@ -278,15 +254,10 @@ proc gtk_selection_data_set_text(self: ptr SelectionData00; str: cstring;
 proc setText*(self: SelectionData; str: cstring; len: int): bool =
   toBool(gtk_selection_data_set_text(cast[ptr SelectionData00](self.impl), str, int32(len)))
 
-proc gtk_selection_data_set_uris(self: ptr SelectionData00; uris: cstringArray): gboolean {.
+proc gtk_selection_data_set_uris(self: ptr SelectionData00; uris: ptr cstring): gboolean {.
     importc, libprag.}
 
 proc setUris*(self: SelectionData; uris: varargs[string, `$`]): bool =
-  var fs469n23x: array[256, pointer]
-  var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
-  toBool(gtk_selection_data_set_uris(cast[ptr SelectionData00](self.impl), seq2CstringArray(uris, fs469n23)))
-
-proc `uris=`*(self: SelectionData; uris: varargs[string, `$`]): bool =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   toBool(gtk_selection_data_set_uris(cast[ptr SelectionData00](self.impl), seq2CstringArray(uris, fs469n23)))
@@ -808,29 +779,10 @@ proc scWindowStateEvent*(self: Widget;  p: proc (self: ptr Widget00; event: ptr 
 proc getDefaultDirection*(): TextDirection {.
     importc: "gtk_widget_get_default_direction", libprag.}
 
-proc defaultDirection*(): TextDirection {.
-    importc: "gtk_widget_get_default_direction", libprag.}
-
 proc gtk_widget_get_default_style(): ptr Style00 {.
     importc, libprag.}
 
 proc getDefaultStyle*(): Style =
-  let gobj = gtk_widget_get_default_style()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultStyle*(): Style =
   let gobj = gtk_widget_get_default_style()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -853,9 +805,6 @@ proc pushCompositeChild*() {.
     importc: "gtk_widget_push_composite_child", libprag.}
 
 proc setDefaultDirection*(dir: TextDirection) {.
-    importc: "gtk_widget_set_default_direction", libprag.}
-
-proc `defaultDirection=`*(dir: TextDirection) {.
     importc: "gtk_widget_set_default_direction", libprag.}
 
 proc gtk_widget_activate(self: ptr Widget00): gboolean {.
@@ -905,15 +854,18 @@ proc gtk_widget_class_path(self: ptr Widget00; pathLength: var uint32; path: var
     pathReversed: var cstring) {.
     importc, libprag.}
 
-proc classPath*(self: Widget; pathLength: var int; path: var string;
-    pathReversed: var string) =
-  var path_00 = cstring(path)
-  var pathReversed_00 = cstring(pathReversed)
-  var pathLength_00 = uint32(pathLength)
+proc classPath*(self: Widget; pathLength: var int = cast[var int](nil);
+    path: var string = cast[var string](nil); pathReversed: var string = cast[var string](nil)) =
+  var path_00: cstring
+  var pathReversed_00: cstring
+  var pathLength_00: uint32
   gtk_widget_class_path(cast[ptr Widget00](self.impl), pathLength_00, path_00, pathReversed_00)
-  path = $(path_00)
-  pathReversed = $(pathReversed_00)
-  pathLength = int(pathLength_00)
+  if path.addr != nil:
+    path = $(path_00)
+  if pathReversed.addr != nil:
+    pathReversed = $(pathReversed_00)
+  if pathLength.addr != nil:
+    pathLength = int(pathLength_00)
 
 proc gtk_widget_create_pango_context(self: ptr Widget00): ptr pango.Context00 {.
     importc, libprag.}
@@ -1020,12 +972,12 @@ proc dragDestUnset*(self: Widget) =
   gtk_drag_dest_unset(cast[ptr Widget00](self.impl))
 
 proc gtk_drag_get_data(self: ptr Widget00; context: ptr gdk.DragContext00;
-    target: ptr gdk.Atom00; time: uint32) {.
+    target: gdk.Atom; time: uint32) {.
     importc, libprag.}
 
 proc dragGetData*(self: Widget; context: gdk.DragContext; target: gdk.Atom;
     time: int) =
-  gtk_drag_get_data(cast[ptr Widget00](self.impl), cast[ptr gdk.DragContext00](context.impl), cast[ptr gdk.Atom00](target.impl), uint32(time))
+  gtk_drag_get_data(cast[ptr Widget00](self.impl), cast[ptr gdk.DragContext00](context.impl), target, uint32(time))
 
 proc gtk_drag_highlight(self: ptr Widget00) {.
     importc, libprag.}
@@ -1173,24 +1125,6 @@ proc getActionGroup*(self: Widget; prefix: cstring): gio.ActionGroup =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc actionGroup*(self: Widget; prefix: cstring): gio.ActionGroup =
-  let gobj = gtk_widget_get_action_group(cast[ptr Widget00](self.impl), prefix)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_widget_get_allocated_baseline(self: ptr Widget00): int32 {.
     importc, libprag.}
 
@@ -1214,10 +1148,11 @@ proc gtk_widget_get_allocated_size(self: ptr Widget00; allocation: var gdk.Recta
     importc, libprag.}
 
 proc getAllocatedSize*(self: Widget; allocation: var gdk.Rectangle;
-    baseline: var int) =
-  var baseline_00 = int32(baseline)
+    baseline: var int = cast[var int](nil)) =
+  var baseline_00: int32
   gtk_widget_get_allocated_size(cast[ptr Widget00](self.impl), allocation, baseline_00)
-  baseline = int(baseline_00)
+  if baseline.addr != nil:
+    baseline = int(baseline_00)
 
 proc gtk_widget_get_allocated_width(self: ptr Widget00): int32 {.
     importc, libprag.}
@@ -1238,24 +1173,6 @@ proc gtk_widget_get_ancestor(self: ptr Widget00; widgetType: GType): ptr Widget0
     importc, libprag.}
 
 proc getAncestor*(self: Widget; widgetType: GType): Widget =
-  let gobj = gtk_widget_get_ancestor(cast[ptr Widget00](self.impl), widgetType)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc ancestor*(self: Widget; widgetType: GType): Widget =
   let gobj = gtk_widget_get_ancestor(cast[ptr Widget00](self.impl), widgetType)
   if gobj.isNil:
     return nil
@@ -1334,16 +1251,10 @@ proc gtk_widget_get_device_enabled(self: ptr Widget00; device: ptr gdk.Device00)
 proc getDeviceEnabled*(self: Widget; device: gdk.Device): bool =
   toBool(gtk_widget_get_device_enabled(cast[ptr Widget00](self.impl), cast[ptr gdk.Device00](device.impl)))
 
-proc deviceEnabled*(self: Widget; device: gdk.Device): bool =
-  toBool(gtk_widget_get_device_enabled(cast[ptr Widget00](self.impl), cast[ptr gdk.Device00](device.impl)))
-
 proc gtk_widget_get_device_events(self: ptr Widget00; device: ptr gdk.Device00): gdk.EventMask {.
     importc, libprag.}
 
 proc getDeviceEvents*(self: Widget; device: gdk.Device): gdk.EventMask =
-  gtk_widget_get_device_events(cast[ptr Widget00](self.impl), cast[ptr gdk.Device00](device.impl))
-
-proc deviceEvents*(self: Widget; device: gdk.Device): gdk.EventMask =
   gtk_widget_get_device_events(cast[ptr Widget00](self.impl), cast[ptr gdk.Device00](device.impl))
 
 proc gtk_widget_get_direction(self: ptr Widget00): TextDirection {.
@@ -1619,9 +1530,6 @@ proc gtk_widget_get_modifier_mask(self: ptr Widget00; intent: gdk.ModifierIntent
 proc getModifierMask*(self: Widget; intent: gdk.ModifierIntent): gdk.ModifierType =
   gtk_widget_get_modifier_mask(cast[ptr Widget00](self.impl), intent)
 
-proc modifierMask*(self: Widget; intent: gdk.ModifierIntent): gdk.ModifierType =
-  gtk_widget_get_modifier_mask(cast[ptr Widget00](self.impl), intent)
-
 proc gtk_widget_get_name(self: ptr Widget00): cstring {.
     importc, libprag.}
 
@@ -1765,24 +1673,29 @@ proc parentWindow*(self: Widget): gdk.Window =
 proc gtk_widget_get_pointer(self: ptr Widget00; x: var int32; y: var int32) {.
     importc, libprag.}
 
-proc getPointer*(self: Widget; x: var int; y: var int) =
-  var y_00 = int32(y)
-  var x_00 = int32(x)
+proc getPointer*(self: Widget; x: var int = cast[var int](nil);
+    y: var int = cast[var int](nil)) =
+  var y_00: int32
+  var x_00: int32
   gtk_widget_get_pointer(cast[ptr Widget00](self.impl), x_00, y_00)
-  y = int(y_00)
-  x = int(x_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
 
 proc gtk_widget_get_preferred_height(self: ptr Widget00; minimumHeight: var int32;
     naturalHeight: var int32) {.
     importc, libprag.}
 
-proc getPreferredHeight*(self: Widget; minimumHeight: var int;
-    naturalHeight: var int) =
-  var naturalHeight_00 = int32(naturalHeight)
-  var minimumHeight_00 = int32(minimumHeight)
+proc getPreferredHeight*(self: Widget; minimumHeight: var int = cast[var int](nil);
+    naturalHeight: var int = cast[var int](nil)) =
+  var naturalHeight_00: int32
+  var minimumHeight_00: int32
   gtk_widget_get_preferred_height(cast[ptr Widget00](self.impl), minimumHeight_00, naturalHeight_00)
-  naturalHeight = int(naturalHeight_00)
-  minimumHeight = int(minimumHeight_00)
+  if naturalHeight.addr != nil:
+    naturalHeight = int(naturalHeight_00)
+  if minimumHeight.addr != nil:
+    minimumHeight = int(minimumHeight_00)
 
 proc gtk_widget_get_preferred_height_and_baseline_for_width(self: ptr Widget00;
     width: int32; minimumHeight: var int32; naturalHeight: var int32; minimumBaseline: var int32;
@@ -1790,53 +1703,63 @@ proc gtk_widget_get_preferred_height_and_baseline_for_width(self: ptr Widget00;
     importc, libprag.}
 
 proc getPreferredHeightAndBaselineForWidth*(self: Widget;
-    width: int; minimumHeight: var int; naturalHeight: var int; minimumBaseline: var int;
-    naturalBaseline: var int) =
-  var minimumBaseline_00 = int32(minimumBaseline)
-  var naturalHeight_00 = int32(naturalHeight)
-  var minimumHeight_00 = int32(minimumHeight)
-  var naturalBaseline_00 = int32(naturalBaseline)
+    width: int; minimumHeight: var int = cast[var int](nil); naturalHeight: var int = cast[var int](nil);
+    minimumBaseline: var int = cast[var int](nil); naturalBaseline: var int = cast[var int](nil)) =
+  var minimumBaseline_00: int32
+  var naturalHeight_00: int32
+  var minimumHeight_00: int32
+  var naturalBaseline_00: int32
   gtk_widget_get_preferred_height_and_baseline_for_width(cast[ptr Widget00](self.impl), int32(width), minimumHeight_00, naturalHeight_00, minimumBaseline_00, naturalBaseline_00)
-  minimumBaseline = int(minimumBaseline_00)
-  naturalHeight = int(naturalHeight_00)
-  minimumHeight = int(minimumHeight_00)
-  naturalBaseline = int(naturalBaseline_00)
+  if minimumBaseline.addr != nil:
+    minimumBaseline = int(minimumBaseline_00)
+  if naturalHeight.addr != nil:
+    naturalHeight = int(naturalHeight_00)
+  if minimumHeight.addr != nil:
+    minimumHeight = int(minimumHeight_00)
+  if naturalBaseline.addr != nil:
+    naturalBaseline = int(naturalBaseline_00)
 
 proc gtk_widget_get_preferred_height_for_width(self: ptr Widget00; width: int32;
     minimumHeight: var int32; naturalHeight: var int32) {.
     importc, libprag.}
 
 proc getPreferredHeightForWidth*(self: Widget; width: int;
-    minimumHeight: var int; naturalHeight: var int) =
-  var naturalHeight_00 = int32(naturalHeight)
-  var minimumHeight_00 = int32(minimumHeight)
+    minimumHeight: var int = cast[var int](nil); naturalHeight: var int = cast[var int](nil)) =
+  var naturalHeight_00: int32
+  var minimumHeight_00: int32
   gtk_widget_get_preferred_height_for_width(cast[ptr Widget00](self.impl), int32(width), minimumHeight_00, naturalHeight_00)
-  naturalHeight = int(naturalHeight_00)
-  minimumHeight = int(minimumHeight_00)
+  if naturalHeight.addr != nil:
+    naturalHeight = int(naturalHeight_00)
+  if minimumHeight.addr != nil:
+    minimumHeight = int(minimumHeight_00)
 
 proc gtk_widget_get_preferred_width(self: ptr Widget00; minimumWidth: var int32;
     naturalWidth: var int32) {.
     importc, libprag.}
 
-proc getPreferredWidth*(self: Widget; minimumWidth: var int;
-    naturalWidth: var int) =
-  var minimumWidth_00 = int32(minimumWidth)
-  var naturalWidth_00 = int32(naturalWidth)
+proc getPreferredWidth*(self: Widget; minimumWidth: var int = cast[var int](nil);
+    naturalWidth: var int = cast[var int](nil)) =
+  var minimumWidth_00: int32
+  var naturalWidth_00: int32
   gtk_widget_get_preferred_width(cast[ptr Widget00](self.impl), minimumWidth_00, naturalWidth_00)
-  minimumWidth = int(minimumWidth_00)
-  naturalWidth = int(naturalWidth_00)
+  if minimumWidth.addr != nil:
+    minimumWidth = int(minimumWidth_00)
+  if naturalWidth.addr != nil:
+    naturalWidth = int(naturalWidth_00)
 
 proc gtk_widget_get_preferred_width_for_height(self: ptr Widget00; height: int32;
     minimumWidth: var int32; naturalWidth: var int32) {.
     importc, libprag.}
 
 proc getPreferredWidthForHeight*(self: Widget; height: int;
-    minimumWidth: var int; naturalWidth: var int) =
-  var minimumWidth_00 = int32(minimumWidth)
-  var naturalWidth_00 = int32(naturalWidth)
+    minimumWidth: var int = cast[var int](nil); naturalWidth: var int = cast[var int](nil)) =
+  var minimumWidth_00: int32
+  var naturalWidth_00: int32
   gtk_widget_get_preferred_width_for_height(cast[ptr Widget00](self.impl), int32(height), minimumWidth_00, naturalWidth_00)
-  minimumWidth = int(minimumWidth_00)
-  naturalWidth = int(naturalWidth_00)
+  if minimumWidth.addr != nil:
+    minimumWidth = int(minimumWidth_00)
+  if naturalWidth.addr != nil:
+    naturalWidth = int(naturalWidth_00)
 
 proc gtk_widget_get_realized(self: ptr Widget00): gboolean {.
     importc, libprag.}
@@ -1947,12 +1870,15 @@ proc sensitive*(self: Widget): bool =
 proc gtk_widget_get_size_request(self: ptr Widget00; width: var int32; height: var int32) {.
     importc, libprag.}
 
-proc getSizeRequest*(self: Widget; width: var int; height: var int) =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+proc getSizeRequest*(self: Widget; width: var int = cast[var int](nil);
+    height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var height_00: int32
   gtk_widget_get_size_request(cast[ptr Widget00](self.impl), width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_widget_get_state(self: ptr Widget00): StateType {.
     importc, libprag.}
@@ -2021,22 +1947,6 @@ proc gtk_widget_get_template_child(self: ptr Widget00; widgetType: GType;
     importc, libprag.}
 
 proc getTemplateChild*(self: Widget; widgetType: GType; name: cstring): gobject.Object =
-  let gobj = gtk_widget_get_template_child(cast[ptr Widget00](self.impl), widgetType, name)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gobject.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc templateChild*(self: Widget; widgetType: GType; name: cstring): gobject.Object =
   let gobj = gtk_widget_get_template_child(cast[ptr Widget00](self.impl), widgetType, name)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -2321,7 +2231,7 @@ proc insertActionGroup*(self: Widget; name: cstring; group: gio.ActionGroup | gi
 proc gtk_widget_intersect(self: ptr Widget00; area: gdk.Rectangle; intersection: var gdk.Rectangle): gboolean {.
     importc, libprag.}
 
-proc intersect*(self: Widget; area: gdk.Rectangle; intersection: var gdk.Rectangle): bool =
+proc intersect*(self: Widget; area: gdk.Rectangle; intersection: var gdk.Rectangle = cast[var gdk.Rectangle](nil)): bool =
   toBool(gtk_widget_intersect(cast[ptr Widget00](self.impl), area, intersection))
 
 proc gtk_widget_is_ancestor(self: ptr Widget00; ancestor: ptr Widget00): gboolean {.
@@ -2372,23 +2282,27 @@ proc gtk_widget_keynav_failed(self: ptr Widget00; direction: DirectionType): gbo
 proc keynavFailed*(self: Widget; direction: DirectionType): bool =
   toBool(gtk_widget_keynav_failed(cast[ptr Widget00](self.impl), direction))
 
-proc gtk_widget_list_accel_closures(self: ptr Widget00): ptr pointer {.
+proc gtk_widget_list_accel_closures(self: ptr Widget00): ptr glib.List {.
     importc, libprag.}
 
-proc listAccelClosures*(self: Widget): ptr pointer =
-  gtk_widget_list_accel_closures(cast[ptr Widget00](self.impl))
+proc listAccelClosures*(self: Widget): seq[gobject.Closure] =
+  let resul0 = gtk_widget_list_accel_closures(cast[ptr Widget00](self.impl))
+  result = glistStructs2seq[gobject.Closure](resul0, true)
+  g_list_free(resul0)
 
-proc gtk_widget_list_action_prefixes(self: ptr Widget00): cstringArray {.
+proc gtk_widget_list_action_prefixes(self: ptr Widget00): ptr cstring {.
     importc, libprag.}
 
 proc listActionPrefixes*(self: Widget): seq[string] =
   cstringArrayToSeq(gtk_widget_list_action_prefixes(cast[ptr Widget00](self.impl)))
 
-proc gtk_widget_list_mnemonic_labels(self: ptr Widget00): ptr pointer {.
+proc gtk_widget_list_mnemonic_labels(self: ptr Widget00): ptr glib.List {.
     importc, libprag.}
 
-proc listMnemonicLabels*(self: Widget): ptr pointer =
-  gtk_widget_list_mnemonic_labels(cast[ptr Widget00](self.impl))
+proc listMnemonicLabels*(self: Widget): seq[Widget] =
+  let resul0 = gtk_widget_list_mnemonic_labels(cast[ptr Widget00](self.impl))
+  result = glistObjects2seq(Widget, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_widget_map(self: ptr Widget00) {.
     importc, libprag.}
@@ -2405,26 +2319,26 @@ proc mnemonicActivate*(self: Widget; groupCycling: bool): bool =
 proc gtk_widget_modify_base(self: ptr Widget00; state: StateType; color: gdk.Color) {.
     importc, libprag.}
 
-proc modifyBase*(self: Widget; state: StateType; color: gdk.Color = cast[ptr gdk.Color](nil)[]) =
+proc modifyBase*(self: Widget; state: StateType; color: gdk.Color = cast[var gdk.Color](nil)) =
   gtk_widget_modify_base(cast[ptr Widget00](self.impl), state, color)
 
 proc gtk_widget_modify_bg(self: ptr Widget00; state: StateType; color: gdk.Color) {.
     importc, libprag.}
 
-proc modifyBg*(self: Widget; state: StateType; color: gdk.Color = cast[ptr gdk.Color](nil)[]) =
+proc modifyBg*(self: Widget; state: StateType; color: gdk.Color = cast[var gdk.Color](nil)) =
   gtk_widget_modify_bg(cast[ptr Widget00](self.impl), state, color)
 
 proc gtk_widget_modify_cursor(self: ptr Widget00; primary: gdk.Color; secondary: gdk.Color) {.
     importc, libprag.}
 
-proc modifyCursor*(self: Widget; primary: gdk.Color = cast[ptr gdk.Color](nil)[];
-    secondary: gdk.Color = cast[ptr gdk.Color](nil)[]) =
+proc modifyCursor*(self: Widget; primary: gdk.Color = cast[var gdk.Color](nil);
+    secondary: gdk.Color = cast[var gdk.Color](nil)) =
   gtk_widget_modify_cursor(cast[ptr Widget00](self.impl), primary, secondary)
 
 proc gtk_widget_modify_fg(self: ptr Widget00; state: StateType; color: gdk.Color) {.
     importc, libprag.}
 
-proc modifyFg*(self: Widget; state: StateType; color: gdk.Color = cast[ptr gdk.Color](nil)[]) =
+proc modifyFg*(self: Widget; state: StateType; color: gdk.Color = cast[var gdk.Color](nil)) =
   gtk_widget_modify_fg(cast[ptr Widget00](self.impl), state, color)
 
 proc gtk_widget_modify_font(self: ptr Widget00; fontDesc: ptr pango.FontDescription00) {.
@@ -2436,7 +2350,7 @@ proc modifyFont*(self: Widget; fontDesc: pango.FontDescription = nil) =
 proc gtk_widget_modify_text(self: ptr Widget00; state: StateType; color: gdk.Color) {.
     importc, libprag.}
 
-proc modifyText*(self: Widget; state: StateType; color: gdk.Color = cast[ptr gdk.Color](nil)[]) =
+proc modifyText*(self: Widget; state: StateType; color: gdk.Color = cast[var gdk.Color](nil)) =
   gtk_widget_modify_text(cast[ptr Widget00](self.impl), state, color)
 
 proc gtk_widget_override_background_color(self: ptr Widget00; state: StateFlags;
@@ -2444,20 +2358,20 @@ proc gtk_widget_override_background_color(self: ptr Widget00; state: StateFlags;
     importc, libprag.}
 
 proc overrideBackgroundColor*(self: Widget; state: StateFlags;
-    color: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+    color: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   gtk_widget_override_background_color(cast[ptr Widget00](self.impl), state, color)
 
 proc gtk_widget_override_color(self: ptr Widget00; state: StateFlags; color: gdk.RGBA) {.
     importc, libprag.}
 
-proc overrideColor*(self: Widget; state: StateFlags; color: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc overrideColor*(self: Widget; state: StateFlags; color: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   gtk_widget_override_color(cast[ptr Widget00](self.impl), state, color)
 
 proc gtk_widget_override_cursor(self: ptr Widget00; cursor: gdk.RGBA; secondaryCursor: gdk.RGBA) {.
     importc, libprag.}
 
-proc overrideCursor*(self: Widget; cursor: gdk.RGBA = cast[ptr gdk.RGBA](nil)[];
-    secondaryCursor: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc overrideCursor*(self: Widget; cursor: gdk.RGBA = cast[var gdk.RGBA](nil);
+    secondaryCursor: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   gtk_widget_override_cursor(cast[ptr Widget00](self.impl), cursor, secondaryCursor)
 
 proc gtk_widget_override_font(self: ptr Widget00; fontDesc: ptr pango.FontDescription00) {.
@@ -2470,22 +2384,25 @@ proc gtk_widget_override_symbolic_color(self: ptr Widget00; name: cstring;
     color: gdk.RGBA) {.
     importc, libprag.}
 
-proc overrideSymbolicColor*(self: Widget; name: cstring; color: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc overrideSymbolicColor*(self: Widget; name: cstring; color: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   gtk_widget_override_symbolic_color(cast[ptr Widget00](self.impl), name, color)
 
 proc gtk_widget_path(self: ptr Widget00; pathLength: var uint32; path: var cstring;
     pathReversed: var cstring) {.
     importc, libprag.}
 
-proc path*(self: Widget; pathLength: var int; path: var string;
-    pathReversed: var string) =
-  var path_00 = cstring(path)
-  var pathReversed_00 = cstring(pathReversed)
-  var pathLength_00 = uint32(pathLength)
+proc path*(self: Widget; pathLength: var int = cast[var int](nil);
+    path: var string = cast[var string](nil); pathReversed: var string = cast[var string](nil)) =
+  var path_00: cstring
+  var pathReversed_00: cstring
+  var pathLength_00: uint32
   gtk_widget_path(cast[ptr Widget00](self.impl), pathLength_00, path_00, pathReversed_00)
-  path = $(path_00)
-  pathReversed = $(pathReversed_00)
-  pathLength = int(pathLength_00)
+  if path.addr != nil:
+    path = $(path_00)
+  if pathReversed.addr != nil:
+    pathReversed = $(pathReversed_00)
+  if pathLength.addr != nil:
+    pathLength = int(pathLength_00)
 
 proc gtk_widget_queue_allocate(self: ptr Widget00) {.
     importc, libprag.}
@@ -3046,9 +2963,11 @@ proc gtk_widget_set_window(self: ptr Widget00; window: ptr gdk.Window00) {.
     importc, libprag.}
 
 proc setWindow*(self: Widget; window: gdk.Window) =
+  window.ignoreFinalizer = true
   gtk_widget_set_window(cast[ptr Widget00](self.impl), cast[ptr gdk.Window00](window.impl))
 
 proc `window=`*(self: Widget; window: gdk.Window) =
+  window.ignoreFinalizer = true
   gtk_widget_set_window(cast[ptr Widget00](self.impl), cast[ptr gdk.Window00](window.impl))
 
 proc gtk_widget_shape_combine_region(self: ptr Widget00; region: ptr cairo.Region00) {.
@@ -3113,12 +3032,14 @@ proc gtk_widget_translate_coordinates(self: ptr Widget00; destWidget: ptr Widget
     importc, libprag.}
 
 proc translateCoordinates*(self: Widget; destWidget: Widget; srcX: int;
-    srcY: int; destX: var int; destY: var int): bool =
-  var destY_00 = int32(destY)
-  var destX_00 = int32(destX)
+    srcY: int; destX: var int = cast[var int](nil); destY: var int = cast[var int](nil)): bool =
+  var destY_00: int32
+  var destX_00: int32
   result = toBool(gtk_widget_translate_coordinates(cast[ptr Widget00](self.impl), cast[ptr Widget00](destWidget.impl), int32(srcX), int32(srcY), destX_00, destY_00))
-  destY = int(destY_00)
-  destX = int(destX_00)
+  if destY.addr != nil:
+    destY = int(destY_00)
+  if destX.addr != nil:
+    destX = int(destX_00)
 
 proc gtk_widget_trigger_tooltip_query(self: ptr Widget00) {.
     importc, libprag.}
@@ -3241,23 +3162,18 @@ proc getBorderWidth*(self: Container): int =
 proc borderWidth*(self: Container): int =
   int(gtk_container_get_border_width(cast[ptr Container00](self.impl)))
 
-proc gtk_container_get_children(self: ptr Container00): ptr pointer {.
+proc gtk_container_get_children(self: ptr Container00): ptr glib.List {.
     importc, libprag.}
 
-proc getChildren*(self: Container): ptr pointer =
-  gtk_container_get_children(cast[ptr Container00](self.impl))
+proc getChildren*(self: Container): seq[Widget] =
+  let resul0 = gtk_container_get_children(cast[ptr Container00](self.impl))
+  result = glistObjects2seq(Widget, resul0, false)
+  g_list_free(resul0)
 
-proc children*(self: Container): ptr pointer =
-  gtk_container_get_children(cast[ptr Container00](self.impl))
-
-proc gtk_container_get_focus_chain(self: ptr Container00; focusableWidgets: var ptr pointer): gboolean {.
-    importc, libprag.}
-
-proc getFocusChain*(self: Container; focusableWidgets: var ptr pointer): bool =
-  toBool(gtk_container_get_focus_chain(cast[ptr Container00](self.impl), focusableWidgets))
-
-proc focusChain*(self: Container; focusableWidgets: var ptr pointer): bool =
-  toBool(gtk_container_get_focus_chain(cast[ptr Container00](self.impl), focusableWidgets))
+proc children*(self: Container): seq[Widget] =
+  let resul0 = gtk_container_get_children(cast[ptr Container00](self.impl))
+  result = glistObjects2seq(Widget, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_container_get_focus_child(self: ptr Container00): ptr Widget00 {.
     importc, libprag.}
@@ -3326,14 +3242,18 @@ proc setBorderWidth*(self: Container; borderWidth: int) =
 proc `borderWidth=`*(self: Container; borderWidth: int) =
   gtk_container_set_border_width(cast[ptr Container00](self.impl), uint32(borderWidth))
 
-proc gtk_container_set_focus_chain(self: ptr Container00; focusableWidgets: ptr pointer) {.
+proc gtk_container_set_focus_chain(self: ptr Container00; focusableWidgets: ptr glib.List) {.
     importc, libprag.}
 
-proc setFocusChain*(self: Container; focusableWidgets: ptr pointer) =
-  gtk_container_set_focus_chain(cast[ptr Container00](self.impl), focusableWidgets)
+proc setFocusChain*(self: Container; focusableWidgets: seq[Widget]) =
+  var tempResGL = seq2GList(focusableWidgets)
+  gtk_container_set_focus_chain(cast[ptr Container00](self.impl), tempResGL)
+  g_list_free(tempResGL)
 
-proc `focusChain=`*(self: Container; focusableWidgets: ptr pointer) =
-  gtk_container_set_focus_chain(cast[ptr Container00](self.impl), focusableWidgets)
+proc `focusChain=`*(self: Container; focusableWidgets: seq[Widget]) =
+  var tempResGL = seq2GList(focusableWidgets)
+  gtk_container_set_focus_chain(cast[ptr Container00](self.impl), tempResGL)
+  g_list_free(tempResGL)
 
 proc gtk_container_set_focus_child(self: ptr Container00; child: ptr Widget00) {.
     importc, libprag.}
@@ -3537,31 +3457,61 @@ when defined(gcDestructors):
       self.impl = nil
 
 type
+  PlugAccessible* = ref object of WindowAccessible
+  PlugAccessible00* = object of WindowAccessible00
+
+proc gtk_plug_accessible_get_type*(): GType {.importc, libprag.}
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(PlugAccessible()[])) =
+    when defined(gintroDebug):
+      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
+    g_object_set_qdata(self.impl, Quark, nil)
+    if not self.ignoreFinalizer and self.impl != nil:
+      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
+      self.impl = nil
+
+proc gtk_plug_accessible_get_id(self: ptr PlugAccessible00): cstring {.
+    importc, libprag.}
+
+proc getId*(self: PlugAccessible): string =
+  let resul0 = gtk_plug_accessible_get_id(cast[ptr PlugAccessible00](self.impl))
+  result = $resul0
+  cogfree(resul0)
+
+proc id*(self: PlugAccessible): string =
+  let resul0 = gtk_plug_accessible_get_id(cast[ptr PlugAccessible00](self.impl))
+  result = $resul0
+  cogfree(resul0)
+
+type
   Window* = ref object of Bin
   Window00* = object of Bin00
 
 proc gtk_window_get_type*(): GType {.importc, libprag.}
 
-proc scActivateDefault*(self: Window | WindowAccessible;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scActivateDefault*(self: Window | PlugAccessible | WindowAccessible;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "activate-default", cast[GCallback](p), xdata, nil, cf)
 
-proc scActivateFocus*(self: Window | WindowAccessible;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scActivateFocus*(self: Window | PlugAccessible | WindowAccessible;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "activate-focus", cast[GCallback](p), xdata, nil, cf)
 
-proc scEnableDebugging*(self: Window | WindowAccessible;  p: proc (self: ptr Window00; toggle: gboolean; xdata: pointer): gboolean {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scEnableDebugging*(self: Window | PlugAccessible | WindowAccessible;  p: proc (self: ptr Window00; toggle: gboolean; xdata: pointer): gboolean {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "enable-debugging", cast[GCallback](p), xdata, nil, cf)
 
-proc scKeysChanged*(self: Window | WindowAccessible;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scKeysChanged*(self: Window | PlugAccessible | WindowAccessible;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "keys-changed", cast[GCallback](p), xdata, nil, cf)
 
-proc scSetFocus*(self: Window | WindowAccessible;  p: proc (self: ptr Window00; widget: ptr Widget00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scSetFocus*(self: Window | PlugAccessible | WindowAccessible;  p: proc (self: ptr Window00; widget: ptr Widget00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "set-focus", cast[GCallback](p), xdata, nil, cf)
 
-proc getDefaultIconList*(): ptr pointer {.
-    importc: "gtk_window_get_default_icon_list", libprag.}
+proc gtk_window_get_default_icon_list(): ptr glib.List {.
+    importc, libprag.}
 
-proc defaultIconList*(): ptr pointer {.
-    importc: "gtk_window_get_default_icon_list", libprag.}
+proc getDefaultIconList*(): seq[gdkpixbuf.Pixbuf] =
+  let resul0 = gtk_window_get_default_icon_list()
+  result = glistObjects2seq(gdkpixbuf.Pixbuf, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_window_get_default_icon_name(): cstring {.
     importc, libprag.}
@@ -3569,11 +3519,13 @@ proc gtk_window_get_default_icon_name(): cstring {.
 proc getDefaultIconName*(): string =
   result = $gtk_window_get_default_icon_name()
 
-proc defaultIconName*(): string =
-  result = $gtk_window_get_default_icon_name()
+proc gtk_window_list_toplevels(): ptr glib.List {.
+    importc, libprag.}
 
-proc listToplevels*(): ptr pointer {.
-    importc: "gtk_window_list_toplevels", libprag.}
+proc listToplevels*(): seq[Widget] =
+  let resul0 = gtk_window_list_toplevels()
+  result = glistObjects2seq(Widget, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_window_set_auto_startup_notification(setting: gboolean) {.
     importc, libprag.}
@@ -3581,16 +3533,10 @@ proc gtk_window_set_auto_startup_notification(setting: gboolean) {.
 proc setAutoStartupNotification*(setting: bool = true) =
   gtk_window_set_auto_startup_notification(gboolean(setting))
 
-proc `autoStartupNotification=`*(setting: gboolean) {.
-    importc: "gtk_window_set_auto_startup_notification", libprag.}
-
 proc gtk_window_set_default_icon(icon: ptr gdkpixbuf.Pixbuf00) {.
     importc, libprag.}
 
 proc setDefaultIcon*(icon: gdkpixbuf.Pixbuf) =
-  gtk_window_set_default_icon(cast[ptr gdkpixbuf.Pixbuf00](icon.impl))
-
-proc `defaultIcon=`*(icon: gdkpixbuf.Pixbuf) =
   gtk_window_set_default_icon(cast[ptr gdkpixbuf.Pixbuf00](icon.impl))
 
 proc gtk_window_set_default_icon_from_file(filename: cstring; error: ptr ptr glib.Error = nil): gboolean {.
@@ -3605,25 +3551,10 @@ proc setDefaultIconFromFile*(filename: cstring): bool =
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc `defaultIconFromFile=`*(filename: cstring): bool =
-  var gerror: ptr glib.Error
-  let resul0 = gtk_window_set_default_icon_from_file(filename, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc setDefaultIconList*(list: ptr pointer) {.
-    importc: "gtk_window_set_default_icon_list", libprag.}
-
-proc `defaultIconList=`*(list: ptr pointer) {.
+proc setDefaultIconList*(list: ptr glib.List) {.
     importc: "gtk_window_set_default_icon_list", libprag.}
 
 proc setDefaultIconName*(name: cstring) {.
-    importc: "gtk_window_set_default_icon_name", libprag.}
-
-proc `defaultIconName=`*(name: cstring) {.
     importc: "gtk_window_set_default_icon_name", libprag.}
 
 proc gtk_window_set_interactive_debugging(enable: gboolean) {.
@@ -3632,89 +3563,87 @@ proc gtk_window_set_interactive_debugging(enable: gboolean) {.
 proc setInteractiveDebugging*(enable: bool = true) =
   gtk_window_set_interactive_debugging(gboolean(enable))
 
-proc `interactiveDebugging=`*(enable: gboolean) {.
-    importc: "gtk_window_set_interactive_debugging", libprag.}
-
 proc gtk_window_activate_default(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc activateDefault*(self: Window | WindowAccessible): bool =
+proc activateDefault*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_activate_default(cast[ptr Window00](self.impl)))
 
 proc gtk_window_activate_focus(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc activateFocus*(self: Window | WindowAccessible): bool =
+proc activateFocus*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_activate_focus(cast[ptr Window00](self.impl)))
 
 proc gtk_window_activate_key(self: ptr Window00; event: ptr gdk.EventKey00): gboolean {.
     importc, libprag.}
 
-proc activateKey*(self: Window | WindowAccessible; event: gdk.EventKey): bool =
+proc activateKey*(self: Window | PlugAccessible | WindowAccessible;
+    event: gdk.EventKey): bool =
   toBool(gtk_window_activate_key(cast[ptr Window00](self.impl), cast[ptr gdk.EventKey00](event.impl)))
 
 proc gtk_window_add_mnemonic(self: ptr Window00; keyval: uint32; target: ptr Widget00) {.
     importc, libprag.}
 
-proc addMnemonic*(self: Window | WindowAccessible; keyval: int;
-    target: Widget) =
+proc addMnemonic*(self: Window | PlugAccessible | WindowAccessible;
+    keyval: int; target: Widget) =
   gtk_window_add_mnemonic(cast[ptr Window00](self.impl), uint32(keyval), cast[ptr Widget00](target.impl))
 
 proc gtk_window_begin_move_drag(self: ptr Window00; button: int32; rootX: int32;
     rootY: int32; timestamp: uint32) {.
     importc, libprag.}
 
-proc beginMoveDrag*(self: Window | WindowAccessible; button: int;
-    rootX: int; rootY: int; timestamp: int) =
+proc beginMoveDrag*(self: Window | PlugAccessible | WindowAccessible;
+    button: int; rootX: int; rootY: int; timestamp: int) =
   gtk_window_begin_move_drag(cast[ptr Window00](self.impl), int32(button), int32(rootX), int32(rootY), uint32(timestamp))
 
 proc gtk_window_begin_resize_drag(self: ptr Window00; edge: gdk.WindowEdge;
     button: int32; rootX: int32; rootY: int32; timestamp: uint32) {.
     importc, libprag.}
 
-proc beginResizeDrag*(self: Window | WindowAccessible; edge: gdk.WindowEdge;
-    button: int; rootX: int; rootY: int; timestamp: int) =
+proc beginResizeDrag*(self: Window | PlugAccessible | WindowAccessible;
+    edge: gdk.WindowEdge; button: int; rootX: int; rootY: int; timestamp: int) =
   gtk_window_begin_resize_drag(cast[ptr Window00](self.impl), edge, int32(button), int32(rootX), int32(rootY), uint32(timestamp))
 
 proc gtk_window_close(self: ptr Window00) {.
     importc, libprag.}
 
-proc close*(self: Window | WindowAccessible) =
+proc close*(self: Window | PlugAccessible | WindowAccessible) =
   gtk_window_close(cast[ptr Window00](self.impl))
 
 proc gtk_window_deiconify(self: ptr Window00) {.
     importc, libprag.}
 
-proc deiconify*(self: Window | WindowAccessible) =
+proc deiconify*(self: Window | PlugAccessible | WindowAccessible) =
   gtk_window_deiconify(cast[ptr Window00](self.impl))
 
 proc gtk_window_fullscreen(self: ptr Window00) {.
     importc, libprag.}
 
-proc fullscreen*(self: Window | WindowAccessible) =
+proc fullscreen*(self: Window | PlugAccessible | WindowAccessible) =
   gtk_window_fullscreen(cast[ptr Window00](self.impl))
 
 proc gtk_window_fullscreen_on_monitor(self: ptr Window00; screen: ptr gdk.Screen00;
     monitor: int32) {.
     importc, libprag.}
 
-proc fullscreenOnMonitor*(self: Window | WindowAccessible; screen: gdk.Screen;
-    monitor: int) =
+proc fullscreenOnMonitor*(self: Window | PlugAccessible | WindowAccessible;
+    screen: gdk.Screen; monitor: int) =
   gtk_window_fullscreen_on_monitor(cast[ptr Window00](self.impl), cast[ptr gdk.Screen00](screen.impl), int32(monitor))
 
 proc gtk_window_get_accept_focus(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getAcceptFocus*(self: Window | WindowAccessible): bool =
+proc getAcceptFocus*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_accept_focus(cast[ptr Window00](self.impl)))
 
-proc acceptFocus*(self: Window | WindowAccessible): bool =
+proc acceptFocus*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_accept_focus(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_attached_to(self: ptr Window00): ptr Widget00 {.
     importc, libprag.}
 
-proc getAttachedTo*(self: Window | WindowAccessible): Widget =
+proc getAttachedTo*(self: Window | PlugAccessible | WindowAccessible): Widget =
   let gobj = gtk_window_get_attached_to(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -3732,7 +3661,7 @@ proc getAttachedTo*(self: Window | WindowAccessible): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc attachedTo*(self: Window | WindowAccessible): Widget =
+proc attachedTo*(self: Window | PlugAccessible | WindowAccessible): Widget =
   let gobj = gtk_window_get_attached_to(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -3753,27 +3682,29 @@ proc attachedTo*(self: Window | WindowAccessible): Widget =
 proc gtk_window_get_decorated(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getDecorated*(self: Window | WindowAccessible): bool =
+proc getDecorated*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_decorated(cast[ptr Window00](self.impl)))
 
-proc decorated*(self: Window | WindowAccessible): bool =
+proc decorated*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_decorated(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_default_size(self: ptr Window00; width: var int32; height: var int32) {.
     importc, libprag.}
 
-proc getDefaultSize*(self: Window | WindowAccessible; width: var int;
-    height: var int) =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+proc getDefaultSize*(self: Window | PlugAccessible | WindowAccessible;
+    width: var int = cast[var int](nil); height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var height_00: int32
   gtk_window_get_default_size(cast[ptr Window00](self.impl), width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_window_get_default_widget(self: ptr Window00): ptr Widget00 {.
     importc, libprag.}
 
-proc getDefaultWidget*(self: Window | WindowAccessible): Widget =
+proc getDefaultWidget*(self: Window | PlugAccessible | WindowAccessible): Widget =
   let gobj = gtk_window_get_default_widget(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -3791,7 +3722,7 @@ proc getDefaultWidget*(self: Window | WindowAccessible): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc defaultWidget*(self: Window | WindowAccessible): Widget =
+proc defaultWidget*(self: Window | PlugAccessible | WindowAccessible): Widget =
   let gobj = gtk_window_get_default_widget(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -3812,25 +3743,25 @@ proc defaultWidget*(self: Window | WindowAccessible): Widget =
 proc gtk_window_get_deletable(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getDeletable*(self: Window | WindowAccessible): bool =
+proc getDeletable*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_deletable(cast[ptr Window00](self.impl)))
 
-proc deletable*(self: Window | WindowAccessible): bool =
+proc deletable*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_deletable(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_destroy_with_parent(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getDestroyWithParent*(self: Window | WindowAccessible): bool =
+proc getDestroyWithParent*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_destroy_with_parent(cast[ptr Window00](self.impl)))
 
-proc destroyWithParent*(self: Window | WindowAccessible): bool =
+proc destroyWithParent*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_destroy_with_parent(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_focus(self: ptr Window00): ptr Widget00 {.
     importc, libprag.}
 
-proc getFocus*(self: Window | WindowAccessible): Widget =
+proc getFocus*(self: Window | PlugAccessible | WindowAccessible): Widget =
   let gobj = gtk_window_get_focus(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -3848,7 +3779,7 @@ proc getFocus*(self: Window | WindowAccessible): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc focus*(self: Window | WindowAccessible): Widget =
+proc focus*(self: Window | PlugAccessible | WindowAccessible): Widget =
   let gobj = gtk_window_get_focus(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -3869,52 +3800,52 @@ proc focus*(self: Window | WindowAccessible): Widget =
 proc gtk_window_get_focus_on_map(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getFocusOnMap*(self: Window | WindowAccessible): bool =
+proc getFocusOnMap*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_focus_on_map(cast[ptr Window00](self.impl)))
 
-proc focusOnMap*(self: Window | WindowAccessible): bool =
+proc focusOnMap*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_focus_on_map(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_focus_visible(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getFocusVisible*(self: Window | WindowAccessible): bool =
+proc getFocusVisible*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_focus_visible(cast[ptr Window00](self.impl)))
 
-proc focusVisible*(self: Window | WindowAccessible): bool =
+proc focusVisible*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_focus_visible(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_gravity(self: ptr Window00): gdk.Gravity {.
     importc, libprag.}
 
-proc getGravity*(self: Window | WindowAccessible): gdk.Gravity =
+proc getGravity*(self: Window | PlugAccessible | WindowAccessible): gdk.Gravity =
   gtk_window_get_gravity(cast[ptr Window00](self.impl))
 
-proc gravity*(self: Window | WindowAccessible): gdk.Gravity =
+proc gravity*(self: Window | PlugAccessible | WindowAccessible): gdk.Gravity =
   gtk_window_get_gravity(cast[ptr Window00](self.impl))
 
 proc gtk_window_get_has_resize_grip(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getHasResizeGrip*(self: Window | WindowAccessible): bool =
+proc getHasResizeGrip*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_has_resize_grip(cast[ptr Window00](self.impl)))
 
-proc hasResizeGrip*(self: Window | WindowAccessible): bool =
+proc hasResizeGrip*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_has_resize_grip(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_hide_titlebar_when_maximized(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getHideTitlebarWhenMaximized*(self: Window | WindowAccessible): bool =
+proc getHideTitlebarWhenMaximized*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_hide_titlebar_when_maximized(cast[ptr Window00](self.impl)))
 
-proc hideTitlebarWhenMaximized*(self: Window | WindowAccessible): bool =
+proc hideTitlebarWhenMaximized*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_hide_titlebar_when_maximized(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_icon(self: ptr Window00): ptr gdkpixbuf.Pixbuf00 {.
     importc, libprag.}
 
-proc getIcon*(self: Window | WindowAccessible): gdkpixbuf.Pixbuf =
+proc getIcon*(self: Window | PlugAccessible | WindowAccessible): gdkpixbuf.Pixbuf =
   let gobj = gtk_window_get_icon(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -3932,7 +3863,7 @@ proc getIcon*(self: Window | WindowAccessible): gdkpixbuf.Pixbuf =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc icon*(self: Window | WindowAccessible): gdkpixbuf.Pixbuf =
+proc icon*(self: Window | PlugAccessible | WindowAccessible): gdkpixbuf.Pixbuf =
   let gobj = gtk_window_get_icon(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -3950,25 +3881,29 @@ proc icon*(self: Window | WindowAccessible): gdkpixbuf.Pixbuf =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_window_get_icon_list(self: ptr Window00): ptr pointer {.
+proc gtk_window_get_icon_list(self: ptr Window00): ptr glib.List {.
     importc, libprag.}
 
-proc getIconList*(self: Window | WindowAccessible): ptr pointer =
-  gtk_window_get_icon_list(cast[ptr Window00](self.impl))
+proc getIconList*(self: Window | PlugAccessible | WindowAccessible): seq[gdkpixbuf.Pixbuf] =
+  let resul0 = gtk_window_get_icon_list(cast[ptr Window00](self.impl))
+  result = glistObjects2seq(gdkpixbuf.Pixbuf, resul0, false)
+  g_list_free(resul0)
 
-proc iconList*(self: Window | WindowAccessible): ptr pointer =
-  gtk_window_get_icon_list(cast[ptr Window00](self.impl))
+proc iconList*(self: Window | PlugAccessible | WindowAccessible): seq[gdkpixbuf.Pixbuf] =
+  let resul0 = gtk_window_get_icon_list(cast[ptr Window00](self.impl))
+  result = glistObjects2seq(gdkpixbuf.Pixbuf, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_window_get_icon_name(self: ptr Window00): cstring {.
     importc, libprag.}
 
-proc getIconName*(self: Window | WindowAccessible): string =
+proc getIconName*(self: Window | PlugAccessible | WindowAccessible): string =
   let resul0 = gtk_window_get_icon_name(cast[ptr Window00](self.impl))
   if resul0.isNil:
     return
   result = $resul0
 
-proc iconName*(self: Window | WindowAccessible): string =
+proc iconName*(self: Window | PlugAccessible | WindowAccessible): string =
   let resul0 = gtk_window_get_icon_name(cast[ptr Window00](self.impl))
   if resul0.isNil:
     return
@@ -3977,78 +3912,78 @@ proc iconName*(self: Window | WindowAccessible): string =
 proc gtk_window_get_mnemonic_modifier(self: ptr Window00): gdk.ModifierType {.
     importc, libprag.}
 
-proc getMnemonicModifier*(self: Window | WindowAccessible): gdk.ModifierType =
+proc getMnemonicModifier*(self: Window | PlugAccessible | WindowAccessible): gdk.ModifierType =
   gtk_window_get_mnemonic_modifier(cast[ptr Window00](self.impl))
 
-proc mnemonicModifier*(self: Window | WindowAccessible): gdk.ModifierType =
+proc mnemonicModifier*(self: Window | PlugAccessible | WindowAccessible): gdk.ModifierType =
   gtk_window_get_mnemonic_modifier(cast[ptr Window00](self.impl))
 
 proc gtk_window_get_mnemonics_visible(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getMnemonicsVisible*(self: Window | WindowAccessible): bool =
+proc getMnemonicsVisible*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_mnemonics_visible(cast[ptr Window00](self.impl)))
 
-proc mnemonicsVisible*(self: Window | WindowAccessible): bool =
+proc mnemonicsVisible*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_mnemonics_visible(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_modal(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getModal*(self: Window | WindowAccessible): bool =
+proc getModal*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_modal(cast[ptr Window00](self.impl)))
 
-proc modal*(self: Window | WindowAccessible): bool =
+proc modal*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_modal(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_opacity(self: ptr Window00): cdouble {.
     importc, libprag.}
 
-proc getOpacity*(self: Window | WindowAccessible): cdouble =
+proc getOpacity*(self: Window | PlugAccessible | WindowAccessible): cdouble =
   gtk_window_get_opacity(cast[ptr Window00](self.impl))
 
-proc opacity*(self: Window | WindowAccessible): cdouble =
+proc opacity*(self: Window | PlugAccessible | WindowAccessible): cdouble =
   gtk_window_get_opacity(cast[ptr Window00](self.impl))
 
 proc gtk_window_get_position(self: ptr Window00; rootX: var int32; rootY: var int32) {.
     importc, libprag.}
 
-proc getPosition*(self: Window | WindowAccessible; rootX: var int;
-    rootY: var int) =
-  var rootY_00 = int32(rootY)
-  var rootX_00 = int32(rootX)
+proc getPosition*(self: Window | PlugAccessible | WindowAccessible;
+    rootX: var int = cast[var int](nil); rootY: var int = cast[var int](nil)) =
+  var rootY_00: int32
+  var rootX_00: int32
   gtk_window_get_position(cast[ptr Window00](self.impl), rootX_00, rootY_00)
-  rootY = int(rootY_00)
-  rootX = int(rootX_00)
+  if rootY.addr != nil:
+    rootY = int(rootY_00)
+  if rootX.addr != nil:
+    rootX = int(rootX_00)
 
 proc gtk_window_get_resizable(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getResizable*(self: Window | WindowAccessible): bool =
+proc getResizable*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_resizable(cast[ptr Window00](self.impl)))
 
-proc resizable*(self: Window | WindowAccessible): bool =
+proc resizable*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_resizable(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_resize_grip_area(self: ptr Window00; rect: var gdk.Rectangle): gboolean {.
     importc, libprag.}
 
-proc getResizeGripArea*(self: Window | WindowAccessible; rect: var gdk.Rectangle): bool =
-  toBool(gtk_window_get_resize_grip_area(cast[ptr Window00](self.impl), rect))
-
-proc resizeGripArea*(self: Window | WindowAccessible; rect: var gdk.Rectangle): bool =
+proc getResizeGripArea*(self: Window | PlugAccessible | WindowAccessible;
+    rect: var gdk.Rectangle): bool =
   toBool(gtk_window_get_resize_grip_area(cast[ptr Window00](self.impl), rect))
 
 proc gtk_window_get_role(self: ptr Window00): cstring {.
     importc, libprag.}
 
-proc getRole*(self: Window | WindowAccessible): string =
+proc getRole*(self: Window | PlugAccessible | WindowAccessible): string =
   let resul0 = gtk_window_get_role(cast[ptr Window00](self.impl))
   if resul0.isNil:
     return
   result = $resul0
 
-proc role*(self: Window | WindowAccessible): string =
+proc role*(self: Window | PlugAccessible | WindowAccessible): string =
   let resul0 = gtk_window_get_role(cast[ptr Window00](self.impl))
   if resul0.isNil:
     return
@@ -4057,7 +3992,7 @@ proc role*(self: Window | WindowAccessible): string =
 proc gtk_window_get_screen(self: ptr Window00): ptr gdk.Screen00 {.
     importc, libprag.}
 
-proc getScreen*(self: Window | WindowAccessible): gdk.Screen =
+proc getScreen*(self: Window | PlugAccessible | WindowAccessible): gdk.Screen =
   let gobj = gtk_window_get_screen(cast[ptr Window00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -4073,7 +4008,7 @@ proc getScreen*(self: Window | WindowAccessible): gdk.Screen =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc screen*(self: Window | WindowAccessible): gdk.Screen =
+proc screen*(self: Window | PlugAccessible | WindowAccessible): gdk.Screen =
   let gobj = gtk_window_get_screen(cast[ptr Window00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -4092,42 +4027,44 @@ proc screen*(self: Window | WindowAccessible): gdk.Screen =
 proc gtk_window_get_size(self: ptr Window00; width: var int32; height: var int32) {.
     importc, libprag.}
 
-proc getSize*(self: Window | WindowAccessible; width: var int;
-    height: var int) =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+proc getSize*(self: Window | PlugAccessible | WindowAccessible;
+    width: var int; height: var int) =
+  var width_00: int32
+  var height_00: int32
   gtk_window_get_size(cast[ptr Window00](self.impl), width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_window_get_skip_pager_hint(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getSkipPagerHint*(self: Window | WindowAccessible): bool =
+proc getSkipPagerHint*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_skip_pager_hint(cast[ptr Window00](self.impl)))
 
-proc skipPagerHint*(self: Window | WindowAccessible): bool =
+proc skipPagerHint*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_skip_pager_hint(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_skip_taskbar_hint(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getSkipTaskbarHint*(self: Window | WindowAccessible): bool =
+proc getSkipTaskbarHint*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_skip_taskbar_hint(cast[ptr Window00](self.impl)))
 
-proc skipTaskbarHint*(self: Window | WindowAccessible): bool =
+proc skipTaskbarHint*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_skip_taskbar_hint(cast[ptr Window00](self.impl)))
 
 proc gtk_window_get_title(self: ptr Window00): cstring {.
     importc, libprag.}
 
-proc getTitle*(self: Window | WindowAccessible): string =
+proc getTitle*(self: Window | PlugAccessible | WindowAccessible): string =
   let resul0 = gtk_window_get_title(cast[ptr Window00](self.impl))
   if resul0.isNil:
     return
   result = $resul0
 
-proc title*(self: Window | WindowAccessible): string =
+proc title*(self: Window | PlugAccessible | WindowAccessible): string =
   let resul0 = gtk_window_get_title(cast[ptr Window00](self.impl))
   if resul0.isNil:
     return
@@ -4136,7 +4073,7 @@ proc title*(self: Window | WindowAccessible): string =
 proc gtk_window_get_titlebar(self: ptr Window00): ptr Widget00 {.
     importc, libprag.}
 
-proc getTitlebar*(self: Window | WindowAccessible): Widget =
+proc getTitlebar*(self: Window | PlugAccessible | WindowAccessible): Widget =
   let gobj = gtk_window_get_titlebar(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -4154,7 +4091,7 @@ proc getTitlebar*(self: Window | WindowAccessible): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc titlebar*(self: Window | WindowAccessible): Widget =
+proc titlebar*(self: Window | PlugAccessible | WindowAccessible): Widget =
   let gobj = gtk_window_get_titlebar(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -4175,7 +4112,7 @@ proc titlebar*(self: Window | WindowAccessible): Widget =
 proc gtk_window_get_transient_for(self: ptr Window00): ptr Window00 {.
     importc, libprag.}
 
-proc getTransientFor*(self: Window | WindowAccessible): Window =
+proc getTransientFor*(self: Window | PlugAccessible | WindowAccessible): Window =
   let gobj = gtk_window_get_transient_for(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -4193,7 +4130,7 @@ proc getTransientFor*(self: Window | WindowAccessible): Window =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc transientFor*(self: Window | WindowAccessible): Window =
+proc transientFor*(self: Window | PlugAccessible | WindowAccessible): Window =
   let gobj = gtk_window_get_transient_for(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -4214,174 +4151,187 @@ proc transientFor*(self: Window | WindowAccessible): Window =
 proc gtk_window_get_type_hint(self: ptr Window00): gdk.WindowTypeHint {.
     importc, libprag.}
 
-proc getTypeHint*(self: Window | WindowAccessible): gdk.WindowTypeHint =
+proc getTypeHint*(self: Window | PlugAccessible | WindowAccessible): gdk.WindowTypeHint =
   gtk_window_get_type_hint(cast[ptr Window00](self.impl))
 
-proc typeHint*(self: Window | WindowAccessible): gdk.WindowTypeHint =
+proc typeHint*(self: Window | PlugAccessible | WindowAccessible): gdk.WindowTypeHint =
   gtk_window_get_type_hint(cast[ptr Window00](self.impl))
 
 proc gtk_window_get_urgency_hint(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc getUrgencyHint*(self: Window | WindowAccessible): bool =
+proc getUrgencyHint*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_urgency_hint(cast[ptr Window00](self.impl)))
 
-proc urgencyHint*(self: Window | WindowAccessible): bool =
+proc urgencyHint*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_get_urgency_hint(cast[ptr Window00](self.impl)))
 
 proc gtk_window_has_group(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc hasGroup*(self: Window | WindowAccessible): bool =
+proc hasGroup*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_has_group(cast[ptr Window00](self.impl)))
 
 proc gtk_window_has_toplevel_focus(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc hasToplevelFocus*(self: Window | WindowAccessible): bool =
+proc hasToplevelFocus*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_has_toplevel_focus(cast[ptr Window00](self.impl)))
 
 proc gtk_window_iconify(self: ptr Window00) {.
     importc, libprag.}
 
-proc iconify*(self: Window | WindowAccessible) =
+proc iconify*(self: Window | PlugAccessible | WindowAccessible) =
   gtk_window_iconify(cast[ptr Window00](self.impl))
 
 proc gtk_window_is_active(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc isActive*(self: Window | WindowAccessible): bool =
+proc isActive*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_is_active(cast[ptr Window00](self.impl)))
 
 proc gtk_window_is_maximized(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc isMaximized*(self: Window | WindowAccessible): bool =
+proc isMaximized*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_is_maximized(cast[ptr Window00](self.impl)))
 
 proc gtk_window_maximize(self: ptr Window00) {.
     importc, libprag.}
 
-proc maximize*(self: Window | WindowAccessible) =
+proc maximize*(self: Window | PlugAccessible | WindowAccessible) =
   gtk_window_maximize(cast[ptr Window00](self.impl))
 
 proc gtk_window_mnemonic_activate(self: ptr Window00; keyval: uint32; modifier: gdk.ModifierType): gboolean {.
     importc, libprag.}
 
-proc mnemonicActivate*(self: Window | WindowAccessible; keyval: int;
-    modifier: gdk.ModifierType): bool =
+proc mnemonicActivate*(self: Window | PlugAccessible | WindowAccessible;
+    keyval: int; modifier: gdk.ModifierType): bool =
   toBool(gtk_window_mnemonic_activate(cast[ptr Window00](self.impl), uint32(keyval), modifier))
 
 proc gtk_window_move(self: ptr Window00; x: int32; y: int32) {.
     importc, libprag.}
 
-proc move*(self: Window | WindowAccessible; x: int; y: int) =
+proc move*(self: Window | PlugAccessible | WindowAccessible; x: int;
+    y: int) =
   gtk_window_move(cast[ptr Window00](self.impl), int32(x), int32(y))
 
 proc gtk_window_parse_geometry(self: ptr Window00; geometry: cstring): gboolean {.
     importc, libprag.}
 
-proc parseGeometry*(self: Window | WindowAccessible; geometry: cstring): bool =
+proc parseGeometry*(self: Window | PlugAccessible | WindowAccessible;
+    geometry: cstring): bool =
   toBool(gtk_window_parse_geometry(cast[ptr Window00](self.impl), geometry))
 
 proc gtk_window_present(self: ptr Window00) {.
     importc, libprag.}
 
-proc present*(self: Window | WindowAccessible) =
+proc present*(self: Window | PlugAccessible | WindowAccessible) =
   gtk_window_present(cast[ptr Window00](self.impl))
 
 proc gtk_window_present_with_time(self: ptr Window00; timestamp: uint32) {.
     importc, libprag.}
 
-proc presentWithTime*(self: Window | WindowAccessible; timestamp: int) =
+proc presentWithTime*(self: Window | PlugAccessible | WindowAccessible;
+    timestamp: int) =
   gtk_window_present_with_time(cast[ptr Window00](self.impl), uint32(timestamp))
 
 proc gtk_window_propagate_key_event(self: ptr Window00; event: ptr gdk.EventKey00): gboolean {.
     importc, libprag.}
 
-proc propagateKeyEvent*(self: Window | WindowAccessible; event: gdk.EventKey): bool =
+proc propagateKeyEvent*(self: Window | PlugAccessible | WindowAccessible;
+    event: gdk.EventKey): bool =
   toBool(gtk_window_propagate_key_event(cast[ptr Window00](self.impl), cast[ptr gdk.EventKey00](event.impl)))
 
 proc gtk_window_remove_mnemonic(self: ptr Window00; keyval: uint32; target: ptr Widget00) {.
     importc, libprag.}
 
-proc removeMnemonic*(self: Window | WindowAccessible; keyval: int;
-    target: Widget) =
+proc removeMnemonic*(self: Window | PlugAccessible | WindowAccessible;
+    keyval: int; target: Widget) =
   gtk_window_remove_mnemonic(cast[ptr Window00](self.impl), uint32(keyval), cast[ptr Widget00](target.impl))
 
 proc gtk_window_reshow_with_initial_size(self: ptr Window00) {.
     importc, libprag.}
 
-proc reshowWithInitialSize*(self: Window | WindowAccessible) =
+proc reshowWithInitialSize*(self: Window | PlugAccessible | WindowAccessible) =
   gtk_window_reshow_with_initial_size(cast[ptr Window00](self.impl))
 
 proc gtk_window_resize(self: ptr Window00; width: int32; height: int32) {.
     importc, libprag.}
 
-proc resize*(self: Window | WindowAccessible; width: int; height: int) =
+proc resize*(self: Window | PlugAccessible | WindowAccessible;
+    width: int; height: int) =
   gtk_window_resize(cast[ptr Window00](self.impl), int32(width), int32(height))
 
 proc gtk_window_resize_grip_is_visible(self: ptr Window00): gboolean {.
     importc, libprag.}
 
-proc resizeGripIsVisible*(self: Window | WindowAccessible): bool =
+proc resizeGripIsVisible*(self: Window | PlugAccessible | WindowAccessible): bool =
   toBool(gtk_window_resize_grip_is_visible(cast[ptr Window00](self.impl)))
 
 proc gtk_window_resize_to_geometry(self: ptr Window00; width: int32; height: int32) {.
     importc, libprag.}
 
-proc resizeToGeometry*(self: Window | WindowAccessible; width: int;
-    height: int) =
+proc resizeToGeometry*(self: Window | PlugAccessible | WindowAccessible;
+    width: int; height: int) =
   gtk_window_resize_to_geometry(cast[ptr Window00](self.impl), int32(width), int32(height))
 
 proc gtk_window_set_accept_focus(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setAcceptFocus*(self: Window | WindowAccessible; setting: bool = true) =
+proc setAcceptFocus*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool = true) =
   gtk_window_set_accept_focus(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `acceptFocus=`*(self: Window | WindowAccessible; setting: bool) =
+proc `acceptFocus=`*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool) =
   gtk_window_set_accept_focus(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_attached_to(self: ptr Window00; attachWidget: ptr Widget00) {.
     importc, libprag.}
 
-proc setAttachedTo*(self: Window | WindowAccessible; attachWidget: Widget = nil) =
+proc setAttachedTo*(self: Window | PlugAccessible | WindowAccessible;
+    attachWidget: Widget = nil) =
   gtk_window_set_attached_to(cast[ptr Window00](self.impl), if attachWidget.isNil: nil else: cast[ptr Widget00](attachWidget.impl))
 
-proc `attachedTo=`*(self: Window | WindowAccessible; attachWidget: Widget = nil) =
+proc `attachedTo=`*(self: Window | PlugAccessible | WindowAccessible;
+    attachWidget: Widget = nil) =
   gtk_window_set_attached_to(cast[ptr Window00](self.impl), if attachWidget.isNil: nil else: cast[ptr Widget00](attachWidget.impl))
 
 proc gtk_window_set_decorated(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setDecorated*(self: Window | WindowAccessible; setting: bool = true) =
+proc setDecorated*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool = true) =
   gtk_window_set_decorated(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `decorated=`*(self: Window | WindowAccessible; setting: bool) =
+proc `decorated=`*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool) =
   gtk_window_set_decorated(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_default(self: ptr Window00; defaultWidget: ptr Widget00) {.
     importc, libprag.}
 
-proc setDefault*(self: Window | WindowAccessible; defaultWidget: Widget = nil) =
+proc setDefault*(self: Window | PlugAccessible | WindowAccessible;
+    defaultWidget: Widget = nil) =
   gtk_window_set_default(cast[ptr Window00](self.impl), if defaultWidget.isNil: nil else: cast[ptr Widget00](defaultWidget.impl))
 
-proc `default=`*(self: Window | WindowAccessible; defaultWidget: Widget = nil) =
+proc `default=`*(self: Window | PlugAccessible | WindowAccessible;
+    defaultWidget: Widget = nil) =
   gtk_window_set_default(cast[ptr Window00](self.impl), if defaultWidget.isNil: nil else: cast[ptr Widget00](defaultWidget.impl))
 
 proc gtk_window_set_default_geometry(self: ptr Window00; width: int32; height: int32) {.
     importc, libprag.}
 
-proc setDefaultGeometry*(self: Window | WindowAccessible; width: int;
-    height: int) =
+proc setDefaultGeometry*(self: Window | PlugAccessible | WindowAccessible;
+    width: int; height: int) =
   gtk_window_set_default_geometry(cast[ptr Window00](self.impl), int32(width), int32(height))
 
 proc gtk_window_set_default_size(self: ptr Window00; width: int32; height: int32) {.
     importc, libprag.}
 
-proc setDefaultSize*(self: Window | WindowAccessible; width: int;
-    height: int) =
+proc setDefaultSize*(self: Window | PlugAccessible | WindowAccessible;
+    width: int; height: int) =
   gtk_window_set_default_size(cast[ptr Window00](self.impl), int32(width), int32(height))
 
 proc `defaultSize=`*(self: Window; dim: tuple[width: int; height: int]) =
@@ -4390,110 +4340,128 @@ proc `defaultSize=`*(self: Window; dim: tuple[width: int; height: int]) =
 proc gtk_window_set_deletable(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setDeletable*(self: Window | WindowAccessible; setting: bool = true) =
+proc setDeletable*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool = true) =
   gtk_window_set_deletable(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `deletable=`*(self: Window | WindowAccessible; setting: bool) =
+proc `deletable=`*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool) =
   gtk_window_set_deletable(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_destroy_with_parent(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setDestroyWithParent*(self: Window | WindowAccessible;
+proc setDestroyWithParent*(self: Window | PlugAccessible | WindowAccessible;
     setting: bool = true) =
   gtk_window_set_destroy_with_parent(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `destroyWithParent=`*(self: Window | WindowAccessible;
+proc `destroyWithParent=`*(self: Window | PlugAccessible | WindowAccessible;
     setting: bool) =
   gtk_window_set_destroy_with_parent(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_focus(self: ptr Window00; focus: ptr Widget00) {.
     importc, libprag.}
 
-proc setFocus*(self: Window | WindowAccessible; focus: Widget = nil) =
+proc setFocus*(self: Window | PlugAccessible | WindowAccessible;
+    focus: Widget = nil) =
   gtk_window_set_focus(cast[ptr Window00](self.impl), if focus.isNil: nil else: cast[ptr Widget00](focus.impl))
 
-proc `focus=`*(self: Window | WindowAccessible; focus: Widget = nil) =
+proc `focus=`*(self: Window | PlugAccessible | WindowAccessible;
+    focus: Widget = nil) =
   gtk_window_set_focus(cast[ptr Window00](self.impl), if focus.isNil: nil else: cast[ptr Widget00](focus.impl))
 
 proc gtk_window_set_focus_on_map(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setFocusOnMap*(self: Window | WindowAccessible; setting: bool = true) =
+proc setFocusOnMap*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool = true) =
   gtk_window_set_focus_on_map(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `focusOnMap=`*(self: Window | WindowAccessible; setting: bool) =
+proc `focusOnMap=`*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool) =
   gtk_window_set_focus_on_map(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_focus_visible(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setFocusVisible*(self: Window | WindowAccessible; setting: bool = true) =
+proc setFocusVisible*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool = true) =
   gtk_window_set_focus_visible(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `focusVisible=`*(self: Window | WindowAccessible; setting: bool) =
+proc `focusVisible=`*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool) =
   gtk_window_set_focus_visible(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_geometry_hints(self: ptr Window00; geometryWidget: ptr Widget00;
     geometry: gdk.Geometry; geomMask: gdk.WindowHints) {.
     importc, libprag.}
 
-proc setGeometryHints*(self: Window | WindowAccessible; geometryWidget: Widget = nil;
-    geometry: gdk.Geometry = cast[ptr gdk.Geometry](nil)[]; geomMask: gdk.WindowHints) =
+proc setGeometryHints*(self: Window | PlugAccessible | WindowAccessible;
+    geometryWidget: Widget = nil; geometry: gdk.Geometry = cast[var gdk.Geometry](nil);
+    geomMask: gdk.WindowHints) =
   gtk_window_set_geometry_hints(cast[ptr Window00](self.impl), if geometryWidget.isNil: nil else: cast[ptr Widget00](geometryWidget.impl), geometry, geomMask)
 
 proc gtk_window_set_gravity(self: ptr Window00; gravity: gdk.Gravity) {.
     importc, libprag.}
 
-proc setGravity*(self: Window | WindowAccessible; gravity: gdk.Gravity) =
+proc setGravity*(self: Window | PlugAccessible | WindowAccessible;
+    gravity: gdk.Gravity) =
   gtk_window_set_gravity(cast[ptr Window00](self.impl), gravity)
 
-proc `gravity=`*(self: Window | WindowAccessible; gravity: gdk.Gravity) =
+proc `gravity=`*(self: Window | PlugAccessible | WindowAccessible;
+    gravity: gdk.Gravity) =
   gtk_window_set_gravity(cast[ptr Window00](self.impl), gravity)
 
 proc gtk_window_set_has_resize_grip(self: ptr Window00; value: gboolean) {.
     importc, libprag.}
 
-proc setHasResizeGrip*(self: Window | WindowAccessible; value: bool = true) =
+proc setHasResizeGrip*(self: Window | PlugAccessible | WindowAccessible;
+    value: bool = true) =
   gtk_window_set_has_resize_grip(cast[ptr Window00](self.impl), gboolean(value))
 
-proc `hasResizeGrip=`*(self: Window | WindowAccessible; value: bool) =
+proc `hasResizeGrip=`*(self: Window | PlugAccessible | WindowAccessible;
+    value: bool) =
   gtk_window_set_has_resize_grip(cast[ptr Window00](self.impl), gboolean(value))
 
 proc gtk_window_set_has_user_ref_count(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setHasUserRefCount*(self: Window | WindowAccessible; setting: bool = true) =
+proc setHasUserRefCount*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool = true) =
   gtk_window_set_has_user_ref_count(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `hasUserRefCount=`*(self: Window | WindowAccessible; setting: bool) =
+proc `hasUserRefCount=`*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool) =
   gtk_window_set_has_user_ref_count(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_hide_titlebar_when_maximized(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setHideTitlebarWhenMaximized*(self: Window | WindowAccessible;
+proc setHideTitlebarWhenMaximized*(self: Window | PlugAccessible | WindowAccessible;
     setting: bool = true) =
   gtk_window_set_hide_titlebar_when_maximized(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `hideTitlebarWhenMaximized=`*(self: Window | WindowAccessible;
+proc `hideTitlebarWhenMaximized=`*(self: Window | PlugAccessible | WindowAccessible;
     setting: bool) =
   gtk_window_set_hide_titlebar_when_maximized(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_icon(self: ptr Window00; icon: ptr gdkpixbuf.Pixbuf00) {.
     importc, libprag.}
 
-proc setIcon*(self: Window | WindowAccessible; icon: gdkpixbuf.Pixbuf = nil) =
+proc setIcon*(self: Window | PlugAccessible | WindowAccessible;
+    icon: gdkpixbuf.Pixbuf = nil) =
   gtk_window_set_icon(cast[ptr Window00](self.impl), if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl))
 
-proc `icon=`*(self: Window | WindowAccessible; icon: gdkpixbuf.Pixbuf = nil) =
+proc `icon=`*(self: Window | PlugAccessible | WindowAccessible;
+    icon: gdkpixbuf.Pixbuf = nil) =
   gtk_window_set_icon(cast[ptr Window00](self.impl), if icon.isNil: nil else: cast[ptr gdkpixbuf.Pixbuf00](icon.impl))
 
 proc gtk_window_set_icon_from_file(self: ptr Window00; filename: cstring;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc setIconFromFile*(self: Window | WindowAccessible; filename: cstring): bool =
+proc setIconFromFile*(self: Window | PlugAccessible | WindowAccessible;
+    filename: cstring): bool =
   var gerror: ptr glib.Error
   let resul0 = gtk_window_set_icon_from_file(cast[ptr Window00](self.impl), filename, addr gerror)
   if gerror != nil:
@@ -4502,215 +4470,248 @@ proc setIconFromFile*(self: Window | WindowAccessible; filename: cstring): bool 
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc `iconFromFile=`*(self: Window | WindowAccessible; filename: cstring): bool =
-  var gerror: ptr glib.Error
-  let resul0 = gtk_window_set_icon_from_file(cast[ptr Window00](self.impl), filename, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc gtk_window_set_icon_list(self: ptr Window00; list: ptr pointer) {.
+proc gtk_window_set_icon_list(self: ptr Window00; list: ptr glib.List) {.
     importc, libprag.}
 
-proc setIconList*(self: Window | WindowAccessible; list: ptr pointer) =
-  gtk_window_set_icon_list(cast[ptr Window00](self.impl), list)
+proc setIconList*(self: Window | PlugAccessible | WindowAccessible;
+    list: seq[gdkpixbuf.Pixbuf]) =
+  var tempResGL = seq2GList(list)
+  gtk_window_set_icon_list(cast[ptr Window00](self.impl), tempResGL)
+  g_list_free(tempResGL)
 
-proc `iconList=`*(self: Window | WindowAccessible; list: ptr pointer) =
-  gtk_window_set_icon_list(cast[ptr Window00](self.impl), list)
+proc `iconList=`*(self: Window | PlugAccessible | WindowAccessible;
+    list: seq[gdkpixbuf.Pixbuf]) =
+  var tempResGL = seq2GList(list)
+  gtk_window_set_icon_list(cast[ptr Window00](self.impl), tempResGL)
+  g_list_free(tempResGL)
 
 proc gtk_window_set_icon_name(self: ptr Window00; name: cstring) {.
     importc, libprag.}
 
-proc setIconName*(self: Window | WindowAccessible; name: cstring = "") =
+proc setIconName*(self: Window | PlugAccessible | WindowAccessible;
+    name: cstring = "") =
   gtk_window_set_icon_name(cast[ptr Window00](self.impl), safeStringToCString(name))
 
-proc `iconName=`*(self: Window | WindowAccessible; name: cstring = "") =
+proc `iconName=`*(self: Window | PlugAccessible | WindowAccessible;
+    name: cstring = "") =
   gtk_window_set_icon_name(cast[ptr Window00](self.impl), safeStringToCString(name))
 
 proc gtk_window_set_keep_above(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setKeepAbove*(self: Window | WindowAccessible; setting: bool = true) =
+proc setKeepAbove*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool = true) =
   gtk_window_set_keep_above(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `keepAbove=`*(self: Window | WindowAccessible; setting: bool) =
+proc `keepAbove=`*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool) =
   gtk_window_set_keep_above(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_keep_below(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setKeepBelow*(self: Window | WindowAccessible; setting: bool = true) =
+proc setKeepBelow*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool = true) =
   gtk_window_set_keep_below(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `keepBelow=`*(self: Window | WindowAccessible; setting: bool) =
+proc `keepBelow=`*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool) =
   gtk_window_set_keep_below(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_mnemonic_modifier(self: ptr Window00; modifier: gdk.ModifierType) {.
     importc, libprag.}
 
-proc setMnemonicModifier*(self: Window | WindowAccessible; modifier: gdk.ModifierType) =
+proc setMnemonicModifier*(self: Window | PlugAccessible | WindowAccessible;
+    modifier: gdk.ModifierType) =
   gtk_window_set_mnemonic_modifier(cast[ptr Window00](self.impl), modifier)
 
-proc `mnemonicModifier=`*(self: Window | WindowAccessible; modifier: gdk.ModifierType) =
+proc `mnemonicModifier=`*(self: Window | PlugAccessible | WindowAccessible;
+    modifier: gdk.ModifierType) =
   gtk_window_set_mnemonic_modifier(cast[ptr Window00](self.impl), modifier)
 
 proc gtk_window_set_mnemonics_visible(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setMnemonicsVisible*(self: Window | WindowAccessible; setting: bool = true) =
+proc setMnemonicsVisible*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool = true) =
   gtk_window_set_mnemonics_visible(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `mnemonicsVisible=`*(self: Window | WindowAccessible; setting: bool) =
+proc `mnemonicsVisible=`*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool) =
   gtk_window_set_mnemonics_visible(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_modal(self: ptr Window00; modal: gboolean) {.
     importc, libprag.}
 
-proc setModal*(self: Window | WindowAccessible; modal: bool = true) =
+proc setModal*(self: Window | PlugAccessible | WindowAccessible;
+    modal: bool = true) =
   gtk_window_set_modal(cast[ptr Window00](self.impl), gboolean(modal))
 
-proc `modal=`*(self: Window | WindowAccessible; modal: bool) =
+proc `modal=`*(self: Window | PlugAccessible | WindowAccessible;
+    modal: bool) =
   gtk_window_set_modal(cast[ptr Window00](self.impl), gboolean(modal))
 
 proc gtk_window_set_opacity(self: ptr Window00; opacity: cdouble) {.
     importc, libprag.}
 
-proc setOpacity*(self: Window | WindowAccessible; opacity: cdouble) =
+proc setOpacity*(self: Window | PlugAccessible | WindowAccessible;
+    opacity: cdouble) =
   gtk_window_set_opacity(cast[ptr Window00](self.impl), opacity)
 
-proc `opacity=`*(self: Window | WindowAccessible; opacity: cdouble) =
+proc `opacity=`*(self: Window | PlugAccessible | WindowAccessible;
+    opacity: cdouble) =
   gtk_window_set_opacity(cast[ptr Window00](self.impl), opacity)
 
 proc gtk_window_set_resizable(self: ptr Window00; resizable: gboolean) {.
     importc, libprag.}
 
-proc setResizable*(self: Window | WindowAccessible; resizable: bool = true) =
+proc setResizable*(self: Window | PlugAccessible | WindowAccessible;
+    resizable: bool = true) =
   gtk_window_set_resizable(cast[ptr Window00](self.impl), gboolean(resizable))
 
-proc `resizable=`*(self: Window | WindowAccessible; resizable: bool) =
+proc `resizable=`*(self: Window | PlugAccessible | WindowAccessible;
+    resizable: bool) =
   gtk_window_set_resizable(cast[ptr Window00](self.impl), gboolean(resizable))
 
 proc gtk_window_set_role(self: ptr Window00; role: cstring) {.
     importc, libprag.}
 
-proc setRole*(self: Window | WindowAccessible; role: cstring) =
+proc setRole*(self: Window | PlugAccessible | WindowAccessible;
+    role: cstring) =
   gtk_window_set_role(cast[ptr Window00](self.impl), role)
 
-proc `role=`*(self: Window | WindowAccessible; role: cstring) =
+proc `role=`*(self: Window | PlugAccessible | WindowAccessible;
+    role: cstring) =
   gtk_window_set_role(cast[ptr Window00](self.impl), role)
 
 proc gtk_window_set_screen(self: ptr Window00; screen: ptr gdk.Screen00) {.
     importc, libprag.}
 
-proc setScreen*(self: Window | WindowAccessible; screen: gdk.Screen) =
+proc setScreen*(self: Window | PlugAccessible | WindowAccessible;
+    screen: gdk.Screen) =
   gtk_window_set_screen(cast[ptr Window00](self.impl), cast[ptr gdk.Screen00](screen.impl))
 
-proc `screen=`*(self: Window | WindowAccessible; screen: gdk.Screen) =
+proc `screen=`*(self: Window | PlugAccessible | WindowAccessible;
+    screen: gdk.Screen) =
   gtk_window_set_screen(cast[ptr Window00](self.impl), cast[ptr gdk.Screen00](screen.impl))
 
 proc gtk_window_set_skip_pager_hint(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setSkipPagerHint*(self: Window | WindowAccessible; setting: bool = true) =
+proc setSkipPagerHint*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool = true) =
   gtk_window_set_skip_pager_hint(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `skipPagerHint=`*(self: Window | WindowAccessible; setting: bool) =
+proc `skipPagerHint=`*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool) =
   gtk_window_set_skip_pager_hint(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_skip_taskbar_hint(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setSkipTaskbarHint*(self: Window | WindowAccessible; setting: bool = true) =
+proc setSkipTaskbarHint*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool = true) =
   gtk_window_set_skip_taskbar_hint(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `skipTaskbarHint=`*(self: Window | WindowAccessible; setting: bool) =
+proc `skipTaskbarHint=`*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool) =
   gtk_window_set_skip_taskbar_hint(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_startup_id(self: ptr Window00; startupId: cstring) {.
     importc, libprag.}
 
-proc setStartupId*(self: Window | WindowAccessible; startupId: cstring) =
+proc setStartupId*(self: Window | PlugAccessible | WindowAccessible;
+    startupId: cstring) =
   gtk_window_set_startup_id(cast[ptr Window00](self.impl), startupId)
 
-proc `startupId=`*(self: Window | WindowAccessible; startupId: cstring) =
+proc `startupId=`*(self: Window | PlugAccessible | WindowAccessible;
+    startupId: cstring) =
   gtk_window_set_startup_id(cast[ptr Window00](self.impl), startupId)
 
 proc gtk_window_set_title(self: ptr Window00; title: cstring) {.
     importc, libprag.}
 
-proc setTitle*(self: Window | WindowAccessible; title: cstring) =
+proc setTitle*(self: Window | PlugAccessible | WindowAccessible;
+    title: cstring) =
   gtk_window_set_title(cast[ptr Window00](self.impl), title)
 
-proc `title=`*(self: Window | WindowAccessible; title: cstring) =
+proc `title=`*(self: Window | PlugAccessible | WindowAccessible;
+    title: cstring) =
   gtk_window_set_title(cast[ptr Window00](self.impl), title)
 
 proc gtk_window_set_titlebar(self: ptr Window00; titlebar: ptr Widget00) {.
     importc, libprag.}
 
-proc setTitlebar*(self: Window | WindowAccessible; titlebar: Widget = nil) =
+proc setTitlebar*(self: Window | PlugAccessible | WindowAccessible;
+    titlebar: Widget = nil) =
   gtk_window_set_titlebar(cast[ptr Window00](self.impl), if titlebar.isNil: nil else: cast[ptr Widget00](titlebar.impl))
 
-proc `titlebar=`*(self: Window | WindowAccessible; titlebar: Widget = nil) =
+proc `titlebar=`*(self: Window | PlugAccessible | WindowAccessible;
+    titlebar: Widget = nil) =
   gtk_window_set_titlebar(cast[ptr Window00](self.impl), if titlebar.isNil: nil else: cast[ptr Widget00](titlebar.impl))
 
 proc gtk_window_set_transient_for(self: ptr Window00; parent: ptr Window00) {.
     importc, libprag.}
 
-proc setTransientFor*(self: Window | WindowAccessible; parent: Window = nil) =
+proc setTransientFor*(self: Window | PlugAccessible | WindowAccessible;
+    parent: Window = nil) =
   gtk_window_set_transient_for(cast[ptr Window00](self.impl), if parent.isNil: nil else: cast[ptr Window00](parent.impl))
 
-proc `transientFor=`*(self: Window | WindowAccessible; parent: Window = nil) =
+proc `transientFor=`*(self: Window | PlugAccessible | WindowAccessible;
+    parent: Window = nil) =
   gtk_window_set_transient_for(cast[ptr Window00](self.impl), if parent.isNil: nil else: cast[ptr Window00](parent.impl))
 
 proc gtk_window_set_type_hint(self: ptr Window00; hint: gdk.WindowTypeHint) {.
     importc, libprag.}
 
-proc setTypeHint*(self: Window | WindowAccessible; hint: gdk.WindowTypeHint) =
+proc setTypeHint*(self: Window | PlugAccessible | WindowAccessible;
+    hint: gdk.WindowTypeHint) =
   gtk_window_set_type_hint(cast[ptr Window00](self.impl), hint)
 
-proc `typeHint=`*(self: Window | WindowAccessible; hint: gdk.WindowTypeHint) =
+proc `typeHint=`*(self: Window | PlugAccessible | WindowAccessible;
+    hint: gdk.WindowTypeHint) =
   gtk_window_set_type_hint(cast[ptr Window00](self.impl), hint)
 
 proc gtk_window_set_urgency_hint(self: ptr Window00; setting: gboolean) {.
     importc, libprag.}
 
-proc setUrgencyHint*(self: Window | WindowAccessible; setting: bool = true) =
+proc setUrgencyHint*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool = true) =
   gtk_window_set_urgency_hint(cast[ptr Window00](self.impl), gboolean(setting))
 
-proc `urgencyHint=`*(self: Window | WindowAccessible; setting: bool) =
+proc `urgencyHint=`*(self: Window | PlugAccessible | WindowAccessible;
+    setting: bool) =
   gtk_window_set_urgency_hint(cast[ptr Window00](self.impl), gboolean(setting))
 
 proc gtk_window_set_wmclass(self: ptr Window00; wmclassName: cstring; wmclassClass: cstring) {.
     importc, libprag.}
 
-proc setWmclass*(self: Window | WindowAccessible; wmclassName: cstring;
-    wmclassClass: cstring) =
+proc setWmclass*(self: Window | PlugAccessible | WindowAccessible;
+    wmclassName: cstring; wmclassClass: cstring) =
   gtk_window_set_wmclass(cast[ptr Window00](self.impl), wmclassName, wmclassClass)
 
 proc gtk_window_stick(self: ptr Window00) {.
     importc, libprag.}
 
-proc stick*(self: Window | WindowAccessible) =
+proc stick*(self: Window | PlugAccessible | WindowAccessible) =
   gtk_window_stick(cast[ptr Window00](self.impl))
 
 proc gtk_window_unfullscreen(self: ptr Window00) {.
     importc, libprag.}
 
-proc unfullscreen*(self: Window | WindowAccessible) =
+proc unfullscreen*(self: Window | PlugAccessible | WindowAccessible) =
   gtk_window_unfullscreen(cast[ptr Window00](self.impl))
 
 proc gtk_window_unmaximize(self: ptr Window00) {.
     importc, libprag.}
 
-proc unmaximize*(self: Window | WindowAccessible) =
+proc unmaximize*(self: Window | PlugAccessible | WindowAccessible) =
   gtk_window_unmaximize(cast[ptr Window00](self.impl))
 
 proc gtk_window_unstick(self: ptr Window00) {.
     importc, libprag.}
 
-proc unstick*(self: Window | WindowAccessible) =
+proc unstick*(self: Window | PlugAccessible | WindowAccessible) =
   gtk_window_unstick(cast[ptr Window00](self.impl))
 
 type
@@ -4819,31 +4820,10 @@ proc gtk_dialog_get_response_for_widget(self: ptr Dialog00; widget: ptr Widget00
 proc getResponseForWidget*(self: Dialog; widget: Widget): int =
   int(gtk_dialog_get_response_for_widget(cast[ptr Dialog00](self.impl), cast[ptr Widget00](widget.impl)))
 
-proc responseForWidget*(self: Dialog; widget: Widget): int =
-  int(gtk_dialog_get_response_for_widget(cast[ptr Dialog00](self.impl), cast[ptr Widget00](widget.impl)))
-
 proc gtk_dialog_get_widget_for_response(self: ptr Dialog00; responseId: int32): ptr Widget00 {.
     importc, libprag.}
 
 proc getWidgetForResponse*(self: Dialog; responseId: int): Widget =
-  let gobj = gtk_dialog_get_widget_for_response(cast[ptr Dialog00](self.impl), int32(responseId))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc widgetForResponse*(self: Dialog; responseId: int): Widget =
   let gobj = gtk_dialog_get_widget_for_response(cast[ptr Dialog00](self.impl), int32(responseId))
   if gobj.isNil:
     return nil
@@ -4874,12 +4854,12 @@ proc run*(self: Dialog): int =
   int(gtk_dialog_run(cast[ptr Dialog00](self.impl)))
 
 proc gtk_dialog_set_alternative_button_order_from_array(self: ptr Dialog00;
-    nParams: int32; newOrder: int32Array) {.
+    nParams: int32; newOrder: ptr int32) {.
     importc, libprag.}
 
 proc setAlternativeButtonOrderFromArray*(self: Dialog; newOrder: seq[int32]) =
   let nParams = int(new_order.len)
-  gtk_dialog_set_alternative_button_order_from_array(cast[ptr Dialog00](self.impl), int32(nParams), unsafeaddr(newOrder[0]))
+  gtk_dialog_set_alternative_button_order_from_array(cast[ptr Dialog00](self.impl), int32(nParams), cast[ptr int32](unsafeaddr(newOrder[0])))
 
 proc gtk_dialog_set_default_response(self: ptr Dialog00; responseId: int32) {.
     importc, libprag.}
@@ -4969,7 +4949,7 @@ proc initAboutDialog*[T](result: var T) {.deprecated.} =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gtk_about_dialog_add_credit_section(self: ptr AboutDialog00; sectionName: cstring;
-    people: cstringArray) {.
+    people: ptr cstring) {.
     importc, libprag.}
 
 proc addCreditSection*(self: AboutDialog; sectionName: cstring;
@@ -4978,7 +4958,7 @@ proc addCreditSection*(self: AboutDialog; sectionName: cstring;
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   gtk_about_dialog_add_credit_section(cast[ptr AboutDialog00](self.impl), sectionName, seq2CstringArray(people, fs469n23))
 
-proc gtk_about_dialog_get_artists(self: ptr AboutDialog00): cstringArray {.
+proc gtk_about_dialog_get_artists(self: ptr AboutDialog00): ptr cstring {.
     importc, libprag.}
 
 proc getArtists*(self: AboutDialog): seq[string] =
@@ -4987,7 +4967,7 @@ proc getArtists*(self: AboutDialog): seq[string] =
 proc artists*(self: AboutDialog): seq[string] =
   cstringArrayToSeq(gtk_about_dialog_get_artists(cast[ptr AboutDialog00](self.impl)))
 
-proc gtk_about_dialog_get_authors(self: ptr AboutDialog00): cstringArray {.
+proc gtk_about_dialog_get_authors(self: ptr AboutDialog00): ptr cstring {.
     importc, libprag.}
 
 proc getAuthors*(self: AboutDialog): seq[string] =
@@ -5014,7 +4994,7 @@ proc getCopyright*(self: AboutDialog): string =
 proc copyright*(self: AboutDialog): string =
   result = $gtk_about_dialog_get_copyright(cast[ptr AboutDialog00](self.impl))
 
-proc gtk_about_dialog_get_documenters(self: ptr AboutDialog00): cstringArray {.
+proc gtk_about_dialog_get_documenters(self: ptr AboutDialog00): ptr cstring {.
     importc, libprag.}
 
 proc getDocumenters*(self: AboutDialog): seq[string] =
@@ -5130,7 +5110,7 @@ proc getWrapLicense*(self: AboutDialog): bool =
 proc wrapLicense*(self: AboutDialog): bool =
   toBool(gtk_about_dialog_get_wrap_license(cast[ptr AboutDialog00](self.impl)))
 
-proc gtk_about_dialog_set_artists(self: ptr AboutDialog00; artists: cstringArray) {.
+proc gtk_about_dialog_set_artists(self: ptr AboutDialog00; artists: ptr cstring) {.
     importc, libprag.}
 
 proc setArtists*(self: AboutDialog; artists: varargs[string, `$`]) =
@@ -5143,7 +5123,7 @@ proc `artists=`*(self: AboutDialog; artists: varargs[string, `$`]) =
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   gtk_about_dialog_set_artists(cast[ptr AboutDialog00](self.impl), seq2CstringArray(artists, fs469n23))
 
-proc gtk_about_dialog_set_authors(self: ptr AboutDialog00; authors: cstringArray) {.
+proc gtk_about_dialog_set_authors(self: ptr AboutDialog00; authors: ptr cstring) {.
     importc, libprag.}
 
 proc setAuthors*(self: AboutDialog; authors: varargs[string, `$`]) =
@@ -5174,7 +5154,7 @@ proc setCopyright*(self: AboutDialog; copyright: cstring = "") =
 proc `copyright=`*(self: AboutDialog; copyright: cstring = "") =
   gtk_about_dialog_set_copyright(cast[ptr AboutDialog00](self.impl), safeStringToCString(copyright))
 
-proc gtk_about_dialog_set_documenters(self: ptr AboutDialog00; documenters: cstringArray) {.
+proc gtk_about_dialog_set_documenters(self: ptr AboutDialog00; documenters: ptr cstring) {.
     importc, libprag.}
 
 proc setDocumenters*(self: AboutDialog; documenters: varargs[string, `$`]) =
@@ -5410,24 +5390,6 @@ proc getCurrentDeviceGrab*(self: WindowGroup; device: gdk.Device): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc currentDeviceGrab*(self: WindowGroup; device: gdk.Device): Widget =
-  let gobj = gtk_window_group_get_current_device_grab(cast[ptr WindowGroup00](self.impl), cast[ptr gdk.Device00](device.impl))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_window_group_get_current_grab(self: ptr WindowGroup00): ptr Widget00 {.
     importc, libprag.}
 
@@ -5463,11 +5425,13 @@ proc currentGrab*(self: WindowGroup): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_window_group_list_windows(self: ptr WindowGroup00): ptr pointer {.
+proc gtk_window_group_list_windows(self: ptr WindowGroup00): ptr glib.List {.
     importc, libprag.}
 
-proc listWindows*(self: WindowGroup): ptr pointer =
-  gtk_window_group_list_windows(cast[ptr WindowGroup00](self.impl))
+proc listWindows*(self: WindowGroup): seq[Window] =
+  let resul0 = gtk_window_group_list_windows(cast[ptr WindowGroup00](self.impl))
+  result = glistObjects2seq(Window, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_window_group_remove_window(self: ptr WindowGroup00; window: ptr Window00) {.
     importc, libprag.}
@@ -5478,7 +5442,7 @@ proc removeWindow*(self: WindowGroup; window: Window) =
 proc gtk_window_get_group(self: ptr Window00): ptr WindowGroup00 {.
     importc, libprag.}
 
-proc getGroup*(self: Window | WindowAccessible): WindowGroup =
+proc getGroup*(self: Window | PlugAccessible | WindowAccessible): WindowGroup =
   let gobj = gtk_window_get_group(cast[ptr Window00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -5494,7 +5458,7 @@ proc getGroup*(self: Window | WindowAccessible): WindowGroup =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc group*(self: Window | WindowAccessible): WindowGroup =
+proc group*(self: Window | PlugAccessible | WindowAccessible): WindowGroup =
   let gobj = gtk_window_get_group(cast[ptr Window00](self.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -5574,10 +5538,10 @@ proc initWindow*[T](result: var T; `type`: WindowType = WindowType.toplevel) {.d
 proc gtk_window_get_window_type(self: ptr Window00): WindowType {.
     importc, libprag.}
 
-proc getWindowType*(self: Window | WindowAccessible): WindowType =
+proc getWindowType*(self: Window | PlugAccessible | WindowAccessible): WindowType =
   gtk_window_get_window_type(cast[ptr Window00](self.impl))
 
-proc windowType*(self: Window | WindowAccessible): WindowType =
+proc windowType*(self: Window | PlugAccessible | WindowAccessible): WindowType =
   gtk_window_get_window_type(cast[ptr Window00](self.impl))
 
 type
@@ -5674,7 +5638,7 @@ proc gtk_application_add_window(self: ptr Application00; window: ptr Window00) {
 proc addWindow*(self: Application; window: Window) =
   gtk_application_add_window(cast[ptr Application00](self.impl), cast[ptr Window00](window.impl))
 
-proc gtk_application_get_accels_for_action(self: ptr Application00; detailedActionName: cstring): cstringArray {.
+proc gtk_application_get_accels_for_action(self: ptr Application00; detailedActionName: cstring): ptr cstring {.
     importc, libprag.}
 
 proc getAccelsForAction*(self: Application; detailedActionName: cstring): seq[string] =
@@ -5682,20 +5646,10 @@ proc getAccelsForAction*(self: Application; detailedActionName: cstring): seq[st
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
-proc accelsForAction*(self: Application; detailedActionName: cstring): seq[string] =
-  let resul0 = gtk_application_get_accels_for_action(cast[ptr Application00](self.impl), detailedActionName)
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc gtk_application_get_actions_for_accel(self: ptr Application00; accel: cstring): cstringArray {.
+proc gtk_application_get_actions_for_accel(self: ptr Application00; accel: cstring): ptr cstring {.
     importc, libprag.}
 
 proc getActionsForAccel*(self: Application; accel: cstring): seq[string] =
-  let resul0 = gtk_application_get_actions_for_accel(cast[ptr Application00](self.impl), accel)
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc actionsForAccel*(self: Application; accel: cstring): seq[string] =
   let resul0 = gtk_application_get_actions_for_accel(cast[ptr Application00](self.impl), accel)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
@@ -5797,22 +5751,6 @@ proc getMenuById*(self: Application; id: cstring): gio.Menu =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc menuById*(self: Application; id: cstring): gio.Menu =
-  let gobj = gtk_application_get_menu_by_id(cast[ptr Application00](self.impl), id)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_application_get_menubar(self: ptr Application00): ptr gio.MenuModel00 {.
     importc, libprag.}
 
@@ -5869,34 +5807,16 @@ proc getWindowById*(self: Application; id: int): Window =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc windowById*(self: Application; id: int): Window =
-  let gobj = gtk_application_get_window_by_id(cast[ptr Application00](self.impl), uint32(id))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_application_get_windows(self: ptr Application00): ptr pointer {.
+proc gtk_application_get_windows(self: ptr Application00): ptr glib.List {.
     importc, libprag.}
 
-proc getWindows*(self: Application): ptr pointer =
-  gtk_application_get_windows(cast[ptr Application00](self.impl))
+proc getWindows*(self: Application): seq[Window] =
+  result = glistObjects2seq(Window, gtk_application_get_windows(cast[ptr Application00](self.impl)), false)
 
-proc windows*(self: Application): ptr pointer =
-  gtk_application_get_windows(cast[ptr Application00](self.impl))
+proc windows*(self: Application): seq[Window] =
+  result = glistObjects2seq(Window, gtk_application_get_windows(cast[ptr Application00](self.impl)), false)
 
-proc gtk_application_list_action_descriptions(self: ptr Application00): cstringArray {.
+proc gtk_application_list_action_descriptions(self: ptr Application00): ptr cstring {.
     importc, libprag.}
 
 proc listActionDescriptions*(self: Application): seq[string] =
@@ -5925,7 +5845,7 @@ proc removeWindow*(self: Application; window: Window) =
   gtk_application_remove_window(cast[ptr Application00](self.impl), cast[ptr Window00](window.impl))
 
 proc gtk_application_set_accels_for_action(self: ptr Application00; detailedActionName: cstring;
-    accels: cstringArray) {.
+    accels: ptr cstring) {.
     importc, libprag.}
 
 proc setAccelsForAction*(self: Application; detailedActionName: cstring;
@@ -5961,7 +5881,7 @@ proc uninhibit*(self: Application; cookie: int) =
 proc gtk_window_get_application(self: ptr Window00): ptr Application00 {.
     importc, libprag.}
 
-proc getApplication*(self: Window | WindowAccessible): Application =
+proc getApplication*(self: Window | PlugAccessible | WindowAccessible): Application =
   let gobj = gtk_window_get_application(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -5979,7 +5899,7 @@ proc getApplication*(self: Window | WindowAccessible): Application =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc application*(self: Window | WindowAccessible): Application =
+proc application*(self: Window | PlugAccessible | WindowAccessible): Application =
   let gobj = gtk_window_get_application(cast[ptr Window00](self.impl))
   if gobj.isNil:
     return nil
@@ -6000,10 +5920,12 @@ proc application*(self: Window | WindowAccessible): Application =
 proc gtk_window_set_application(self: ptr Window00; application: ptr Application00) {.
     importc, libprag.}
 
-proc setApplication*(self: Window | WindowAccessible; application: Application = nil) =
+proc setApplication*(self: Window | PlugAccessible | WindowAccessible;
+    application: Application = nil) =
   gtk_window_set_application(cast[ptr Window00](self.impl), if application.isNil: nil else: cast[ptr Application00](application.impl))
 
-proc `application=`*(self: Window | WindowAccessible; application: Application = nil) =
+proc `application=`*(self: Window | PlugAccessible | WindowAccessible;
+    application: Application = nil) =
   gtk_window_set_application(cast[ptr Window00](self.impl), if application.isNil: nil else: cast[ptr Application00](application.impl))
 
 type
@@ -6040,10 +5962,12 @@ type
 proc gtk_window_set_position(self: ptr Window00; position: WindowPosition) {.
     importc, libprag.}
 
-proc setPosition*(self: Window | WindowAccessible; position: WindowPosition) =
+proc setPosition*(self: Window | PlugAccessible | WindowAccessible;
+    position: WindowPosition) =
   gtk_window_set_position(cast[ptr Window00](self.impl), position)
 
-proc `position=`*(self: Window | WindowAccessible; position: WindowPosition) =
+proc `position=`*(self: Window | PlugAccessible | WindowAccessible;
+    position: WindowPosition) =
   gtk_window_set_position(cast[ptr Window00](self.impl), position)
 
 type
@@ -6272,13 +6196,16 @@ proc gtk_box_query_child_packing(self: ptr Box00; child: ptr Widget00; expand: v
 
 proc queryChildPacking*(self: Box; child: Widget; expand: var bool;
     fill: var bool; padding: var int; packType: var PackType) =
-  var fill_00 = gboolean(fill)
-  var padding_00 = uint32(padding)
-  var expand_00 = gboolean(expand)
+  var fill_00: gboolean
+  var padding_00: uint32
+  var expand_00: gboolean
   gtk_box_query_child_packing(cast[ptr Box00](self.impl), cast[ptr Widget00](child.impl), expand_00, fill_00, padding_00, packType)
-  fill = toBool(fill_00)
-  padding = int(padding_00)
-  expand = toBool(expand_00)
+  if fill.addr != nil:
+    fill = toBool(fill_00)
+  if padding.addr != nil:
+    padding = int(padding_00)
+  if expand.addr != nil:
+    expand = toBool(expand_00)
 
 proc gtk_box_set_child_packing(self: ptr Box00; child: ptr Widget00; expand: gboolean;
     fill: gboolean; padding: uint32; packType: PackType) {.
@@ -6610,6 +6537,12 @@ when defined(gcDestructors):
       boxedFree(gtk_icon_set_get_type(), cast[ptr IconSet00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var IconSet) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkIconSet)
+
 proc gtk_icon_set_unref(self: ptr IconSet00) {.
     importc, libprag.}
 
@@ -6715,6 +6648,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(gtk_icon_source_get_type(), cast[ptr IconSource00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var IconSource) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkIconSource)
 
 proc gtk_icon_source_free(self: ptr IconSource00) {.
     importc, libprag.}
@@ -6980,7 +6919,7 @@ proc computeExpand*(self: Widget; orientation: Orientation): bool =
 proc gtk_box_new(orientation: Orientation; spacing: int32): ptr Box00 {.
     importc, libprag.}
 
-proc newBox*(orientation: Orientation; spacing: int): Box =
+proc newBox*(orientation: Orientation; spacing: int = 0): Box =
   let gobj = gtk_box_new(orientation, int32(spacing))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -6996,7 +6935,7 @@ proc newBox*(orientation: Orientation; spacing: int): Box =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newBox*(tdesc: typedesc; orientation: Orientation; spacing: int): tdesc =
+proc newBox*(tdesc: typedesc; orientation: Orientation; spacing: int = 0): tdesc =
   assert(result is Box)
   let gobj = gtk_box_new(orientation, int32(spacing))
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -7013,7 +6952,7 @@ proc newBox*(tdesc: typedesc; orientation: Orientation; spacing: int): tdesc =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initBox*[T](result: var T; orientation: Orientation; spacing: int) {.deprecated.} =
+proc initBox*[T](result: var T; orientation: Orientation; spacing: int = 0) {.deprecated.} =
   assert(result is Box)
   let gobj = gtk_box_new(orientation, int32(spacing))
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -7058,18 +6997,24 @@ when defined(gcDestructors):
       boxedFree(gtk_target_entry_get_type(), cast[ptr TargetEntry00](self.impl))
       self.impl = nil
 
-proc seq2TargetEntryArray(s: openarray[TargetEntry]; a: var cstringArray):  TargetEntry00Array =
+proc newWithFinalizer*(x: var TargetEntry) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkTargetEntry)
+
+proc seq2TargetEntryArray(s: openarray[TargetEntry]; a: var cstringArray):  ptr TargetEntry00 =
   assert s.high < 256
   let x = cast[ptr UncheckedArray[ptr TargetEntry00]](a)
   for i, o in s:
     x[i] = o.impl
-  return x
+  return cast[ptr TargetEntry00](x)
 
 proc newTargetEntry*(target: cstring; flags: int; info: int): TargetEntry
 
-proc priv_target_table_free(targets: TargetEntry00Array; nTargets: int32) {.importc: "gtk_target_table_free", libprag.}
+proc priv_target_table_free(targets: ptr TargetEntry00; nTargets: int32) {.importc: "gtk_target_table_free", libprag.}
 
-proc targetEntryArrayToSeq(s: TargetEntry00Array; n: int):  seq[TargetEntry] =
+proc targetEntryArrayToSeq(s: ptr TargetEntry00; n: int):  seq[TargetEntry] =
   let a = cast[ptr UncheckedArray[ptr TargetEntry00]](s)
   for i in 0 ..< n:
     result.add(newTargetEntry(a[i].target,  a[i].flags.int, a[i].info.int))
@@ -7111,7 +7056,7 @@ proc initTargetEntry*[T](result: var T; target: cstring; flags: int; info: int) 
   fnew(result, gBoxedFreeGtkTargetEntry)
   result.impl = gtk_target_entry_new(target, uint32(flags), uint32(info))
 
-proc gtk_drag_dest_set(self: ptr Widget00; flags: DestDefaults; targets: TargetEntry00Array;
+proc gtk_drag_dest_set(self: ptr Widget00; flags: DestDefaults; targets: ptr TargetEntry00;
     nTargets: int32; actions: gdk.DragAction) {.
     importc, libprag.}
 
@@ -7123,7 +7068,7 @@ proc dragDestSet*(self: Widget; flags: DestDefaults; targets: seq[TargetEntry];
   gtk_drag_dest_set(cast[ptr Widget00](self.impl), flags, seq2TargetEntryArray(targets, fs469n23), int32(nTargets), actions)
 
 proc gtk_drag_source_set(self: ptr Widget00; startButtonMask: gdk.ModifierType;
-    targets: TargetEntry00Array; nTargets: int32; actions: gdk.DragAction) {.
+    targets: ptr TargetEntry00; nTargets: int32; actions: gdk.DragAction) {.
     importc, libprag.}
 
 proc dragSourceSet*(self: Widget; startButtonMask: gdk.ModifierType;
@@ -7151,6 +7096,12 @@ when defined(gcDestructors):
       boxedFree(gtk_target_list_get_type(), cast[ptr TargetList00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var TargetList) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkTargetList)
+
 proc gtk_target_list_unref(self: ptr TargetList00) {.
     importc, libprag.}
 
@@ -7161,13 +7112,13 @@ proc finalizerunref*(self: TargetList) =
   if not self.ignoreFinalizer:
     gtk_target_list_unref(self.impl)
 
-proc gtk_target_list_add(self: ptr TargetList00; target: ptr gdk.Atom00;
-    flags: uint32; info: uint32) {.
+proc gtk_target_list_add(self: ptr TargetList00; target: gdk.Atom; flags: uint32;
+    info: uint32) {.
     importc, libprag.}
 
 proc add*(self: TargetList; target: gdk.Atom; flags: int;
     info: int) =
-  gtk_target_list_add(cast[ptr TargetList00](self.impl), cast[ptr gdk.Atom00](target.impl), uint32(flags), uint32(info))
+  gtk_target_list_add(cast[ptr TargetList00](self.impl), target, uint32(flags), uint32(info))
 
 proc gtk_target_list_add_image_targets(self: ptr TargetList00; info: uint32;
     writable: gboolean) {.
@@ -7176,7 +7127,7 @@ proc gtk_target_list_add_image_targets(self: ptr TargetList00; info: uint32;
 proc addImageTargets*(self: TargetList; info: int; writable: bool) =
   gtk_target_list_add_image_targets(cast[ptr TargetList00](self.impl), uint32(info), gboolean(writable))
 
-proc gtk_target_list_add_table(self: ptr TargetList00; targets: TargetEntry00Array;
+proc gtk_target_list_add_table(self: ptr TargetList00; targets: ptr TargetEntry00;
     ntargets: uint32) {.
     importc, libprag.}
 
@@ -7198,14 +7149,14 @@ proc gtk_target_list_add_uri_targets(self: ptr TargetList00; info: uint32) {.
 proc addUriTargets*(self: TargetList; info: int) =
   gtk_target_list_add_uri_targets(cast[ptr TargetList00](self.impl), uint32(info))
 
-proc gtk_target_list_find(self: ptr TargetList00; target: ptr gdk.Atom00;
-    info: var uint32): gboolean {.
+proc gtk_target_list_find(self: ptr TargetList00; target: gdk.Atom; info: var uint32): gboolean {.
     importc, libprag.}
 
-proc findTargetList*(self: TargetList; target: gdk.Atom; info: var int): bool =
-  var info_00 = uint32(info)
-  result = toBool(gtk_target_list_find(cast[ptr TargetList00](self.impl), cast[ptr gdk.Atom00](target.impl), info_00))
-  info = int(info_00)
+proc findTargetList*(self: TargetList; target: gdk.Atom; info: var int = cast[var int](nil)): bool =
+  var info_00: uint32
+  result = toBool(gtk_target_list_find(cast[ptr TargetList00](self.impl), target, info_00))
+  if info.addr != nil:
+    info = int(info_00)
 
 proc gtk_target_list_ref(self: ptr TargetList00): ptr TargetList00 {.
     importc, libprag.}
@@ -7214,13 +7165,13 @@ proc `ref`*(self: TargetList): TargetList =
   fnew(result, gBoxedFreeGtkTargetList)
   result.impl = gtk_target_list_ref(cast[ptr TargetList00](self.impl))
 
-proc gtk_target_list_remove(self: ptr TargetList00; target: ptr gdk.Atom00) {.
+proc gtk_target_list_remove(self: ptr TargetList00; target: gdk.Atom) {.
     importc, libprag.}
 
 proc remove*(self: TargetList; target: gdk.Atom) =
-  gtk_target_list_remove(cast[ptr TargetList00](self.impl), cast[ptr gdk.Atom00](target.impl))
+  gtk_target_list_remove(cast[ptr TargetList00](self.impl), target)
 
-proc gtk_target_list_new(targets: TargetEntry00Array; ntargets: uint32): ptr TargetList00 {.
+proc gtk_target_list_new(targets: ptr TargetEntry00; ntargets: uint32): ptr TargetList00 {.
     importc, libprag.}
 
 proc newTargetList*(targets: seq[TargetEntry]): TargetList =
@@ -7290,13 +7241,11 @@ proc dragBeginWithCoordinates*(self: Widget; targets: TargetList; actions: gdk.D
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gtk_drag_dest_find_target(self: ptr Widget00; context: ptr gdk.DragContext00;
-    targetList: ptr TargetList00): ptr gdk.Atom00 {.
+    targetList: ptr TargetList00): ptr gdk.Atom {.
     importc, libprag.}
 
-proc dragDestFindTarget*(self: Widget; context: gdk.DragContext; targetList: TargetList = nil): gdk.Atom =
-  new(result)
-  result.impl = gtk_drag_dest_find_target(cast[ptr Widget00](self.impl), cast[ptr gdk.DragContext00](context.impl), if targetList.isNil: nil else: cast[ptr TargetList00](targetList.impl))
-  result.ignoreFinalizer = true
+proc dragDestFindTarget*(self: Widget; context: gdk.DragContext; targetList: TargetList = nil): ptr gdk.Atom =
+  gtk_drag_dest_find_target(cast[ptr Widget00](self.impl), cast[ptr gdk.DragContext00](context.impl), if targetList.isNil: nil else: cast[ptr TargetList00](targetList.impl))
 
 proc gtk_drag_dest_get_target_list(self: ptr Widget00): ptr TargetList00 {.
     importc, libprag.}
@@ -7350,11 +7299,11 @@ when defined(gcDestructors):
 proc scOwnerChange*(self: Clipboard;  p: proc (self: ptr Clipboard00; event: ptr gdk.EventOwnerChange00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "owner-change", cast[GCallback](p), xdata, nil, cf)
 
-proc gtk_clipboard_get(selection: ptr gdk.Atom00): ptr Clipboard00 {.
+proc gtk_clipboard_get(selection: gdk.Atom): ptr Clipboard00 {.
     importc, libprag.}
 
 proc getClipboard*(selection: gdk.Atom): Clipboard =
-  let gobj = gtk_clipboard_get(cast[ptr gdk.Atom00](selection.impl))
+  let gobj = gtk_clipboard_get(selection)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -7370,7 +7319,7 @@ proc getClipboard*(selection: gdk.Atom): Clipboard =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc clipboard*(selection: gdk.Atom): Clipboard =
-  let gobj = gtk_clipboard_get(cast[ptr gdk.Atom00](selection.impl))
+  let gobj = gtk_clipboard_get(selection)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -7420,27 +7369,11 @@ proc defaultClipboard*(display: gdk.Display): Clipboard =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_clipboard_get_for_display(display: ptr gdk.Display00; selection: ptr gdk.Atom00): ptr Clipboard00 {.
+proc gtk_clipboard_get_for_display(display: ptr gdk.Display00; selection: gdk.Atom): ptr Clipboard00 {.
     importc, libprag.}
 
 proc getForDisplay*(display: gdk.Display; selection: gdk.Atom): Clipboard =
-  let gobj = gtk_clipboard_get_for_display(cast[ptr gdk.Display00](display.impl), cast[ptr gdk.Atom00](selection.impl))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc forDisplay*(display: gdk.Display; selection: gdk.Atom): Clipboard =
-  let gobj = gtk_clipboard_get_for_display(cast[ptr gdk.Display00](display.impl), cast[ptr gdk.Atom00](selection.impl))
+  let gobj = gtk_clipboard_get_for_display(cast[ptr gdk.Display00](display.impl), selection)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -7535,7 +7468,7 @@ proc owner*(self: Clipboard): gobject.Object =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_clipboard_set_can_store(self: ptr Clipboard00; targets: TargetEntry00Array;
+proc gtk_clipboard_set_can_store(self: ptr Clipboard00; targets: ptr TargetEntry00;
     nTargets: int32) {.
     importc, libprag.}
 
@@ -7566,11 +7499,11 @@ proc gtk_clipboard_store(self: ptr Clipboard00) {.
 proc store*(self: Clipboard) =
   gtk_clipboard_store(cast[ptr Clipboard00](self.impl))
 
-proc gtk_clipboard_wait_for_contents(self: ptr Clipboard00; target: ptr gdk.Atom00): ptr SelectionData00 {.
+proc gtk_clipboard_wait_for_contents(self: ptr Clipboard00; target: gdk.Atom): ptr SelectionData00 {.
     importc, libprag.}
 
 proc waitForContents*(self: Clipboard; target: gdk.Atom): SelectionData =
-  let impl0 = gtk_clipboard_wait_for_contents(cast[ptr Clipboard00](self.impl), cast[ptr gdk.Atom00](target.impl))
+  let impl0 = gtk_clipboard_wait_for_contents(cast[ptr Clipboard00](self.impl), target)
   if impl0.isNil:
     return nil
   fnew(result, gBoxedFreeGtkSelectionData)
@@ -7598,15 +7531,16 @@ proc waitForImage*(self: Clipboard): gdkpixbuf.Pixbuf =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_clipboard_wait_for_targets(self: ptr Clipboard00; targets: var ptr gdk.Atom00Array;
+proc gtk_clipboard_wait_for_targets(self: ptr Clipboard00; targets: var ptr ptr gdk.Atom;
     nTargets: var int32): gboolean {.
     importc, libprag.}
 
-proc waitForTargets*(self: Clipboard; targets: var ptr gdk.Atom00Array;
+proc waitForTargets*(self: Clipboard; targets: var ptr ptr gdk.Atom;
     nTargets: var int): bool =
-  var nTargets_00 = int32(nTargets)
+  var nTargets_00: int32
   result = toBool(gtk_clipboard_wait_for_targets(cast[ptr Clipboard00](self.impl), targets, nTargets_00))
-  nTargets = int(nTargets_00)
+  if nTargets.addr != nil:
+    nTargets = int(nTargets_00)
 
 proc gtk_clipboard_wait_for_text(self: ptr Clipboard00): cstring {.
     importc, libprag.}
@@ -7618,7 +7552,7 @@ proc waitForText*(self: Clipboard): string =
   result = $resul0
   cogfree(resul0)
 
-proc gtk_clipboard_wait_for_uris(self: ptr Clipboard00): cstringArray {.
+proc gtk_clipboard_wait_for_uris(self: ptr Clipboard00): ptr cstring {.
     importc, libprag.}
 
 proc waitForUris*(self: Clipboard): seq[string] =
@@ -7634,11 +7568,11 @@ proc gtk_clipboard_wait_is_image_available(self: ptr Clipboard00): gboolean {.
 proc waitIsImageAvailable*(self: Clipboard): bool =
   toBool(gtk_clipboard_wait_is_image_available(cast[ptr Clipboard00](self.impl)))
 
-proc gtk_clipboard_wait_is_target_available(self: ptr Clipboard00; target: ptr gdk.Atom00): gboolean {.
+proc gtk_clipboard_wait_is_target_available(self: ptr Clipboard00; target: gdk.Atom): gboolean {.
     importc, libprag.}
 
 proc waitIsTargetAvailable*(self: Clipboard; target: gdk.Atom): bool =
-  toBool(gtk_clipboard_wait_is_target_available(cast[ptr Clipboard00](self.impl), cast[ptr gdk.Atom00](target.impl)))
+  toBool(gtk_clipboard_wait_is_target_available(cast[ptr Clipboard00](self.impl), target))
 
 proc gtk_clipboard_wait_is_text_available(self: ptr Clipboard00): gboolean {.
     importc, libprag.}
@@ -7652,27 +7586,11 @@ proc gtk_clipboard_wait_is_uris_available(self: ptr Clipboard00): gboolean {.
 proc waitIsUrisAvailable*(self: Clipboard): bool =
   toBool(gtk_clipboard_wait_is_uris_available(cast[ptr Clipboard00](self.impl)))
 
-proc gtk_widget_get_clipboard(self: ptr Widget00; selection: ptr gdk.Atom00): ptr Clipboard00 {.
+proc gtk_widget_get_clipboard(self: ptr Widget00; selection: gdk.Atom): ptr Clipboard00 {.
     importc, libprag.}
 
 proc getClipboard*(self: Widget; selection: gdk.Atom): Clipboard =
-  let gobj = gtk_widget_get_clipboard(cast[ptr Widget00](self.impl), cast[ptr gdk.Atom00](selection.impl))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc clipboard*(self: Widget; selection: gdk.Atom): Clipboard =
-  let gobj = gtk_widget_get_clipboard(cast[ptr Widget00](self.impl), cast[ptr gdk.Atom00](selection.impl))
+  let gobj = gtk_widget_get_clipboard(cast[ptr Widget00](self.impl), selection)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -7721,24 +7639,6 @@ proc gtk_settings_get_default(): ptr Settings00 {.
     importc, libprag.}
 
 proc getDefaultSettings*(): Settings =
-  let gobj = gtk_settings_get_default()
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultSettings*(): Settings =
   let gobj = gtk_settings_get_default()
   if gobj.isNil:
     return nil
@@ -7831,17 +7731,16 @@ proc getSettings*(self: Widget): Settings =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 type
-  SettingsValue00* {.pure.} = object
-  SettingsValue* = ref object
-    impl*: ptr SettingsValue00
-    ignoreFinalizer*: bool
+  SettingsValue* {.pure, byRef.} = object
+    origin*: cstring
+    value*: gobject.Value
 
 proc gtk_settings_set_property_value(self: ptr Settings00; name: cstring;
-    svalue: ptr SettingsValue00) {.
+    svalue: SettingsValue) {.
     importc, libprag.}
 
 proc setPropertyValue*(self: Settings; name: cstring; svalue: SettingsValue) =
-  gtk_settings_set_property_value(cast[ptr Settings00](self.impl), name, cast[ptr SettingsValue00](svalue.impl))
+  gtk_settings_set_property_value(cast[ptr Settings00](self.impl), name, svalue)
 
 type
   StyleContext* = ref object of gobject.Object
@@ -7971,11 +7870,6 @@ proc gtk_style_context_get_font(self: ptr StyleContext00; state: StateFlags): pt
     importc, libprag.}
 
 proc getFont*(self: StyleContext; state: StateFlags): pango.FontDescription =
-  fnew(result, gBoxedFreePangoFontDescription)
-  result.impl = gtk_style_context_get_font(cast[ptr StyleContext00](self.impl), state)
-  result.ignoreFinalizer = true
-
-proc font*(self: StyleContext; state: StateFlags): pango.FontDescription =
   fnew(result, gBoxedFreePangoFontDescription)
   result.impl = gtk_style_context_get_font(cast[ptr StyleContext00](self.impl), state)
   result.ignoreFinalizer = true
@@ -8139,17 +8033,19 @@ proc gtk_style_context_invalidate(self: ptr StyleContext00) {.
 proc invalidate*(self: StyleContext) =
   gtk_style_context_invalidate(cast[ptr StyleContext00](self.impl))
 
-proc gtk_style_context_list_classes(self: ptr StyleContext00): ptr pointer {.
+proc gtk_style_context_list_classes(self: ptr StyleContext00): ptr glib.List {.
     importc, libprag.}
 
-proc listClasses*(self: StyleContext): ptr pointer =
-  gtk_style_context_list_classes(cast[ptr StyleContext00](self.impl))
+proc listClasses*(self: StyleContext): seq[cstring] =
+  let resul0 = gtk_style_context_list_classes(cast[ptr StyleContext00](self.impl))
+  g_list_free(resul0)
 
-proc gtk_style_context_list_regions(self: ptr StyleContext00): ptr pointer {.
+proc gtk_style_context_list_regions(self: ptr StyleContext00): ptr glib.List {.
     importc, libprag.}
 
-proc listRegions*(self: StyleContext): ptr pointer =
-  gtk_style_context_list_regions(cast[ptr StyleContext00](self.impl))
+proc listRegions*(self: StyleContext): seq[cstring] =
+  let resul0 = gtk_style_context_list_regions(cast[ptr StyleContext00](self.impl))
+  g_list_free(resul0)
 
 proc gtk_style_context_lookup_color(self: ptr StyleContext00; colorName: cstring;
     color: var gdk.RGBA): gboolean {.
@@ -8425,6 +8321,12 @@ when defined(gcDestructors):
       boxedFree(gtk_css_section_get_type(), cast[ptr CssSection00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var CssSection) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkCssSection)
+
 proc gtk_css_section_unref(self: ptr CssSection00) {.
     importc, libprag.}
 
@@ -8543,14 +8445,6 @@ proc getSection*(self: StyleContext; property: cstring): CssSection =
   result.impl = impl0
   result.ignoreFinalizer = true
 
-proc section*(self: StyleContext; property: cstring): CssSection =
-  let impl0 = gtk_style_context_get_section(cast[ptr StyleContext00](self.impl), property)
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreeGtkCssSection)
-  result.impl = impl0
-  result.ignoreFinalizer = true
-
 type
   CssSectionType* {.size: sizeof(cint), pure.} = enum
     document = 0
@@ -8596,7 +8490,7 @@ proc gtk_style_context_has_region(self: ptr StyleContext00; regionName: cstring;
     importc, libprag.}
 
 proc hasRegion*(self: StyleContext; regionName: cstring;
-    flagsReturn: var RegionFlags): bool =
+    flagsReturn: var RegionFlags = cast[var RegionFlags](nil)): bool =
   toBool(gtk_style_context_has_region(cast[ptr StyleContext00](self.impl), regionName, flagsReturn))
 
 type
@@ -8685,10 +8579,6 @@ proc gtk_style_properties_get_property(self: ptr StyleProperties00; property: cs
     importc, libprag.}
 
 proc getProperty*(self: StyleProperties; property: cstring;
-    state: StateFlags; value: var gobject.Value): bool =
-  toBool(gtk_style_properties_get_property(cast[ptr StyleProperties00](self.impl), property, state, value))
-
-proc property*(self: StyleProperties; property: cstring;
     state: StateFlags; value: var gobject.Value): bool =
   toBool(gtk_style_properties_get_property(cast[ptr StyleProperties00](self.impl), property, state, value))
 
@@ -8809,22 +8699,6 @@ proc getDefaultCssProvider*(): CssProvider =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc defaultCssProvider*(): CssProvider =
-  let gobj = gtk_css_provider_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_css_provider_get_named(name: cstring; variant: cstring): ptr CssProvider00 {.
     importc, libprag.}
 
@@ -8844,30 +8718,14 @@ proc getNamed*(name: cstring; variant: cstring = ""): CssProvider =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc named*(name: cstring; variant: cstring = ""): CssProvider =
-  let gobj = gtk_css_provider_get_named(name, safeStringToCString(variant))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_css_provider_load_from_data(self: ptr CssProvider00; data: uint8Array;
+proc gtk_css_provider_load_from_data(self: ptr CssProvider00; data: ptr uint8;
     length: int64; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc loadFromData*(self: CssProvider; data: seq[uint8] | string): bool =
   let length = int64(data.len)
   var gerror: ptr glib.Error
-  let resul0 = gtk_css_provider_load_from_data(cast[ptr CssProvider00](self.impl), unsafeaddr(data[0]), length, addr gerror)
+  let resul0 = gtk_css_provider_load_from_data(cast[ptr CssProvider00](self.impl), cast[ptr uint8](unsafeaddr(data[0])), length, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -8960,6 +8818,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(gtk_symbolic_color_get_type(), cast[ptr SymbolicColor00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var SymbolicColor) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkSymbolicColor)
 
 proc gtk_symbolic_color_unref(self: ptr SymbolicColor00) {.
     importc, libprag.}
@@ -9467,13 +9331,15 @@ proc setAccelPath*(self: Widget; accelPath: cstring = ""; accelGroup: AccelGroup
 proc gtk_window_add_accel_group(self: ptr Window00; accelGroup: ptr AccelGroup00) {.
     importc, libprag.}
 
-proc addAccelGroup*(self: Window | WindowAccessible; accelGroup: AccelGroup) =
+proc addAccelGroup*(self: Window | PlugAccessible | WindowAccessible;
+    accelGroup: AccelGroup) =
   gtk_window_add_accel_group(cast[ptr Window00](self.impl), cast[ptr AccelGroup00](accelGroup.impl))
 
 proc gtk_window_remove_accel_group(self: ptr Window00; accelGroup: ptr AccelGroup00) {.
     importc, libprag.}
 
-proc removeAccelGroup*(self: Window | WindowAccessible; accelGroup: AccelGroup) =
+proc removeAccelGroup*(self: Window | PlugAccessible | WindowAccessible;
+    accelGroup: AccelGroup) =
   gtk_window_remove_accel_group(cast[ptr Window00](self.impl), cast[ptr AccelGroup00](accelGroup.impl))
 
 type
@@ -9507,17 +9373,18 @@ type
     ignoreFinalizer*: bool
 
 proc gtk_accel_group_query(self: ptr AccelGroup00; accelKey: uint32; accelMods: gdk.ModifierType;
-    nEntries: var uint32): AccelGroupEntry00Array {.
+    nEntries: var uint32): ptr AccelGroupEntry00 {.
     importc, libprag.}
 
 proc query*(self: AccelGroup; accelKey: int; accelMods: gdk.ModifierType;
-    nEntries: var int): AccelGroupEntry00Array =
-  var nEntries_00 = uint32(nEntries)
+    nEntries: var int = cast[var int](nil)): ptr AccelGroupEntry00 =
+  var nEntries_00: uint32
   let resul0 = gtk_accel_group_query(cast[ptr AccelGroup00](self.impl), uint32(accelKey), accelMods, nEntries_00)
   if resul0.isNil:
     return
   result = resul0
-  nEntries = int(nEntries_00)
+  if nEntries.addr != nil:
+    nEntries = int(nEntries_00)
 
 type
   Align* {.size: sizeof(cint), pure.} = enum
@@ -9604,8 +9471,8 @@ proc gtk_widget_get_preferred_size(self: ptr Widget00; minimumSize: var Requisit
     naturalSize: var Requisition) {.
     importc, libprag.}
 
-proc getPreferredSize*(self: Widget; minimumSize: var Requisition;
-    naturalSize: var Requisition) =
+proc getPreferredSize*(self: Widget; minimumSize: var Requisition = cast[var Requisition](nil);
+    naturalSize: var Requisition = cast[var Requisition](nil)) =
   gtk_widget_get_preferred_size(cast[ptr Widget00](self.impl), minimumSize, naturalSize)
 
 proc gtk_widget_get_requisition(self: ptr Widget00; requisition: var Requisition) {.
@@ -9637,6 +9504,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(gtk_widget_path_get_type(), cast[ptr WidgetPath00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var WidgetPath) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkWidgetPath)
 
 proc gtk_widget_path_free(self: ptr WidgetPath00) {.
     importc, libprag.}
@@ -9824,17 +9697,19 @@ proc iterHasRegion*(self: WidgetPath; pos: int; name: cstring;
     flags: var RegionFlags): bool =
   toBool(gtk_widget_path_iter_has_region(cast[ptr WidgetPath00](self.impl), int32(pos), name, flags))
 
-proc gtk_widget_path_iter_list_classes(self: ptr WidgetPath00; pos: int32): ptr pointer {.
+proc gtk_widget_path_iter_list_classes(self: ptr WidgetPath00; pos: int32): ptr glib.SList {.
     importc, libprag.}
 
-proc iterListClasses*(self: WidgetPath; pos: int): ptr pointer =
-  gtk_widget_path_iter_list_classes(cast[ptr WidgetPath00](self.impl), int32(pos))
+proc iterListClasses*(self: WidgetPath; pos: int): seq[cstring] =
+  let resul0 = gtk_widget_path_iter_list_classes(cast[ptr WidgetPath00](self.impl), int32(pos))
+  g_slist_free(resul0)
 
-proc gtk_widget_path_iter_list_regions(self: ptr WidgetPath00; pos: int32): ptr pointer {.
+proc gtk_widget_path_iter_list_regions(self: ptr WidgetPath00; pos: int32): ptr glib.SList {.
     importc, libprag.}
 
-proc iterListRegions*(self: WidgetPath; pos: int): ptr pointer =
-  gtk_widget_path_iter_list_regions(cast[ptr WidgetPath00](self.impl), int32(pos))
+proc iterListRegions*(self: WidgetPath; pos: int): seq[cstring] =
+  let resul0 = gtk_widget_path_iter_list_regions(cast[ptr WidgetPath00](self.impl), int32(pos))
+  g_slist_free(resul0)
 
 proc gtk_widget_path_iter_remove_class(self: ptr WidgetPath00; pos: int32;
     name: cstring) {.
@@ -9933,10 +9808,6 @@ proc getPathForChild*(self: Container; child: Widget): WidgetPath =
   fnew(result, gBoxedFreeGtkWidgetPath)
   result.impl = gtk_container_get_path_for_child(cast[ptr Container00](self.impl), cast[ptr Widget00](child.impl))
 
-proc pathForChild*(self: Container; child: Widget): WidgetPath =
-  fnew(result, gBoxedFreeGtkWidgetPath)
-  result.impl = gtk_container_get_path_for_child(cast[ptr Container00](self.impl), cast[ptr Widget00](child.impl))
-
 proc gtk_style_context_get_path(self: ptr StyleContext00): ptr WidgetPath00 {.
     importc, libprag.}
 
@@ -9982,35 +9853,11 @@ proc getStyle*(self: StyleProvider | StyleProperties | CssProvider | Settings;
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc style*(self: StyleProvider | StyleProperties | CssProvider | Settings;
-    path: WidgetPath): StyleProperties =
-  let gobj = gtk_style_provider_get_style(cast[ptr StyleProvider00](self.impl), cast[ptr WidgetPath00](path.impl))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_style_provider_get_style_property(self: ptr StyleProvider00; path: ptr WidgetPath00;
     state: StateFlags; pspec: ptr gobject.ParamSpec00; value: var gobject.Value): gboolean {.
     importc, libprag.}
 
 proc getStyleProperty*(self: StyleProvider | StyleProperties | CssProvider | Settings;
-    path: WidgetPath; state: StateFlags; pspec: gobject.ParamSpec; value: var gobject.Value): bool =
-  toBool(gtk_style_provider_get_style_property(cast[ptr StyleProvider00](self.impl), cast[ptr WidgetPath00](path.impl), state, cast[ptr gobject.ParamSpec00](pspec.impl), value))
-
-proc styleProperty*(self: StyleProvider | StyleProperties | CssProvider | Settings;
     path: WidgetPath; state: StateFlags; pspec: gobject.ParamSpec; value: var gobject.Value): bool =
   toBool(gtk_style_provider_get_style_property(cast[ptr StyleProvider00](self.impl), cast[ptr WidgetPath00](path.impl), state, cast[ptr gobject.ParamSpec00](pspec.impl), value))
 
@@ -10123,25 +9970,6 @@ proc gtk_style_provider_get_icon_factory(self: ptr StyleProvider00; path: ptr Wi
     importc, libprag.}
 
 proc getIconFactory*(self: StyleProvider | StyleProperties | CssProvider | Settings;
-    path: WidgetPath): IconFactory =
-  let gobj = gtk_style_provider_get_icon_factory(cast[ptr StyleProvider00](self.impl), cast[ptr WidgetPath00](path.impl))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc iconFactory*(self: StyleProvider | StyleProperties | CssProvider | Settings;
     path: WidgetPath): IconFactory =
   let gobj = gtk_style_provider_get_icon_factory(cast[ptr StyleProvider00](self.impl), cast[ptr WidgetPath00](path.impl))
   if gobj.isNil:
@@ -10840,15 +10668,6 @@ proc getLineOffset*(self: TextIter): int =
 proc lineOffset*(self: TextIter): int =
   int(gtk_text_iter_get_line_offset(self))
 
-proc gtk_text_iter_get_marks(self: TextIter): ptr pointer {.
-    importc, libprag.}
-
-proc getMarks*(self: TextIter): ptr pointer =
-  gtk_text_iter_get_marks(self)
-
-proc marks*(self: TextIter): ptr pointer =
-  gtk_text_iter_get_marks(self)
-
 proc gtk_text_iter_get_offset(self: TextIter): int32 {.
     importc, libprag.}
 
@@ -10901,20 +10720,6 @@ proc getSlice*(self: TextIter; `end`: TextIter): string =
   result = $resul0
   cogfree(resul0)
 
-proc slice*(self: TextIter; `end`: TextIter): string =
-  let resul0 = gtk_text_iter_get_slice(self, `end`)
-  result = $resul0
-  cogfree(resul0)
-
-proc gtk_text_iter_get_tags(self: TextIter): ptr pointer {.
-    importc, libprag.}
-
-proc getTags*(self: TextIter): ptr pointer =
-  gtk_text_iter_get_tags(self)
-
-proc tags*(self: TextIter): ptr pointer =
-  gtk_text_iter_get_tags(self)
-
 proc gtk_text_iter_get_text(self: TextIter; `end`: TextIter): cstring {.
     importc, libprag.}
 
@@ -10922,20 +10727,6 @@ proc getText*(self: TextIter; `end`: TextIter): string =
   let resul0 = gtk_text_iter_get_text(self, `end`)
   result = $resul0
   cogfree(resul0)
-
-proc text*(self: TextIter; `end`: TextIter): string =
-  let resul0 = gtk_text_iter_get_text(self, `end`)
-  result = $resul0
-  cogfree(resul0)
-
-proc gtk_text_iter_get_toggled_tags(self: TextIter; toggledOn: gboolean): ptr pointer {.
-    importc, libprag.}
-
-proc getToggledTags*(self: TextIter; toggledOn: bool): ptr pointer =
-  gtk_text_iter_get_toggled_tags(self, gboolean(toggledOn))
-
-proc toggledTags*(self: TextIter; toggledOn: bool): ptr pointer =
-  gtk_text_iter_get_toggled_tags(self, gboolean(toggledOn))
 
 proc gtk_text_iter_get_visible_line_index(self: TextIter): int32 {.
     importc, libprag.}
@@ -10963,20 +10754,10 @@ proc getVisibleSlice*(self: TextIter; `end`: TextIter): string =
   result = $resul0
   cogfree(resul0)
 
-proc visibleSlice*(self: TextIter; `end`: TextIter): string =
-  let resul0 = gtk_text_iter_get_visible_slice(self, `end`)
-  result = $resul0
-  cogfree(resul0)
-
 proc gtk_text_iter_get_visible_text(self: TextIter; `end`: TextIter): cstring {.
     importc, libprag.}
 
 proc getVisibleText*(self: TextIter; `end`: TextIter): string =
-  let resul0 = gtk_text_iter_get_visible_text(self, `end`)
-  result = $resul0
-  cogfree(resul0)
-
-proc visibleText*(self: TextIter; `end`: TextIter): string =
   let resul0 = gtk_text_iter_get_visible_text(self, `end`)
   result = $resul0
   cogfree(resul0)
@@ -11225,6 +11006,27 @@ proc gtk_text_iter_forward_to_tag_toggle(self: TextIter; tag: ptr TextTag00): gb
 proc forwardToTagToggle*(self: TextIter; tag: TextTag = nil): bool =
   toBool(gtk_text_iter_forward_to_tag_toggle(self, if tag.isNil: nil else: cast[ptr TextTag00](tag.impl)))
 
+proc gtk_text_iter_get_tags(self: TextIter): ptr glib.SList {.
+    importc, libprag.}
+
+proc getTags*(self: TextIter): seq[TextTag] =
+  let resul0 = gtk_text_iter_get_tags(self)
+  result = gslistObjects2seq(TextTag, resul0, false)
+  g_slist_free(resul0)
+
+proc tags*(self: TextIter): seq[TextTag] =
+  let resul0 = gtk_text_iter_get_tags(self)
+  result = gslistObjects2seq(TextTag, resul0, false)
+  g_slist_free(resul0)
+
+proc gtk_text_iter_get_toggled_tags(self: TextIter; toggledOn: gboolean): ptr glib.SList {.
+    importc, libprag.}
+
+proc getToggledTags*(self: TextIter; toggledOn: bool): seq[TextTag] =
+  let resul0 = gtk_text_iter_get_toggled_tags(self, gboolean(toggledOn))
+  result = gslistObjects2seq(TextTag, resul0, false)
+  g_slist_free(resul0)
+
 proc gtk_text_iter_has_tag(self: TextIter; tag: ptr TextTag00): gboolean {.
     importc, libprag.}
 
@@ -11256,7 +11058,8 @@ proc gtk_text_iter_backward_search(self: TextIter; str: cstring; flags: TextSear
     importc, libprag.}
 
 proc backwardSearch*(self: TextIter; str: cstring; flags: TextSearchFlags;
-    matchStart: var TextIter; matchEnd: var TextIter; limit: TextIter = cast[ptr TextIter](nil)[]): bool =
+    matchStart: var TextIter = cast[var TextIter](nil); matchEnd: var TextIter = cast[var TextIter](nil);
+    limit: TextIter = cast[var TextIter](nil)): bool =
   toBool(gtk_text_iter_backward_search(self, str, flags, matchStart, matchEnd, limit))
 
 proc gtk_text_iter_forward_search(self: TextIter; str: cstring; flags: TextSearchFlags;
@@ -11264,7 +11067,8 @@ proc gtk_text_iter_forward_search(self: TextIter; str: cstring; flags: TextSearc
     importc, libprag.}
 
 proc forwardSearch*(self: TextIter; str: cstring; flags: TextSearchFlags;
-    matchStart: var TextIter; matchEnd: var TextIter; limit: TextIter = cast[ptr TextIter](nil)[]): bool =
+    matchStart: var TextIter = cast[var TextIter](nil); matchEnd: var TextIter = cast[var TextIter](nil);
+    limit: TextIter = cast[var TextIter](nil)): bool =
   toBool(gtk_text_iter_forward_search(self, str, flags, matchStart, matchEnd, limit))
 
 type
@@ -11284,6 +11088,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(gtk_text_attributes_get_type(), cast[ptr TextAttributes00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var TextAttributes) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkTextAttributes)
 
 proc gtk_text_attributes_unref(self: ptr TextAttributes00) {.
     importc, libprag.}
@@ -11336,9 +11146,6 @@ proc gtk_text_iter_get_attributes(self: TextIter; values: var TextAttributes00):
     importc, libprag.}
 
 proc getAttributes*(self: TextIter; values: var TextAttributes00): bool =
-  toBool(gtk_text_iter_get_attributes(self, values))
-
-proc attributes*(self: TextIter; values: var TextAttributes00): bool =
   toBool(gtk_text_iter_get_attributes(self, values))
 
 type
@@ -11421,14 +11228,18 @@ proc getDeleted*(self: TextChildAnchor): bool =
 proc deleted*(self: TextChildAnchor): bool =
   toBool(gtk_text_child_anchor_get_deleted(cast[ptr TextChildAnchor00](self.impl)))
 
-proc gtk_text_child_anchor_get_widgets(self: ptr TextChildAnchor00): ptr pointer {.
+proc gtk_text_child_anchor_get_widgets(self: ptr TextChildAnchor00): ptr glib.List {.
     importc, libprag.}
 
-proc getWidgets*(self: TextChildAnchor): ptr pointer =
-  gtk_text_child_anchor_get_widgets(cast[ptr TextChildAnchor00](self.impl))
+proc getWidgets*(self: TextChildAnchor): seq[Widget] =
+  let resul0 = gtk_text_child_anchor_get_widgets(cast[ptr TextChildAnchor00](self.impl))
+  result = glistObjects2seq(Widget, resul0, false)
+  g_list_free(resul0)
 
-proc widgets*(self: TextChildAnchor): ptr pointer =
-  gtk_text_child_anchor_get_widgets(cast[ptr TextChildAnchor00](self.impl))
+proc widgets*(self: TextChildAnchor): seq[Widget] =
+  let resul0 = gtk_text_child_anchor_get_widgets(cast[ptr TextChildAnchor00](self.impl))
+  result = glistObjects2seq(Widget, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_text_iter_get_child_anchor(self: TextIter): ptr TextChildAnchor00 {.
     importc, libprag.}
@@ -11773,15 +11584,14 @@ proc deleteSelection*(self: TextBuffer; interactive: bool;
   toBool(gtk_text_buffer_delete_selection(cast[ptr TextBuffer00](self.impl), gboolean(interactive), gboolean(defaultEditable)))
 
 proc gtk_text_buffer_deserialize(self: ptr TextBuffer00; contentBuffer: ptr TextBuffer00;
-    format: ptr gdk.Atom00; iter: TextIter; data: uint8Array; length: uint64;
-    error: ptr ptr glib.Error = nil): gboolean {.
+    format: gdk.Atom; iter: TextIter; data: ptr uint8; length: uint64; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc deserialize*(self: TextBuffer; contentBuffer: TextBuffer;
     format: gdk.Atom; iter: TextIter; data: seq[uint8] | string): bool =
   let length = uint64(data.len)
   var gerror: ptr glib.Error
-  let resul0 = gtk_text_buffer_deserialize(cast[ptr TextBuffer00](self.impl), cast[ptr TextBuffer00](contentBuffer.impl), cast[ptr gdk.Atom00](format.impl), iter, unsafeaddr(data[0]), length, addr gerror)
+  let resul0 = gtk_text_buffer_deserialize(cast[ptr TextBuffer00](self.impl), cast[ptr TextBuffer00](contentBuffer.impl), format, iter, cast[ptr uint8](unsafeaddr(data[0])), length, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -11789,19 +11599,19 @@ proc deserialize*(self: TextBuffer; contentBuffer: TextBuffer;
   result = toBool(resul0)
 
 proc gtk_text_buffer_deserialize_get_can_create_tags(self: ptr TextBuffer00;
-    format: ptr gdk.Atom00): gboolean {.
+    format: gdk.Atom): gboolean {.
     importc, libprag.}
 
 proc deserializeGetCanCreateTags*(self: TextBuffer; format: gdk.Atom): bool =
-  toBool(gtk_text_buffer_deserialize_get_can_create_tags(cast[ptr TextBuffer00](self.impl), cast[ptr gdk.Atom00](format.impl)))
+  toBool(gtk_text_buffer_deserialize_get_can_create_tags(cast[ptr TextBuffer00](self.impl), format))
 
 proc gtk_text_buffer_deserialize_set_can_create_tags(self: ptr TextBuffer00;
-    format: ptr gdk.Atom00; canCreateTags: gboolean) {.
+    format: gdk.Atom; canCreateTags: gboolean) {.
     importc, libprag.}
 
 proc deserializeSetCanCreateTags*(self: TextBuffer; format: gdk.Atom;
     canCreateTags: bool) =
-  gtk_text_buffer_deserialize_set_can_create_tags(cast[ptr TextBuffer00](self.impl), cast[ptr gdk.Atom00](format.impl), gboolean(canCreateTags))
+  gtk_text_buffer_deserialize_set_can_create_tags(cast[ptr TextBuffer00](self.impl), format, gboolean(canCreateTags))
 
 proc gtk_text_buffer_end_user_action(self: ptr TextBuffer00) {.
     importc, libprag.}
@@ -11838,18 +11648,14 @@ proc copyTargetList*(self: TextBuffer): TargetList =
   result.impl = gtk_text_buffer_get_copy_target_list(cast[ptr TextBuffer00](self.impl))
   result.ignoreFinalizer = true
 
-proc gtk_text_buffer_get_deserialize_formats(self: ptr TextBuffer00; nFormats: var int32): ptr gdk.Atom00Array {.
+proc gtk_text_buffer_get_deserialize_formats(self: ptr TextBuffer00; nFormats: var int32): ptr ptr gdk.Atom {.
     importc, libprag.}
 
-proc getDeserializeFormats*(self: TextBuffer; nFormats: var int): ptr gdk.Atom00Array =
-  var nFormats_00 = int32(nFormats)
+proc getDeserializeFormats*(self: TextBuffer; nFormats: var int): ptr ptr gdk.Atom =
+  var nFormats_00: int32
   result = gtk_text_buffer_get_deserialize_formats(cast[ptr TextBuffer00](self.impl), nFormats_00)
-  nFormats = int(nFormats_00)
-
-proc deserializeFormats*(self: TextBuffer; nFormats: var int): ptr gdk.Atom00Array =
-  var nFormats_00 = int32(nFormats)
-  result = gtk_text_buffer_get_deserialize_formats(cast[ptr TextBuffer00](self.impl), nFormats_00)
-  nFormats = int(nFormats_00)
+  if nFormats.addr != nil:
+    nFormats = int(nFormats_00)
 
 proc gtk_text_buffer_get_end_iter(self: ptr TextBuffer00; iter: var TextIter) {.
     importc, libprag.}
@@ -11979,24 +11785,6 @@ proc getMark*(self: TextBuffer; name: cstring): TextMark =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc mark*(self: TextBuffer; name: cstring): TextMark =
-  let gobj = gtk_text_buffer_get_mark(cast[ptr TextBuffer00](self.impl), name)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_text_buffer_get_modified(self: ptr TextBuffer00): gboolean {.
     importc, libprag.}
 
@@ -12062,34 +11850,20 @@ proc getSelectionBounds*(self: TextBuffer; start: var TextIter;
     `end`: var TextIter): bool =
   toBool(gtk_text_buffer_get_selection_bounds(cast[ptr TextBuffer00](self.impl), start, `end`))
 
-proc selectionBounds*(self: TextBuffer; start: var TextIter;
-    `end`: var TextIter): bool =
-  toBool(gtk_text_buffer_get_selection_bounds(cast[ptr TextBuffer00](self.impl), start, `end`))
-
-proc gtk_text_buffer_get_serialize_formats(self: ptr TextBuffer00; nFormats: var int32): ptr gdk.Atom00Array {.
+proc gtk_text_buffer_get_serialize_formats(self: ptr TextBuffer00; nFormats: var int32): ptr ptr gdk.Atom {.
     importc, libprag.}
 
-proc getSerializeFormats*(self: TextBuffer; nFormats: var int): ptr gdk.Atom00Array =
-  var nFormats_00 = int32(nFormats)
+proc getSerializeFormats*(self: TextBuffer; nFormats: var int): ptr ptr gdk.Atom =
+  var nFormats_00: int32
   result = gtk_text_buffer_get_serialize_formats(cast[ptr TextBuffer00](self.impl), nFormats_00)
-  nFormats = int(nFormats_00)
-
-proc serializeFormats*(self: TextBuffer; nFormats: var int): ptr gdk.Atom00Array =
-  var nFormats_00 = int32(nFormats)
-  result = gtk_text_buffer_get_serialize_formats(cast[ptr TextBuffer00](self.impl), nFormats_00)
-  nFormats = int(nFormats_00)
+  if nFormats.addr != nil:
+    nFormats = int(nFormats_00)
 
 proc gtk_text_buffer_get_slice(self: ptr TextBuffer00; start: TextIter; `end`: TextIter;
     includeHiddenChars: gboolean): cstring {.
     importc, libprag.}
 
 proc getSlice*(self: TextBuffer; start: TextIter; `end`: TextIter;
-    includeHiddenChars: bool): string =
-  let resul0 = gtk_text_buffer_get_slice(cast[ptr TextBuffer00](self.impl), start, `end`, gboolean(includeHiddenChars))
-  result = $resul0
-  cogfree(resul0)
-
-proc slice*(self: TextBuffer; start: TextIter; `end`: TextIter;
     includeHiddenChars: bool): string =
   let resul0 = gtk_text_buffer_get_slice(cast[ptr TextBuffer00](self.impl), start, `end`, gboolean(includeHiddenChars))
   result = $resul0
@@ -12106,12 +11880,6 @@ proc gtk_text_buffer_get_text(self: ptr TextBuffer00; start: TextIter; `end`: Te
     importc, libprag.}
 
 proc getText*(self: TextBuffer; start: TextIter; `end`: TextIter;
-    includeHiddenChars: bool): string =
-  let resul0 = gtk_text_buffer_get_text(cast[ptr TextBuffer00](self.impl), start, `end`, gboolean(includeHiddenChars))
-  result = $resul0
-  cogfree(resul0)
-
-proc text*(self: TextBuffer; start: TextIter; `end`: TextIter;
     includeHiddenChars: bool): string =
   let resul0 = gtk_text_buffer_get_text(cast[ptr TextBuffer00](self.impl), start, `end`, gboolean(includeHiddenChars))
   result = $resul0
@@ -12206,7 +11974,7 @@ proc gtk_text_buffer_paste_clipboard(self: ptr TextBuffer00; clipboard: ptr Clip
     importc, libprag.}
 
 proc pasteClipboard*(self: TextBuffer; clipboard: Clipboard;
-    overrideLocation: TextIter = cast[ptr TextIter](nil)[]; defaultEditable: bool) =
+    overrideLocation: TextIter = cast[var TextIter](nil); defaultEditable: bool) =
   gtk_text_buffer_paste_clipboard(cast[ptr TextBuffer00](self.impl), cast[ptr Clipboard00](clipboard.impl), overrideLocation, gboolean(defaultEditable))
 
 proc gtk_text_buffer_place_cursor(self: ptr TextBuffer00; where: TextIter) {.
@@ -12216,21 +11984,17 @@ proc placeCursor*(self: TextBuffer; where: TextIter) =
   gtk_text_buffer_place_cursor(cast[ptr TextBuffer00](self.impl), where)
 
 proc gtk_text_buffer_register_deserialize_tagset(self: ptr TextBuffer00;
-    tagsetName: cstring): ptr gdk.Atom00 {.
+    tagsetName: cstring): ptr gdk.Atom {.
     importc, libprag.}
 
-proc registerDeserializeTagset*(self: TextBuffer; tagsetName: cstring = ""): gdk.Atom =
-  new(result)
-  result.impl = gtk_text_buffer_register_deserialize_tagset(cast[ptr TextBuffer00](self.impl), safeStringToCString(tagsetName))
-  result.ignoreFinalizer = true
+proc registerDeserializeTagset*(self: TextBuffer; tagsetName: cstring = ""): ptr gdk.Atom =
+  gtk_text_buffer_register_deserialize_tagset(cast[ptr TextBuffer00](self.impl), safeStringToCString(tagsetName))
 
-proc gtk_text_buffer_register_serialize_tagset(self: ptr TextBuffer00; tagsetName: cstring): ptr gdk.Atom00 {.
+proc gtk_text_buffer_register_serialize_tagset(self: ptr TextBuffer00; tagsetName: cstring): ptr gdk.Atom {.
     importc, libprag.}
 
-proc registerSerializeTagset*(self: TextBuffer; tagsetName: cstring = ""): gdk.Atom =
-  new(result)
-  result.impl = gtk_text_buffer_register_serialize_tagset(cast[ptr TextBuffer00](self.impl), safeStringToCString(tagsetName))
-  result.ignoreFinalizer = true
+proc registerSerializeTagset*(self: TextBuffer; tagsetName: cstring = ""): ptr gdk.Atom =
+  gtk_text_buffer_register_serialize_tagset(cast[ptr TextBuffer00](self.impl), safeStringToCString(tagsetName))
 
 proc gtk_text_buffer_remove_all_tags(self: ptr TextBuffer00; start: TextIter;
     `end`: TextIter) {.
@@ -12269,13 +12033,13 @@ proc selectRange*(self: TextBuffer; ins: TextIter; bound: TextIter) =
   gtk_text_buffer_select_range(cast[ptr TextBuffer00](self.impl), ins, bound)
 
 proc gtk_text_buffer_serialize(self: ptr TextBuffer00; contentBuffer: ptr TextBuffer00;
-    format: ptr gdk.Atom00; start: TextIter; `end`: TextIter; length: var uint64): uint8Array {.
+    format: gdk.Atom; start: TextIter; `end`: TextIter; length: var uint64): ptr uint8 {.
     importc, libprag.}
 
 proc serialize*(self: TextBuffer; contentBuffer: TextBuffer;
     format: gdk.Atom; start: TextIter; `end`: TextIter; length: var uint64): seq[uint8] =
-  let resul0 = gtk_text_buffer_serialize(cast[ptr TextBuffer00](self.impl), cast[ptr TextBuffer00](contentBuffer.impl), cast[ptr gdk.Atom00](format.impl), start, `end`, length)
-  result = uint8ArrayZT2seq(resul0)
+  let resul0 = gtk_text_buffer_serialize(cast[ptr TextBuffer00](self.impl), cast[ptr TextBuffer00](contentBuffer.impl), format, start, `end`, length)
+  result = uint8ArrayToSeq(resul0, length.int)
   cogfree(resul0)
 
 proc gtk_text_buffer_set_modified(self: ptr TextBuffer00; setting: gboolean) {.
@@ -12294,18 +12058,18 @@ proc setText*(self: TextBuffer; text: cstring; len: int) =
   gtk_text_buffer_set_text(cast[ptr TextBuffer00](self.impl), text, int32(len))
 
 proc gtk_text_buffer_unregister_deserialize_format(self: ptr TextBuffer00;
-    format: ptr gdk.Atom00) {.
+    format: gdk.Atom) {.
     importc, libprag.}
 
 proc unregisterDeserializeFormat*(self: TextBuffer; format: gdk.Atom) =
-  gtk_text_buffer_unregister_deserialize_format(cast[ptr TextBuffer00](self.impl), cast[ptr gdk.Atom00](format.impl))
+  gtk_text_buffer_unregister_deserialize_format(cast[ptr TextBuffer00](self.impl), format)
 
 proc gtk_text_buffer_unregister_serialize_format(self: ptr TextBuffer00;
-    format: ptr gdk.Atom00) {.
+    format: gdk.Atom) {.
     importc, libprag.}
 
 proc unregisterSerializeFormat*(self: TextBuffer; format: gdk.Atom) =
-  gtk_text_buffer_unregister_serialize_format(cast[ptr TextBuffer00](self.impl), cast[ptr gdk.Atom00](format.impl))
+  gtk_text_buffer_unregister_serialize_format(cast[ptr TextBuffer00](self.impl), format)
 
 proc gtk_selection_data_targets_include_rich_text(self: ptr SelectionData00;
     buffer: ptr TextBuffer00): gboolean {.
@@ -12323,15 +12087,15 @@ proc addRichTextTargets*(self: TargetList; info: int; deserializable: bool;
   gtk_target_list_add_rich_text_targets(cast[ptr TargetList00](self.impl), uint32(info), gboolean(deserializable), cast[ptr TextBuffer00](buffer.impl))
 
 proc gtk_clipboard_wait_for_rich_text(self: ptr Clipboard00; buffer: ptr TextBuffer00;
-    format: var ptr gdk.Atom00; length: var uint64): uint8Array {.
+    format: var gdk.Atom; length: var uint64): ptr uint8 {.
     importc, libprag.}
 
 proc waitForRichText*(self: Clipboard; buffer: TextBuffer;
-    format: var ptr gdk.Atom00; length: var uint64): seq[uint8] =
+    format: var gdk.Atom; length: var uint64): seq[uint8] =
   let resul0 = gtk_clipboard_wait_for_rich_text(cast[ptr Clipboard00](self.impl), cast[ptr TextBuffer00](buffer.impl), format, length)
   if resul0.isNil:
     return
-  result = uint8ArrayZT2seq(resul0)
+  result = uint8ArrayToSeq(resul0, length.int)
   cogfree(resul0)
 
 proc gtk_clipboard_wait_is_rich_text_available(self: ptr Clipboard00; buffer: ptr TextBuffer00): gboolean {.
@@ -12374,6 +12138,19 @@ proc buffer*(self: TextIter): TextBuffer =
     g_object_unref(result.impl)
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc gtk_text_iter_get_marks(self: TextIter): ptr glib.SList {.
+    importc, libprag.}
+
+proc getMarks*(self: TextIter): seq[TextMark] =
+  let resul0 = gtk_text_iter_get_marks(self)
+  result = gslistObjects2seq(TextMark, resul0, false)
+  g_slist_free(resul0)
+
+proc marks*(self: TextIter): seq[TextMark] =
+  let resul0 = gtk_text_iter_get_marks(self)
+  result = gslistObjects2seq(TextMark, resul0, false)
+  g_slist_free(resul0)
 
 proc gtk_text_mark_get_buffer(self: ptr TextMark00): ptr TextBuffer00 {.
     importc, libprag.}
@@ -12628,23 +12405,21 @@ type
     keyval: uint32; modifier: gdk.ModifierType): gboolean {.cdecl.}
 
 type
-  AccelKey00* {.pure.} = object
-  AccelKey* = ref object
-    impl*: ptr AccelKey00
-    ignoreFinalizer*: bool
+  AccelKey* {.pure, byRef.} = object
+    accelKey*: uint32
+    accelMods*: gdk.ModifierType
+    accelFlags*: uint32
 
 type
-  AccelGroupFindFunc* = proc (key: ptr AccelKey00; closure: ptr gobject.Closure00; data: pointer): gboolean {.cdecl.}
+  AccelGroupFindFunc* = proc (key: AccelKey; closure: ptr gobject.Closure00; data: pointer): gboolean {.cdecl.}
 
 proc gtk_accel_group_find(self: ptr AccelGroup00; findFunc: AccelGroupFindFunc;
-    data: pointer): ptr AccelKey00 {.
+    data: pointer): ptr AccelKey {.
     importc, libprag.}
 
 proc findAccelGroup*(self: AccelGroup; findFunc: AccelGroupFindFunc;
-    data: pointer): AccelKey =
-  new(result)
-  result.impl = gtk_accel_group_find(cast[ptr AccelGroup00](self.impl), findFunc, data)
-  result.ignoreFinalizer = true
+    data: pointer): ptr AccelKey =
+  gtk_accel_group_find(cast[ptr AccelGroup00](self.impl), findFunc, data)
 
 type
   Misc* = ref object of Widget
@@ -12664,18 +12439,22 @@ when defined(gcDestructors):
 proc gtk_misc_get_alignment(self: ptr Misc00; xalign: var cfloat; yalign: var cfloat) {.
     importc, libprag.}
 
-proc getAlignment*(self: Misc; xalign: var cfloat; yalign: var cfloat) =
+proc getAlignment*(self: Misc; xalign: var cfloat = cast[var cfloat](nil);
+    yalign: var cfloat = cast[var cfloat](nil)) =
   gtk_misc_get_alignment(cast[ptr Misc00](self.impl), xalign, yalign)
 
 proc gtk_misc_get_padding(self: ptr Misc00; xpad: var int32; ypad: var int32) {.
     importc, libprag.}
 
-proc getPadding*(self: Misc; xpad: var int; ypad: var int) =
-  var ypad_00 = int32(ypad)
-  var xpad_00 = int32(xpad)
+proc getPadding*(self: Misc; xpad: var int = cast[var int](nil);
+    ypad: var int = cast[var int](nil)) =
+  var ypad_00: int32
+  var xpad_00: int32
   gtk_misc_get_padding(cast[ptr Misc00](self.impl), xpad_00, ypad_00)
-  ypad = int(ypad_00)
-  xpad = int(xpad_00)
+  if ypad.addr != nil:
+    ypad = int(ypad_00)
+  if xpad.addr != nil:
+    xpad = int(xpad_00)
 
 proc gtk_misc_set_alignment(self: ptr Misc00; xalign: cfloat; yalign: cfloat) {.
     importc, libprag.}
@@ -13039,14 +12818,14 @@ proc initMenuFromModel*[T](result: var T; model: gio.MenuModel) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_menu_get_for_attach_widget(widget: ptr Widget00): ptr pointer {.
+proc gtk_menu_get_for_attach_widget(widget: ptr Widget00): ptr glib.List {.
     importc, libprag.}
 
-proc getForAttachWidget*(widget: Widget): ptr pointer =
-  gtk_menu_get_for_attach_widget(cast[ptr Widget00](widget.impl))
+proc getForAttachWidget*(widget: Widget): seq[Widget] =
+  result = glistObjects2seq(Widget, gtk_menu_get_for_attach_widget(cast[ptr Widget00](widget.impl)), false)
 
-proc forAttachWidget*(widget: Widget): ptr pointer =
-  gtk_menu_get_for_attach_widget(cast[ptr Widget00](widget.impl))
+proc forAttachWidget*(widget: Widget): seq[Widget] =
+  result = glistObjects2seq(Widget, gtk_menu_get_for_attach_widget(cast[ptr Widget00](widget.impl)), false)
 
 proc gtk_menu_attach(self: ptr Menu00; child: ptr Widget00; leftAttach: uint32;
     rightAttach: uint32; topAttach: uint32; bottomAttach: uint32) {.
@@ -13560,12 +13339,15 @@ proc layout*(self: Label): pango.Layout =
 proc gtk_label_get_layout_offsets(self: ptr Label00; x: var int32; y: var int32) {.
     importc, libprag.}
 
-proc getLayoutOffsets*(self: Label; x: var int; y: var int) =
-  var y_00 = int32(y)
-  var x_00 = int32(x)
+proc getLayoutOffsets*(self: Label; x: var int = cast[var int](nil);
+    y: var int = cast[var int](nil)) =
+  var y_00: int32
+  var x_00: int32
   gtk_label_get_layout_offsets(cast[ptr Label00](self.impl), x_00, y_00)
-  y = int(y_00)
-  x = int(x_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
 
 proc gtk_label_get_line_wrap(self: ptr Label00): gboolean {.
     importc, libprag.}
@@ -13665,18 +13447,13 @@ proc gtk_label_get_selection_bounds(self: ptr Label00; start: var int32;
     importc, libprag.}
 
 proc getSelectionBounds*(self: Label; start: var int; `end`: var int): bool =
-  var start_00 = int32(start)
-  var end_00 = int32(`end`)
+  var start_00: int32
+  var end_00: int32
   result = toBool(gtk_label_get_selection_bounds(cast[ptr Label00](self.impl), start_00, end_00))
-  start = int(start_00)
-  `end` = int(end_00)
-
-proc selectionBounds*(self: Label; start: var int; `end`: var int): bool =
-  var start_00 = int32(start)
-  var end_00 = int32(`end`)
-  result = toBool(gtk_label_get_selection_bounds(cast[ptr Label00](self.impl), start_00, end_00))
-  start = int(start_00)
-  `end` = int(end_00)
+  if start.addr != nil:
+    start = int(start_00)
+  if `end`.addr != nil:
+    `end` = int(end_00)
 
 proc gtk_label_get_single_line_mode(self: ptr Label00): gboolean {.
     importc, libprag.}
@@ -14028,9 +13805,10 @@ proc gtk_accel_label_get_accel(self: ptr AccelLabel00; acceleratorKey: var uint3
 
 proc getAccel*(self: AccelLabel; acceleratorKey: var int;
     acceleratorMods: var gdk.ModifierType) =
-  var acceleratorKey_00 = uint32(acceleratorKey)
+  var acceleratorKey_00: uint32
   gtk_accel_label_get_accel(cast[ptr AccelLabel00](self.impl), acceleratorKey_00, acceleratorMods)
-  acceleratorKey = int(acceleratorKey_00)
+  if acceleratorKey.addr != nil:
+    acceleratorKey = int(acceleratorKey_00)
 
 proc gtk_accel_label_get_accel_widget(self: ptr AccelLabel00): ptr Widget00 {.
     importc, libprag.}
@@ -14564,22 +14342,6 @@ proc getAccelMap*(): AccelMap =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc accelMap*(): AccelMap =
-  let gobj = gtk_accel_map_get()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc load*(fileName: cstring) {.
     importc: "gtk_accel_map_load", libprag.}
 
@@ -14598,10 +14360,10 @@ proc loadScanner*(scanner: glib.Scanner) =
 proc lockPath*(accelPath: cstring) {.
     importc: "gtk_accel_map_lock_path", libprag.}
 
-proc gtk_accel_map_lookup_entry(accelPath: cstring; key: var AccelKey00): gboolean {.
+proc gtk_accel_map_lookup_entry(accelPath: cstring; key: var AccelKey): gboolean {.
     importc, libprag.}
 
-proc lookupEntry*(accelPath: cstring; key: var AccelKey00): bool =
+proc lookupEntry*(accelPath: cstring; key: var AccelKey = cast[var AccelKey](nil)): bool =
   toBool(gtk_accel_map_lookup_entry(accelPath, key))
 
 proc save*(fileName: cstring) {.
@@ -14735,14 +14497,14 @@ proc addChild*(self: ContainerCellAccessible;
     child: CellAccessible) =
   gtk_container_cell_accessible_add_child(cast[ptr ContainerCellAccessible00](self.impl), cast[ptr CellAccessible00](child.impl))
 
-proc gtk_container_cell_accessible_get_children(self: ptr ContainerCellAccessible00): ptr pointer {.
+proc gtk_container_cell_accessible_get_children(self: ptr ContainerCellAccessible00): ptr glib.List {.
     importc, libprag.}
 
-proc getChildren*(self: ContainerCellAccessible): ptr pointer =
-  gtk_container_cell_accessible_get_children(cast[ptr ContainerCellAccessible00](self.impl))
+proc getChildren*(self: ContainerCellAccessible): seq[CellAccessible] =
+  result = glistObjects2seq(CellAccessible, gtk_container_cell_accessible_get_children(cast[ptr ContainerCellAccessible00](self.impl)), false)
 
-proc children*(self: ContainerCellAccessible): ptr pointer =
-  gtk_container_cell_accessible_get_children(cast[ptr ContainerCellAccessible00](self.impl))
+proc children*(self: ContainerCellAccessible): seq[CellAccessible] =
+  result = glistObjects2seq(CellAccessible, gtk_container_cell_accessible_get_children(cast[ptr ContainerCellAccessible00](self.impl)), false)
 
 proc gtk_container_cell_accessible_remove_child(self: ptr ContainerCellAccessible00;
     child: ptr CellAccessible00) {.
@@ -15317,14 +15079,14 @@ proc getName*(self: Action | ExpanderAccessible | ContainerCellAccessible | Lock
 proc name*(self: Action | ExpanderAccessible | ContainerCellAccessible | LockButtonAccessible | SwitchAccessible | CheckMenuItemAccessible | RadioButtonAccessible | LinkButtonAccessible | ImageCellAccessible | SpinButtonAccessible | MenuButtonAccessible | ComboBoxAccessible | ToggleButtonAccessible | MenuItemAccessible | RendererCellAccessible | RadioMenuItemAccessible | ScaleButtonAccessible | BooleanCellAccessible | ButtonAccessible | TextCellAccessible | EntryIconAccessible | CellAccessible | EntryAccessible): string =
   result = $gtk_action_get_name(cast[ptr Action00](self.impl))
 
-proc gtk_action_get_proxies(self: ptr Action00): ptr pointer {.
+proc gtk_action_get_proxies(self: ptr Action00): ptr glib.SList {.
     importc, libprag.}
 
-proc getProxies*(self: Action | ExpanderAccessible | ContainerCellAccessible | LockButtonAccessible | SwitchAccessible | CheckMenuItemAccessible | RadioButtonAccessible | LinkButtonAccessible | ImageCellAccessible | SpinButtonAccessible | MenuButtonAccessible | ComboBoxAccessible | ToggleButtonAccessible | MenuItemAccessible | RendererCellAccessible | RadioMenuItemAccessible | ScaleButtonAccessible | BooleanCellAccessible | ButtonAccessible | TextCellAccessible | EntryIconAccessible | CellAccessible | EntryAccessible): ptr pointer =
-  gtk_action_get_proxies(cast[ptr Action00](self.impl))
+proc getProxies*(self: Action | ExpanderAccessible | ContainerCellAccessible | LockButtonAccessible | SwitchAccessible | CheckMenuItemAccessible | RadioButtonAccessible | LinkButtonAccessible | ImageCellAccessible | SpinButtonAccessible | MenuButtonAccessible | ComboBoxAccessible | ToggleButtonAccessible | MenuItemAccessible | RendererCellAccessible | RadioMenuItemAccessible | ScaleButtonAccessible | BooleanCellAccessible | ButtonAccessible | TextCellAccessible | EntryIconAccessible | CellAccessible | EntryAccessible): seq[Widget] =
+  result = gslistObjects2seq(Widget, gtk_action_get_proxies(cast[ptr Action00](self.impl)), false)
 
-proc proxies*(self: Action | ExpanderAccessible | ContainerCellAccessible | LockButtonAccessible | SwitchAccessible | CheckMenuItemAccessible | RadioButtonAccessible | LinkButtonAccessible | ImageCellAccessible | SpinButtonAccessible | MenuButtonAccessible | ComboBoxAccessible | ToggleButtonAccessible | MenuItemAccessible | RendererCellAccessible | RadioMenuItemAccessible | ScaleButtonAccessible | BooleanCellAccessible | ButtonAccessible | TextCellAccessible | EntryIconAccessible | CellAccessible | EntryAccessible): ptr pointer =
-  gtk_action_get_proxies(cast[ptr Action00](self.impl))
+proc proxies*(self: Action | ExpanderAccessible | ContainerCellAccessible | LockButtonAccessible | SwitchAccessible | CheckMenuItemAccessible | RadioButtonAccessible | LinkButtonAccessible | ImageCellAccessible | SpinButtonAccessible | MenuButtonAccessible | ComboBoxAccessible | ToggleButtonAccessible | MenuItemAccessible | RendererCellAccessible | RadioMenuItemAccessible | ScaleButtonAccessible | BooleanCellAccessible | ButtonAccessible | TextCellAccessible | EntryIconAccessible | CellAccessible | EntryAccessible): seq[Widget] =
+  result = gslistObjects2seq(Widget, gtk_action_get_proxies(cast[ptr Action00](self.impl)), false)
 
 proc gtk_action_get_sensitive(self: ptr Action00): gboolean {.
     importc, libprag.}
@@ -15879,9 +15641,6 @@ proc gtk_combo_box_set_active_id(self: ptr ComboBox00; activeId: cstring): gbool
 proc setActiveId*(self: ComboBox; activeId: cstring = ""): bool =
   toBool(gtk_combo_box_set_active_id(cast[ptr ComboBox00](self.impl), safeStringToCString(activeId)))
 
-proc `activeId=`*(self: ComboBox; activeId: cstring = ""): bool =
-  toBool(gtk_combo_box_set_active_id(cast[ptr ComboBox00](self.impl), safeStringToCString(activeId)))
-
 proc gtk_combo_box_set_add_tearoffs(self: ptr ComboBox00; addTearoffs: gboolean) {.
     importc, libprag.}
 
@@ -16194,10 +15953,10 @@ proc scCutClipboard*(self: Entry;  p: proc (self: ptr gobject.Object00; xdata: p
 proc scDeleteFromCursor*(self: Entry;  p: proc (self: ptr Entry00; `type`: DeleteType; count: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "delete-from-cursor", cast[GCallback](p), xdata, nil, cf)
 
-proc scIconPress*(self: Entry;  p: proc (self: ptr Entry00; iconPos: EntryIconPosition; event: ptr gdk.EventButton00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scIconPress*(self: Entry;  p: proc (self: ptr Entry00; iconPos: EntryIconPosition; event: ptr gdk.Event00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "icon-press", cast[GCallback](p), xdata, nil, cf)
 
-proc scIconRelease*(self: Entry;  p: proc (self: ptr Entry00; iconPos: EntryIconPosition; event: ptr gdk.EventButton00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scIconRelease*(self: Entry;  p: proc (self: ptr Entry00; iconPos: EntryIconPosition; event: ptr gdk.Event00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "icon-release", cast[GCallback](p), xdata, nil, cf)
 
 proc scInsertAtCursor*(self: Entry;  p: proc (self: ptr Entry00; string: cstring; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
@@ -16374,9 +16133,6 @@ proc gtk_entry_get_icon_activatable(self: ptr Entry00; iconPos: EntryIconPositio
 proc getIconActivatable*(self: Entry; iconPos: EntryIconPosition): bool =
   toBool(gtk_entry_get_icon_activatable(cast[ptr Entry00](self.impl), iconPos))
 
-proc iconActivatable*(self: Entry; iconPos: EntryIconPosition): bool =
-  toBool(gtk_entry_get_icon_activatable(cast[ptr Entry00](self.impl), iconPos))
-
 proc gtk_entry_get_icon_area(self: ptr Entry00; iconPos: EntryIconPosition;
     iconArea: var gdk.Rectangle) {.
     importc, libprag.}
@@ -16390,31 +16146,10 @@ proc gtk_entry_get_icon_at_pos(self: ptr Entry00; x: int32; y: int32): int32 {.
 proc getIconAtPos*(self: Entry; x: int; y: int): int =
   int(gtk_entry_get_icon_at_pos(cast[ptr Entry00](self.impl), int32(x), int32(y)))
 
-proc iconAtPos*(self: Entry; x: int; y: int): int =
-  int(gtk_entry_get_icon_at_pos(cast[ptr Entry00](self.impl), int32(x), int32(y)))
-
 proc gtk_entry_get_icon_gicon(self: ptr Entry00; iconPos: EntryIconPosition): ptr gio.Icon00 {.
     importc, libprag.}
 
 proc getIconGicon*(self: Entry; iconPos: EntryIconPosition): gio.Icon =
-  let gobj = gtk_entry_get_icon_gicon(cast[ptr Entry00](self.impl), iconPos)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc iconGicon*(self: Entry; iconPos: EntryIconPosition): gio.Icon =
   let gobj = gtk_entry_get_icon_gicon(cast[ptr Entry00](self.impl), iconPos)
   if gobj.isNil:
     return nil
@@ -16441,34 +16176,10 @@ proc getIconName*(self: Entry; iconPos: EntryIconPosition): string =
     return
   result = $resul0
 
-proc iconName*(self: Entry; iconPos: EntryIconPosition): string =
-  let resul0 = gtk_entry_get_icon_name(cast[ptr Entry00](self.impl), iconPos)
-  if resul0.isNil:
-    return
-  result = $resul0
-
 proc gtk_entry_get_icon_pixbuf(self: ptr Entry00; iconPos: EntryIconPosition): ptr gdkpixbuf.Pixbuf00 {.
     importc, libprag.}
 
 proc getIconPixbuf*(self: Entry; iconPos: EntryIconPosition): gdkpixbuf.Pixbuf =
-  let gobj = gtk_entry_get_icon_pixbuf(cast[ptr Entry00](self.impl), iconPos)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdkpixbuf.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc iconPixbuf*(self: Entry; iconPos: EntryIconPosition): gdkpixbuf.Pixbuf =
   let gobj = gtk_entry_get_icon_pixbuf(cast[ptr Entry00](self.impl), iconPos)
   if gobj.isNil:
     return nil
@@ -16492,16 +16203,10 @@ proc gtk_entry_get_icon_sensitive(self: ptr Entry00; iconPos: EntryIconPosition)
 proc getIconSensitive*(self: Entry; iconPos: EntryIconPosition): bool =
   toBool(gtk_entry_get_icon_sensitive(cast[ptr Entry00](self.impl), iconPos))
 
-proc iconSensitive*(self: Entry; iconPos: EntryIconPosition): bool =
-  toBool(gtk_entry_get_icon_sensitive(cast[ptr Entry00](self.impl), iconPos))
-
 proc gtk_entry_get_icon_stock(self: ptr Entry00; iconPos: EntryIconPosition): cstring {.
     importc, libprag.}
 
 proc getIconStock*(self: Entry; iconPos: EntryIconPosition): string =
-  result = $gtk_entry_get_icon_stock(cast[ptr Entry00](self.impl), iconPos)
-
-proc iconStock*(self: Entry; iconPos: EntryIconPosition): string =
   result = $gtk_entry_get_icon_stock(cast[ptr Entry00](self.impl), iconPos)
 
 proc gtk_entry_get_icon_tooltip_markup(self: ptr Entry00; iconPos: EntryIconPosition): cstring {.
@@ -16514,24 +16219,10 @@ proc getIconTooltipMarkup*(self: Entry; iconPos: EntryIconPosition): string =
   result = $resul0
   cogfree(resul0)
 
-proc iconTooltipMarkup*(self: Entry; iconPos: EntryIconPosition): string =
-  let resul0 = gtk_entry_get_icon_tooltip_markup(cast[ptr Entry00](self.impl), iconPos)
-  if resul0.isNil:
-    return
-  result = $resul0
-  cogfree(resul0)
-
 proc gtk_entry_get_icon_tooltip_text(self: ptr Entry00; iconPos: EntryIconPosition): cstring {.
     importc, libprag.}
 
 proc getIconTooltipText*(self: Entry; iconPos: EntryIconPosition): string =
-  let resul0 = gtk_entry_get_icon_tooltip_text(cast[ptr Entry00](self.impl), iconPos)
-  if resul0.isNil:
-    return
-  result = $resul0
-  cogfree(resul0)
-
-proc iconTooltipText*(self: Entry; iconPos: EntryIconPosition): string =
   let resul0 = gtk_entry_get_icon_tooltip_text(cast[ptr Entry00](self.impl), iconPos)
   if resul0.isNil:
     return
@@ -16594,12 +16285,15 @@ proc layout*(self: Entry): pango.Layout =
 proc gtk_entry_get_layout_offsets(self: ptr Entry00; x: var int32; y: var int32) {.
     importc, libprag.}
 
-proc getLayoutOffsets*(self: Entry; x: var int; y: var int) =
-  var y_00 = int32(y)
-  var x_00 = int32(x)
+proc getLayoutOffsets*(self: Entry; x: var int = cast[var int](nil);
+    y: var int = cast[var int](nil)) =
+  var y_00: int32
+  var x_00: int32
   gtk_entry_get_layout_offsets(cast[ptr Entry00](self.impl), x_00, y_00)
-  y = int(y_00)
-  x = int(x_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
 
 proc gtk_entry_get_max_length(self: ptr Entry00): int32 {.
     importc, libprag.}
@@ -16866,10 +16560,10 @@ proc setIconTooltipText*(self: Entry; iconPos: EntryIconPosition;
 proc gtk_entry_set_inner_border(self: ptr Entry00; border: Border) {.
     importc, libprag.}
 
-proc setInnerBorder*(self: Entry; border: Border = cast[ptr Border](nil)[]) =
+proc setInnerBorder*(self: Entry; border: Border = cast[var Border](nil)) =
   gtk_entry_set_inner_border(cast[ptr Entry00](self.impl), border)
 
-proc `innerBorder=`*(self: Entry; border: Border = cast[ptr Border](nil)[]) =
+proc `innerBorder=`*(self: Entry; border: Border = cast[var Border](nil)) =
   gtk_entry_set_inner_border(cast[ptr Entry00](self.impl), border)
 
 proc gtk_entry_set_invisible_char(self: ptr Entry00; ch: gunichar) {.
@@ -17179,8 +16873,8 @@ proc gtk_spin_button_get_increments(self: ptr SpinButton00; step: var cdouble;
     page: var cdouble) {.
     importc, libprag.}
 
-proc getIncrements*(self: SpinButton; step: var cdouble;
-    page: var cdouble) =
+proc getIncrements*(self: SpinButton; step: var cdouble = cast[var cdouble](nil);
+    page: var cdouble = cast[var cdouble](nil)) =
   gtk_spin_button_get_increments(cast[ptr SpinButton00](self.impl), step, page)
 
 proc gtk_spin_button_get_numeric(self: ptr SpinButton00): gboolean {.
@@ -17196,7 +16890,8 @@ proc gtk_spin_button_get_range(self: ptr SpinButton00; min: var cdouble;
     max: var cdouble) {.
     importc, libprag.}
 
-proc getRange*(self: SpinButton; min: var cdouble; max: var cdouble) =
+proc getRange*(self: SpinButton; min: var cdouble = cast[var cdouble](nil);
+    max: var cdouble = cast[var cdouble](nil)) =
   gtk_spin_button_get_range(cast[ptr SpinButton00](self.impl), min, max)
 
 proc gtk_spin_button_get_snap_to_ticks(self: ptr SpinButton00): gboolean {.
@@ -17611,63 +17306,73 @@ proc gtk_cell_renderer_get_alignment(self: ptr CellRenderer00; xalign: var cfloa
     yalign: var cfloat) {.
     importc, libprag.}
 
-proc getAlignment*(self: CellRenderer; xalign: var cfloat;
-    yalign: var cfloat) =
+proc getAlignment*(self: CellRenderer; xalign: var cfloat = cast[var cfloat](nil);
+    yalign: var cfloat = cast[var cfloat](nil)) =
   gtk_cell_renderer_get_alignment(cast[ptr CellRenderer00](self.impl), xalign, yalign)
 
 proc gtk_cell_renderer_get_fixed_size(self: ptr CellRenderer00; width: var int32;
     height: var int32) {.
     importc, libprag.}
 
-proc getFixedSize*(self: CellRenderer; width: var int;
-    height: var int) =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+proc getFixedSize*(self: CellRenderer; width: var int = cast[var int](nil);
+    height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var height_00: int32
   gtk_cell_renderer_get_fixed_size(cast[ptr CellRenderer00](self.impl), width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_cell_renderer_get_padding(self: ptr CellRenderer00; xpad: var int32;
     ypad: var int32) {.
     importc, libprag.}
 
-proc getPadding*(self: CellRenderer; xpad: var int; ypad: var int) =
-  var ypad_00 = int32(ypad)
-  var xpad_00 = int32(xpad)
+proc getPadding*(self: CellRenderer; xpad: var int = cast[var int](nil);
+    ypad: var int = cast[var int](nil)) =
+  var ypad_00: int32
+  var xpad_00: int32
   gtk_cell_renderer_get_padding(cast[ptr CellRenderer00](self.impl), xpad_00, ypad_00)
-  ypad = int(ypad_00)
-  xpad = int(xpad_00)
+  if ypad.addr != nil:
+    ypad = int(ypad_00)
+  if xpad.addr != nil:
+    xpad = int(xpad_00)
 
 proc gtk_cell_renderer_get_preferred_height(self: ptr CellRenderer00; widget: ptr Widget00;
     minimumSize: var int32; naturalSize: var int32) {.
     importc, libprag.}
 
 proc getPreferredHeight*(self: CellRenderer; widget: Widget;
-    minimumSize: var int; naturalSize: var int) =
-  var minimumSize_00 = int32(minimumSize)
-  var naturalSize_00 = int32(naturalSize)
+    minimumSize: var int = cast[var int](nil); naturalSize: var int = cast[var int](nil)) =
+  var minimumSize_00: int32
+  var naturalSize_00: int32
   gtk_cell_renderer_get_preferred_height(cast[ptr CellRenderer00](self.impl), cast[ptr Widget00](widget.impl), minimumSize_00, naturalSize_00)
-  minimumSize = int(minimumSize_00)
-  naturalSize = int(naturalSize_00)
+  if minimumSize.addr != nil:
+    minimumSize = int(minimumSize_00)
+  if naturalSize.addr != nil:
+    naturalSize = int(naturalSize_00)
 
 proc gtk_cell_renderer_get_preferred_height_for_width(self: ptr CellRenderer00;
     widget: ptr Widget00; width: int32; minimumHeight: var int32; naturalHeight: var int32) {.
     importc, libprag.}
 
 proc getPreferredHeightForWidth*(self: CellRenderer;
-    widget: Widget; width: int; minimumHeight: var int; naturalHeight: var int) =
-  var naturalHeight_00 = int32(naturalHeight)
-  var minimumHeight_00 = int32(minimumHeight)
+    widget: Widget; width: int; minimumHeight: var int = cast[var int](nil);
+    naturalHeight: var int = cast[var int](nil)) =
+  var naturalHeight_00: int32
+  var minimumHeight_00: int32
   gtk_cell_renderer_get_preferred_height_for_width(cast[ptr CellRenderer00](self.impl), cast[ptr Widget00](widget.impl), int32(width), minimumHeight_00, naturalHeight_00)
-  naturalHeight = int(naturalHeight_00)
-  minimumHeight = int(minimumHeight_00)
+  if naturalHeight.addr != nil:
+    naturalHeight = int(naturalHeight_00)
+  if minimumHeight.addr != nil:
+    minimumHeight = int(minimumHeight_00)
 
 proc gtk_cell_renderer_get_preferred_size(self: ptr CellRenderer00; widget: ptr Widget00;
     minimumSize: var Requisition; naturalSize: var Requisition) {.
     importc, libprag.}
 
 proc getPreferredSize*(self: CellRenderer; widget: Widget;
-    minimumSize: var Requisition; naturalSize: var Requisition) =
+    minimumSize: var Requisition = cast[var Requisition](nil); naturalSize: var Requisition = cast[var Requisition](nil)) =
   gtk_cell_renderer_get_preferred_size(cast[ptr CellRenderer00](self.impl), cast[ptr Widget00](widget.impl), minimumSize, naturalSize)
 
 proc gtk_cell_renderer_get_preferred_width(self: ptr CellRenderer00; widget: ptr Widget00;
@@ -17675,24 +17380,29 @@ proc gtk_cell_renderer_get_preferred_width(self: ptr CellRenderer00; widget: ptr
     importc, libprag.}
 
 proc getPreferredWidth*(self: CellRenderer; widget: Widget;
-    minimumSize: var int; naturalSize: var int) =
-  var minimumSize_00 = int32(minimumSize)
-  var naturalSize_00 = int32(naturalSize)
+    minimumSize: var int = cast[var int](nil); naturalSize: var int = cast[var int](nil)) =
+  var minimumSize_00: int32
+  var naturalSize_00: int32
   gtk_cell_renderer_get_preferred_width(cast[ptr CellRenderer00](self.impl), cast[ptr Widget00](widget.impl), minimumSize_00, naturalSize_00)
-  minimumSize = int(minimumSize_00)
-  naturalSize = int(naturalSize_00)
+  if minimumSize.addr != nil:
+    minimumSize = int(minimumSize_00)
+  if naturalSize.addr != nil:
+    naturalSize = int(naturalSize_00)
 
 proc gtk_cell_renderer_get_preferred_width_for_height(self: ptr CellRenderer00;
     widget: ptr Widget00; height: int32; minimumWidth: var int32; naturalWidth: var int32) {.
     importc, libprag.}
 
 proc getPreferredWidthForHeight*(self: CellRenderer;
-    widget: Widget; height: int; minimumWidth: var int; naturalWidth: var int) =
-  var minimumWidth_00 = int32(minimumWidth)
-  var naturalWidth_00 = int32(naturalWidth)
+    widget: Widget; height: int; minimumWidth: var int = cast[var int](nil);
+    naturalWidth: var int = cast[var int](nil)) =
+  var minimumWidth_00: int32
+  var naturalWidth_00: int32
   gtk_cell_renderer_get_preferred_width_for_height(cast[ptr CellRenderer00](self.impl), cast[ptr Widget00](widget.impl), int32(height), minimumWidth_00, naturalWidth_00)
-  minimumWidth = int(minimumWidth_00)
-  naturalWidth = int(naturalWidth_00)
+  if minimumWidth.addr != nil:
+    minimumWidth = int(minimumWidth_00)
+  if naturalWidth.addr != nil:
+    naturalWidth = int(naturalWidth_00)
 
 proc gtk_cell_renderer_get_request_mode(self: ptr CellRenderer00): SizeRequestMode {.
     importc, libprag.}
@@ -17717,17 +17427,22 @@ proc gtk_cell_renderer_get_size(self: ptr CellRenderer00; widget: ptr Widget00;
     height: var int32) {.
     importc, libprag.}
 
-proc getSize*(self: CellRenderer; widget: Widget; cellArea: gdk.Rectangle = cast[ptr gdk.Rectangle](nil)[];
-    xOffset: var int; yOffset: var int; width: var int; height: var int) =
-  var width_00 = int32(width)
-  var yOffset_00 = int32(yOffset)
-  var xOffset_00 = int32(xOffset)
-  var height_00 = int32(height)
+proc getSize*(self: CellRenderer; widget: Widget; cellArea: gdk.Rectangle = cast[var gdk.Rectangle](nil);
+    xOffset: var int = cast[var int](nil); yOffset: var int = cast[var int](nil);
+    width: var int = cast[var int](nil); height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var yOffset_00: int32
+  var xOffset_00: int32
+  var height_00: int32
   gtk_cell_renderer_get_size(cast[ptr CellRenderer00](self.impl), cast[ptr Widget00](widget.impl), cellArea, xOffset_00, yOffset_00, width_00, height_00)
-  width = int(width_00)
-  yOffset = int(yOffset_00)
-  xOffset = int(xOffset_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if yOffset.addr != nil:
+    yOffset = int(yOffset_00)
+  if xOffset.addr != nil:
+    xOffset = int(xOffset_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_cell_renderer_get_visible(self: ptr CellRenderer00): gboolean {.
     importc, libprag.}
@@ -17882,10 +17597,6 @@ proc getState*(self: CellRenderer; widget: Widget = nil;
     cellState: CellRendererState): StateFlags =
   gtk_cell_renderer_get_state(cast[ptr CellRenderer00](self.impl), if widget.isNil: nil else: cast[ptr Widget00](widget.impl), cellState)
 
-proc state*(self: CellRenderer; widget: Widget = nil;
-    cellState: CellRendererState): StateFlags =
-  gtk_cell_renderer_get_state(cast[ptr CellRenderer00](self.impl), if widget.isNil: nil else: cast[ptr Widget00](widget.impl), cellState)
-
 proc gtk_cell_renderer_render(self: ptr CellRenderer00; cr: ptr cairo.Context00;
     widget: ptr Widget00; backgroundArea: gdk.Rectangle; cellArea: gdk.Rectangle;
     flags: CellRendererState) {.
@@ -17935,9 +17646,6 @@ proc gtk_entry_get_icon_storage_type(self: ptr Entry00; iconPos: EntryIconPositi
     importc, libprag.}
 
 proc getIconStorageType*(self: Entry; iconPos: EntryIconPosition): ImageType =
-  gtk_entry_get_icon_storage_type(cast[ptr Entry00](self.impl), iconPos)
-
-proc iconStorageType*(self: Entry; iconPos: EntryIconPosition): ImageType =
   gtk_entry_get_icon_storage_type(cast[ptr Entry00](self.impl), iconPos)
 
 type
@@ -18327,16 +18035,13 @@ proc gtk_combo_box_get_active_iter(self: ptr ComboBox00; iter: var TreeIter): gb
 proc getActiveIter*(self: ComboBox; iter: var TreeIter): bool =
   toBool(gtk_combo_box_get_active_iter(cast[ptr ComboBox00](self.impl), iter))
 
-proc activeIter*(self: ComboBox; iter: var TreeIter): bool =
-  toBool(gtk_combo_box_get_active_iter(cast[ptr ComboBox00](self.impl), iter))
-
 proc gtk_combo_box_set_active_iter(self: ptr ComboBox00; iter: TreeIter) {.
     importc, libprag.}
 
-proc setActiveIter*(self: ComboBox; iter: TreeIter = cast[ptr TreeIter](nil)[]) =
+proc setActiveIter*(self: ComboBox; iter: TreeIter = cast[var TreeIter](nil)) =
   gtk_combo_box_set_active_iter(cast[ptr ComboBox00](self.impl), iter)
 
-proc `activeIter=`*(self: ComboBox; iter: TreeIter = cast[ptr TreeIter](nil)[]) =
+proc `activeIter=`*(self: ComboBox; iter: TreeIter = cast[var TreeIter](nil)) =
   gtk_combo_box_set_active_iter(cast[ptr ComboBox00](self.impl), iter)
 
 type
@@ -18381,6 +18086,12 @@ when defined(gcDestructors):
       boxedFree(gtk_tree_path_get_type(), cast[ptr TreePath00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var TreePath) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkTreePath)
+
 proc gtk_tree_path_free(self: ptr TreePath00) {.
     importc, libprag.}
 
@@ -18408,25 +18119,25 @@ proc initTreePathFirst*[T](result: var T) {.deprecated.} =
   fnew(result, gBoxedFreeGtkTreePath)
   result.impl = gtk_tree_path_new_first()
 
-proc gtk_tree_path_new_from_indicesv(indices: int32Array; length: uint64): ptr TreePath00 {.
+proc gtk_tree_path_new_from_indicesv(indices: ptr int32; length: uint64): ptr TreePath00 {.
     importc, libprag.}
 
 proc newTreePathFromIndices*(indices: seq[int32]): TreePath =
   let length = uint64(indices.len)
   fnew(result, gBoxedFreeGtkTreePath)
-  result.impl = gtk_tree_path_new_from_indicesv(unsafeaddr(indices[0]), length)
+  result.impl = gtk_tree_path_new_from_indicesv(cast[ptr int32](unsafeaddr(indices[0])), length)
 
 proc newTreePathFromIndices*(tdesc: typedesc; indices: seq[int32]): tdesc =
   let length = uint64(indices.len)
   assert(result is TreePath)
   fnew(result, gBoxedFreeGtkTreePath)
-  result.impl = gtk_tree_path_new_from_indicesv(unsafeaddr(indices[0]), length)
+  result.impl = gtk_tree_path_new_from_indicesv(cast[ptr int32](unsafeaddr(indices[0])), length)
 
 proc initTreePathFromIndices*[T](result: var T; indices: seq[int32]) {.deprecated.} =
   let length = uint64(indices.len)
   assert(result is TreePath)
   fnew(result, gBoxedFreeGtkTreePath)
-  result.impl = gtk_tree_path_new_from_indicesv(unsafeaddr(indices[0]), length)
+  result.impl = gtk_tree_path_new_from_indicesv(cast[ptr int32](unsafeaddr(indices[0])), length)
 
 proc gtk_tree_path_new_from_string(path: cstring): ptr TreePath00 {.
     importc, libprag.}
@@ -18496,18 +18207,14 @@ proc getDepth*(self: TreePath): int =
 proc depth*(self: TreePath): int =
   int(gtk_tree_path_get_depth(cast[ptr TreePath00](self.impl)))
 
-proc gtk_tree_path_get_indices_with_depth(self: ptr TreePath00; depth: var int32): int32Array {.
+proc gtk_tree_path_get_indices_with_depth(self: ptr TreePath00; depth: var int32): ptr int32 {.
     importc, libprag.}
 
-proc getIndices*(self: TreePath; depth: var int): seq[int32] =
-  var depth_00 = int32(depth)
-  result = int32ArrayZT2seq(gtk_tree_path_get_indices_with_depth(cast[ptr TreePath00](self.impl), depth_00))
-  depth = int(depth_00)
-
-proc indices*(self: TreePath; depth: var int): seq[int32] =
-  var depth_00 = int32(depth)
-  result = int32ArrayZT2seq(gtk_tree_path_get_indices_with_depth(cast[ptr TreePath00](self.impl), depth_00))
-  depth = int(depth_00)
+proc getIndices*(self: TreePath; depth: var int = cast[var int](nil)): seq[int32] =
+  var depth_00: int32
+  result = int32ArrayToSeq(gtk_tree_path_get_indices_with_depth(cast[ptr TreePath00](self.impl), depth_00), depth.int)
+  if depth.addr != nil:
+    depth = int(depth_00)
 
 proc gtk_tree_path_is_ancestor(self: ptr TreePath00; descendant: ptr TreePath00): gboolean {.
     importc, libprag.}
@@ -18641,10 +18348,10 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_list_store_newv(nColumns: int32; types: GTypeArray): ptr ListStore00 {.
+proc gtk_list_store_newv(nColumns: int32; types: ptr GType): ptr ListStore00 {.
     importc, libprag.}
 
-proc newListStore*(nColumns: int; types: GTypeArray): ListStore =
+proc newListStore*(nColumns: int; types: ptr GType): ListStore =
   let gobj = gtk_list_store_newv(int32(nColumns), types)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -18661,7 +18368,7 @@ proc newListStore*(nColumns: int; types: GTypeArray): ListStore =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newListStore*(tdesc: typedesc; nColumns: int; types: GTypeArray): tdesc =
+proc newListStore*(tdesc: typedesc; nColumns: int; types: ptr GType): tdesc =
   assert(result is ListStore)
   let gobj = gtk_list_store_newv(int32(nColumns), types)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -18679,7 +18386,7 @@ proc newListStore*(tdesc: typedesc; nColumns: int; types: GTypeArray): tdesc =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initListStore*[T](result: var T; nColumns: int; types: GTypeArray) {.deprecated.} =
+proc initListStore*[T](result: var T; nColumns: int; types: ptr GType) {.deprecated.} =
   assert(result is ListStore)
   let gobj = gtk_list_store_newv(int32(nColumns), types)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -18719,14 +18426,14 @@ proc gtk_list_store_insert_after(self: ptr ListStore00; iter: var TreeIter;
     sibling: TreeIter) {.
     importc, libprag.}
 
-proc insertAfter*(self: ListStore; iter: var TreeIter; sibling: TreeIter = cast[ptr TreeIter](nil)[]) =
+proc insertAfter*(self: ListStore; iter: var TreeIter; sibling: TreeIter = cast[var TreeIter](nil)) =
   gtk_list_store_insert_after(cast[ptr ListStore00](self.impl), iter, sibling)
 
 proc gtk_list_store_insert_before(self: ptr ListStore00; iter: var TreeIter;
     sibling: TreeIter) {.
     importc, libprag.}
 
-proc insertBefore*(self: ListStore; iter: var TreeIter; sibling: TreeIter = cast[ptr TreeIter](nil)[]) =
+proc insertBefore*(self: ListStore; iter: var TreeIter; sibling: TreeIter = cast[var TreeIter](nil)) =
   gtk_list_store_insert_before(cast[ptr ListStore00](self.impl), iter, sibling)
 
 proc gtk_list_store_iter_is_valid(self: ptr ListStore00; iter: TreeIter): gboolean {.
@@ -18738,13 +18445,13 @@ proc iterIsValid*(self: ListStore; iter: TreeIter): bool =
 proc gtk_list_store_move_after(self: ptr ListStore00; iter: TreeIter; position: TreeIter) {.
     importc, libprag.}
 
-proc moveAfter*(self: ListStore; iter: TreeIter; position: TreeIter = cast[ptr TreeIter](nil)[]) =
+proc moveAfter*(self: ListStore; iter: TreeIter; position: TreeIter = cast[var TreeIter](nil)) =
   gtk_list_store_move_after(cast[ptr ListStore00](self.impl), iter, position)
 
 proc gtk_list_store_move_before(self: ptr ListStore00; iter: TreeIter; position: TreeIter) {.
     importc, libprag.}
 
-proc moveBefore*(self: ListStore; iter: TreeIter; position: TreeIter = cast[ptr TreeIter](nil)[]) =
+proc moveBefore*(self: ListStore; iter: TreeIter; position: TreeIter = cast[var TreeIter](nil)) =
   gtk_list_store_move_before(cast[ptr ListStore00](self.impl), iter, position)
 
 proc gtk_list_store_prepend(self: ptr ListStore00; iter: var TreeIter) {.
@@ -18759,17 +18466,17 @@ proc gtk_list_store_remove(self: ptr ListStore00; iter: TreeIter): gboolean {.
 proc remove*(self: ListStore; iter: TreeIter): bool =
   toBool(gtk_list_store_remove(cast[ptr ListStore00](self.impl), iter))
 
-proc gtk_list_store_reorder(self: ptr ListStore00; newOrder: int32Array) {.
+proc gtk_list_store_reorder(self: ptr ListStore00; newOrder: ptr int32) {.
     importc, libprag.}
 
 proc reorder*(self: ListStore; newOrder: seq[int32]) =
-  gtk_list_store_reorder(cast[ptr ListStore00](self.impl), unsafeaddr(newOrder[0]))
+  gtk_list_store_reorder(cast[ptr ListStore00](self.impl), cast[ptr int32](unsafeaddr(newOrder[0])))
 
 proc gtk_list_store_set_column_types(self: ptr ListStore00; nColumns: int32;
-    types: GTypeArray) {.
+    types: ptr GType) {.
     importc, libprag.}
 
-proc setColumnTypes*(self: ListStore; nColumns: int; types: GTypeArray) =
+proc setColumnTypes*(self: ListStore; nColumns: int; types: ptr GType) =
   gtk_list_store_set_column_types(cast[ptr ListStore00](self.impl), int32(nColumns), types)
 
 proc gtk_list_store_set_value(self: ptr ListStore00; iter: TreeIter; column: int32;
@@ -18878,10 +18585,10 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_tree_store_newv(nColumns: int32; types: GTypeArray): ptr TreeStore00 {.
+proc gtk_tree_store_newv(nColumns: int32; types: ptr GType): ptr TreeStore00 {.
     importc, libprag.}
 
-proc newTreeStore*(nColumns: int; types: GTypeArray): TreeStore =
+proc newTreeStore*(nColumns: int; types: ptr GType): TreeStore =
   let gobj = gtk_tree_store_newv(int32(nColumns), types)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -18898,7 +18605,7 @@ proc newTreeStore*(nColumns: int; types: GTypeArray): TreeStore =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newTreeStore*(tdesc: typedesc; nColumns: int; types: GTypeArray): tdesc =
+proc newTreeStore*(tdesc: typedesc; nColumns: int; types: ptr GType): tdesc =
   assert(result is TreeStore)
   let gobj = gtk_tree_store_newv(int32(nColumns), types)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -18916,7 +18623,7 @@ proc newTreeStore*(tdesc: typedesc; nColumns: int; types: GTypeArray): tdesc =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initTreeStore*[T](result: var T; nColumns: int; types: GTypeArray) {.deprecated.} =
+proc initTreeStore*[T](result: var T; nColumns: int; types: ptr GType) {.deprecated.} =
   assert(result is TreeStore)
   let gobj = gtk_tree_store_newv(int32(nColumns), types)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -18937,7 +18644,7 @@ proc initTreeStore*[T](result: var T; nColumns: int; types: GTypeArray) {.deprec
 proc gtk_tree_store_append(self: ptr TreeStore00; iter: var TreeIter; parent: TreeIter) {.
     importc, libprag.}
 
-proc append*(self: TreeStore; iter: var TreeIter; parent: TreeIter = cast[ptr TreeIter](nil)[]) =
+proc append*(self: TreeStore; iter: var TreeIter; parent: TreeIter = cast[var TreeIter](nil)) =
   gtk_tree_store_append(cast[ptr TreeStore00](self.impl), iter, parent)
 
 proc gtk_tree_store_clear(self: ptr TreeStore00) {.
@@ -18950,7 +18657,7 @@ proc gtk_tree_store_insert(self: ptr TreeStore00; iter: var TreeIter; parent: Tr
     position: int32) {.
     importc, libprag.}
 
-proc insert*(self: TreeStore; iter: var TreeIter; parent: TreeIter = cast[ptr TreeIter](nil)[];
+proc insert*(self: TreeStore; iter: var TreeIter; parent: TreeIter = cast[var TreeIter](nil);
     position: int) =
   gtk_tree_store_insert(cast[ptr TreeStore00](self.impl), iter, parent, int32(position))
 
@@ -18958,16 +18665,16 @@ proc gtk_tree_store_insert_after(self: ptr TreeStore00; iter: var TreeIter;
     parent: TreeIter; sibling: TreeIter) {.
     importc, libprag.}
 
-proc insertAfter*(self: TreeStore; iter: var TreeIter; parent: TreeIter = cast[ptr TreeIter](nil)[];
-    sibling: TreeIter = cast[ptr TreeIter](nil)[]) =
+proc insertAfter*(self: TreeStore; iter: var TreeIter; parent: TreeIter = cast[var TreeIter](nil);
+    sibling: TreeIter = cast[var TreeIter](nil)) =
   gtk_tree_store_insert_after(cast[ptr TreeStore00](self.impl), iter, parent, sibling)
 
 proc gtk_tree_store_insert_before(self: ptr TreeStore00; iter: var TreeIter;
     parent: TreeIter; sibling: TreeIter) {.
     importc, libprag.}
 
-proc insertBefore*(self: TreeStore; iter: var TreeIter; parent: TreeIter = cast[ptr TreeIter](nil)[];
-    sibling: TreeIter = cast[ptr TreeIter](nil)[]) =
+proc insertBefore*(self: TreeStore; iter: var TreeIter; parent: TreeIter = cast[var TreeIter](nil);
+    sibling: TreeIter = cast[var TreeIter](nil)) =
   gtk_tree_store_insert_before(cast[ptr TreeStore00](self.impl), iter, parent, sibling)
 
 proc gtk_tree_store_is_ancestor(self: ptr TreeStore00; iter: TreeIter; descendant: TreeIter): gboolean {.
@@ -18991,19 +18698,19 @@ proc iterIsValid*(self: TreeStore; iter: TreeIter): bool =
 proc gtk_tree_store_move_after(self: ptr TreeStore00; iter: TreeIter; position: TreeIter) {.
     importc, libprag.}
 
-proc moveAfter*(self: TreeStore; iter: TreeIter; position: TreeIter = cast[ptr TreeIter](nil)[]) =
+proc moveAfter*(self: TreeStore; iter: TreeIter; position: TreeIter = cast[var TreeIter](nil)) =
   gtk_tree_store_move_after(cast[ptr TreeStore00](self.impl), iter, position)
 
 proc gtk_tree_store_move_before(self: ptr TreeStore00; iter: TreeIter; position: TreeIter) {.
     importc, libprag.}
 
-proc moveBefore*(self: TreeStore; iter: TreeIter; position: TreeIter = cast[ptr TreeIter](nil)[]) =
+proc moveBefore*(self: TreeStore; iter: TreeIter; position: TreeIter = cast[var TreeIter](nil)) =
   gtk_tree_store_move_before(cast[ptr TreeStore00](self.impl), iter, position)
 
 proc gtk_tree_store_prepend(self: ptr TreeStore00; iter: var TreeIter; parent: TreeIter) {.
     importc, libprag.}
 
-proc prepend*(self: TreeStore; iter: var TreeIter; parent: TreeIter = cast[ptr TreeIter](nil)[]) =
+proc prepend*(self: TreeStore; iter: var TreeIter; parent: TreeIter = cast[var TreeIter](nil)) =
   gtk_tree_store_prepend(cast[ptr TreeStore00](self.impl), iter, parent)
 
 proc gtk_tree_store_remove(self: ptr TreeStore00; iter: TreeIter): gboolean {.
@@ -19013,10 +18720,10 @@ proc remove*(self: TreeStore; iter: TreeIter): bool =
   toBool(gtk_tree_store_remove(cast[ptr TreeStore00](self.impl), iter))
 
 proc gtk_tree_store_set_column_types(self: ptr TreeStore00; nColumns: int32;
-    types: GTypeArray) {.
+    types: ptr GType) {.
     importc, libprag.}
 
-proc setColumnTypes*(self: TreeStore; nColumns: int; types: GTypeArray) =
+proc setColumnTypes*(self: TreeStore; nColumns: int; types: ptr GType) =
   gtk_tree_store_set_column_types(cast[ptr TreeStore00](self.impl), int32(nColumns), types)
 
 proc gtk_tree_store_set_value(self: ptr TreeStore00; iter: TreeIter; column: int32;
@@ -19077,18 +18784,10 @@ proc getColumnType*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilte
     index: int): GType =
   gtk_tree_model_get_column_type(cast[ptr TreeModel00](self.impl), int32(index))
 
-proc columnType*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
-    index: int): GType =
-  gtk_tree_model_get_column_type(cast[ptr TreeModel00](self.impl), int32(index))
-
 proc gtk_tree_model_get_iter(self: ptr TreeModel00; iter: var TreeIter; path: ptr TreePath00): gboolean {.
     importc, libprag.}
 
 proc getIter*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
-    iter: var TreeIter; path: TreePath): bool =
-  toBool(gtk_tree_model_get_iter(cast[ptr TreeModel00](self.impl), iter, cast[ptr TreePath00](path.impl)))
-
-proc iter*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
     iter: var TreeIter; path: TreePath): bool =
   toBool(gtk_tree_model_get_iter(cast[ptr TreeModel00](self.impl), iter, cast[ptr TreePath00](path.impl)))
 
@@ -19099,19 +18798,11 @@ proc getIterFirst*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter
     iter: var TreeIter): bool =
   toBool(gtk_tree_model_get_iter_first(cast[ptr TreeModel00](self.impl), iter))
 
-proc iterFirst*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
-    iter: var TreeIter): bool =
-  toBool(gtk_tree_model_get_iter_first(cast[ptr TreeModel00](self.impl), iter))
-
 proc gtk_tree_model_get_iter_from_string(self: ptr TreeModel00; iter: var TreeIter;
     pathString: cstring): gboolean {.
     importc, libprag.}
 
 proc getIterFromString*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
-    iter: var TreeIter; pathString: cstring): bool =
-  toBool(gtk_tree_model_get_iter_from_string(cast[ptr TreeModel00](self.impl), iter, pathString))
-
-proc iterFromString*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
     iter: var TreeIter; pathString: cstring): bool =
   toBool(gtk_tree_model_get_iter_from_string(cast[ptr TreeModel00](self.impl), iter, pathString))
 
@@ -19132,21 +18823,10 @@ proc getPath*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | Tr
   fnew(result, gBoxedFreeGtkTreePath)
   result.impl = gtk_tree_model_get_path(cast[ptr TreeModel00](self.impl), iter)
 
-proc path*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
-    iter: TreeIter): TreePath =
-  fnew(result, gBoxedFreeGtkTreePath)
-  result.impl = gtk_tree_model_get_path(cast[ptr TreeModel00](self.impl), iter)
-
 proc gtk_tree_model_get_string_from_iter(self: ptr TreeModel00; iter: TreeIter): cstring {.
     importc, libprag.}
 
 proc getStringFromIter*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
-    iter: TreeIter): string =
-  let resul0 = gtk_tree_model_get_string_from_iter(cast[ptr TreeModel00](self.impl), iter)
-  result = $resul0
-  cogfree(resul0)
-
-proc stringFromIter*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
     iter: TreeIter): string =
   let resul0 = gtk_tree_model_get_string_from_iter(cast[ptr TreeModel00](self.impl), iter)
   result = $resul0
@@ -19165,7 +18845,7 @@ proc gtk_tree_model_iter_children(self: ptr TreeModel00; iter: var TreeIter;
     importc, libprag.}
 
 proc iterChildren*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
-    iter: var TreeIter; parent: TreeIter = cast[ptr TreeIter](nil)[]): bool =
+    iter: var TreeIter; parent: TreeIter = cast[var TreeIter](nil)): bool =
   toBool(gtk_tree_model_iter_children(cast[ptr TreeModel00](self.impl), iter, parent))
 
 proc gtk_tree_model_iter_has_child(self: ptr TreeModel00; iter: TreeIter): gboolean {.
@@ -19179,7 +18859,7 @@ proc gtk_tree_model_iter_n_children(self: ptr TreeModel00; iter: TreeIter): int3
     importc, libprag.}
 
 proc iterNChildren*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
-    iter: TreeIter = cast[ptr TreeIter](nil)[]): int =
+    iter: TreeIter = cast[var TreeIter](nil)): int =
   int(gtk_tree_model_iter_n_children(cast[ptr TreeModel00](self.impl), iter))
 
 proc gtk_tree_model_iter_next(self: ptr TreeModel00; iter: TreeIter): gboolean {.
@@ -19194,7 +18874,7 @@ proc gtk_tree_model_iter_nth_child(self: ptr TreeModel00; iter: var TreeIter;
     importc, libprag.}
 
 proc iterNthChild*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
-    iter: var TreeIter; parent: TreeIter = cast[ptr TreeIter](nil)[]; n: int): bool =
+    iter: var TreeIter; parent: TreeIter = cast[var TreeIter](nil); n: int): bool =
   toBool(gtk_tree_model_iter_nth_child(cast[ptr TreeModel00](self.impl), iter, parent, int32(n)))
 
 proc gtk_tree_model_iter_parent(self: ptr TreeModel00; iter: var TreeIter;
@@ -19251,13 +18931,13 @@ proc rowInserted*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter 
   gtk_tree_model_row_inserted(cast[ptr TreeModel00](self.impl), cast[ptr TreePath00](path.impl), iter)
 
 proc gtk_tree_model_rows_reordered_with_length(self: ptr TreeModel00; path: ptr TreePath00;
-    iter: TreeIter; newOrder: int32Array; length: int32) {.
+    iter: TreeIter; newOrder: ptr int32; length: int32) {.
     importc, libprag.}
 
 proc rowsReordered*(self: TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore;
-    path: TreePath; iter: TreeIter = cast[ptr TreeIter](nil)[]; newOrder: seq[int32]) =
+    path: TreePath; iter: TreeIter = cast[var TreeIter](nil); newOrder: seq[int32]) =
   let length = int(new_order.len)
-  gtk_tree_model_rows_reordered_with_length(cast[ptr TreeModel00](self.impl), cast[ptr TreePath00](path.impl), iter, unsafeaddr(newOrder[0]), int32(length))
+  gtk_tree_model_rows_reordered_with_length(cast[ptr TreeModel00](self.impl), cast[ptr TreePath00](path.impl), iter, cast[ptr int32](unsafeaddr(newOrder[0])), int32(length))
 
 proc gtk_tree_model_unref_node(self: ptr TreeModel00; iter: TreeIter) {.
     importc, libprag.}
@@ -19506,32 +19186,11 @@ proc getFocusFromSibling*(self: CellArea; renderer: CellRenderer): CellRenderer 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc focusFromSibling*(self: CellArea; renderer: CellRenderer): CellRenderer =
-  let gobj = gtk_cell_area_get_focus_from_sibling(cast[ptr CellArea00](self.impl), cast[ptr CellRenderer00](renderer.impl))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_cell_area_get_focus_siblings(self: ptr CellArea00; renderer: ptr CellRenderer00): ptr pointer {.
+proc gtk_cell_area_get_focus_siblings(self: ptr CellArea00; renderer: ptr CellRenderer00): ptr glib.List {.
     importc, libprag.}
 
-proc getFocusSiblings*(self: CellArea; renderer: CellRenderer): ptr pointer =
-  gtk_cell_area_get_focus_siblings(cast[ptr CellArea00](self.impl), cast[ptr CellRenderer00](renderer.impl))
-
-proc focusSiblings*(self: CellArea; renderer: CellRenderer): ptr pointer =
-  gtk_cell_area_get_focus_siblings(cast[ptr CellArea00](self.impl), cast[ptr CellRenderer00](renderer.impl))
+proc getFocusSiblings*(self: CellArea; renderer: CellRenderer): seq[CellRenderer] =
+  result = glistObjects2seq(CellRenderer, gtk_cell_area_get_focus_siblings(cast[ptr CellArea00](self.impl), cast[ptr CellRenderer00](renderer.impl)), false)
 
 proc gtk_cell_area_get_request_mode(self: ptr CellArea00): SizeRequestMode {.
     importc, libprag.}
@@ -19590,13 +19249,15 @@ proc gtk_cell_area_request_renderer(self: ptr CellArea00; renderer: ptr CellRend
     importc, libprag.}
 
 proc requestRenderer*(self: CellArea; renderer: CellRenderer;
-    orientation: Orientation; widget: Widget; forSize: int; minimumSize: var int;
-    naturalSize: var int) =
-  var minimumSize_00 = int32(minimumSize)
-  var naturalSize_00 = int32(naturalSize)
+    orientation: Orientation; widget: Widget; forSize: int; minimumSize: var int = cast[var int](nil);
+    naturalSize: var int = cast[var int](nil)) =
+  var minimumSize_00: int32
+  var naturalSize_00: int32
   gtk_cell_area_request_renderer(cast[ptr CellArea00](self.impl), cast[ptr CellRenderer00](renderer.impl), orientation, cast[ptr Widget00](widget.impl), int32(forSize), minimumSize_00, naturalSize_00)
-  minimumSize = int(minimumSize_00)
-  naturalSize = int(naturalSize_00)
+  if minimumSize.addr != nil:
+    minimumSize = int(minimumSize_00)
+  if naturalSize.addr != nil:
+    naturalSize = int(naturalSize_00)
 
 proc gtk_cell_area_set_focus_cell(self: ptr CellArea00; renderer: ptr CellRenderer00) {.
     importc, libprag.}
@@ -20491,13 +20152,15 @@ proc gtk_cell_area_context_get_allocation(self: ptr CellAreaContext00; width: va
     height: var int32) {.
     importc, libprag.}
 
-proc getAllocation*(self: CellAreaContext; width: var int;
-    height: var int) =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+proc getAllocation*(self: CellAreaContext; width: var int = cast[var int](nil);
+    height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var height_00: int32
   gtk_cell_area_context_get_allocation(cast[ptr CellAreaContext00](self.impl), width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_cell_area_context_get_area(self: ptr CellAreaContext00): ptr CellArea00 {.
     importc, libprag.}
@@ -20538,49 +20201,57 @@ proc gtk_cell_area_context_get_preferred_height(self: ptr CellAreaContext00;
     minimumHeight: var int32; naturalHeight: var int32) {.
     importc, libprag.}
 
-proc getPreferredHeight*(self: CellAreaContext; minimumHeight: var int;
-    naturalHeight: var int) =
-  var naturalHeight_00 = int32(naturalHeight)
-  var minimumHeight_00 = int32(minimumHeight)
+proc getPreferredHeight*(self: CellAreaContext; minimumHeight: var int = cast[var int](nil);
+    naturalHeight: var int = cast[var int](nil)) =
+  var naturalHeight_00: int32
+  var minimumHeight_00: int32
   gtk_cell_area_context_get_preferred_height(cast[ptr CellAreaContext00](self.impl), minimumHeight_00, naturalHeight_00)
-  naturalHeight = int(naturalHeight_00)
-  minimumHeight = int(minimumHeight_00)
+  if naturalHeight.addr != nil:
+    naturalHeight = int(naturalHeight_00)
+  if minimumHeight.addr != nil:
+    minimumHeight = int(minimumHeight_00)
 
 proc gtk_cell_area_context_get_preferred_height_for_width(self: ptr CellAreaContext00;
     width: int32; minimumHeight: var int32; naturalHeight: var int32) {.
     importc, libprag.}
 
 proc getPreferredHeightForWidth*(self: CellAreaContext;
-    width: int; minimumHeight: var int; naturalHeight: var int) =
-  var naturalHeight_00 = int32(naturalHeight)
-  var minimumHeight_00 = int32(minimumHeight)
+    width: int; minimumHeight: var int = cast[var int](nil); naturalHeight: var int = cast[var int](nil)) =
+  var naturalHeight_00: int32
+  var minimumHeight_00: int32
   gtk_cell_area_context_get_preferred_height_for_width(cast[ptr CellAreaContext00](self.impl), int32(width), minimumHeight_00, naturalHeight_00)
-  naturalHeight = int(naturalHeight_00)
-  minimumHeight = int(minimumHeight_00)
+  if naturalHeight.addr != nil:
+    naturalHeight = int(naturalHeight_00)
+  if minimumHeight.addr != nil:
+    minimumHeight = int(minimumHeight_00)
 
 proc gtk_cell_area_context_get_preferred_width(self: ptr CellAreaContext00;
     minimumWidth: var int32; naturalWidth: var int32) {.
     importc, libprag.}
 
-proc getPreferredWidth*(self: CellAreaContext; minimumWidth: var int;
-    naturalWidth: var int) =
-  var minimumWidth_00 = int32(minimumWidth)
-  var naturalWidth_00 = int32(naturalWidth)
+proc getPreferredWidth*(self: CellAreaContext; minimumWidth: var int = cast[var int](nil);
+    naturalWidth: var int = cast[var int](nil)) =
+  var minimumWidth_00: int32
+  var naturalWidth_00: int32
   gtk_cell_area_context_get_preferred_width(cast[ptr CellAreaContext00](self.impl), minimumWidth_00, naturalWidth_00)
-  minimumWidth = int(minimumWidth_00)
-  naturalWidth = int(naturalWidth_00)
+  if minimumWidth.addr != nil:
+    minimumWidth = int(minimumWidth_00)
+  if naturalWidth.addr != nil:
+    naturalWidth = int(naturalWidth_00)
 
 proc gtk_cell_area_context_get_preferred_width_for_height(self: ptr CellAreaContext00;
     height: int32; minimumWidth: var int32; naturalWidth: var int32) {.
     importc, libprag.}
 
 proc getPreferredWidthForHeight*(self: CellAreaContext;
-    height: int; minimumWidth: var int; naturalWidth: var int) =
-  var minimumWidth_00 = int32(minimumWidth)
-  var naturalWidth_00 = int32(naturalWidth)
+    height: int; minimumWidth: var int = cast[var int](nil); naturalWidth: var int = cast[var int](nil)) =
+  var minimumWidth_00: int32
+  var naturalWidth_00: int32
   gtk_cell_area_context_get_preferred_width_for_height(cast[ptr CellAreaContext00](self.impl), int32(height), minimumWidth_00, naturalWidth_00)
-  minimumWidth = int(minimumWidth_00)
-  naturalWidth = int(naturalWidth_00)
+  if minimumWidth.addr != nil:
+    minimumWidth = int(minimumWidth_00)
+  if naturalWidth.addr != nil:
+    naturalWidth = int(naturalWidth_00)
 
 proc gtk_cell_area_context_push_preferred_height(self: ptr CellAreaContext00;
     minimumHeight: int32; naturalHeight: int32) {.
@@ -20676,24 +20347,7 @@ proc gtk_cell_area_get_cell_at_position(self: ptr CellArea00; context: ptr CellA
     importc, libprag.}
 
 proc getCellAtPosition*(self: CellArea; context: CellAreaContext;
-    widget: Widget; cellArea: gdk.Rectangle; x: int; y: int; allocArea: var gdk.Rectangle): CellRenderer =
-  let gobj = gtk_cell_area_get_cell_at_position(cast[ptr CellArea00](self.impl), cast[ptr CellAreaContext00](context.impl), cast[ptr Widget00](widget.impl), cellArea, int32(x), int32(y), allocArea)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc cellAtPosition*(self: CellArea; context: CellAreaContext;
-    widget: Widget; cellArea: gdk.Rectangle; x: int; y: int; allocArea: var gdk.Rectangle): CellRenderer =
+    widget: Widget; cellArea: gdk.Rectangle; x: int; y: int; allocArea: var gdk.Rectangle = cast[var gdk.Rectangle](nil)): CellRenderer =
   let gobj = gtk_cell_area_get_cell_at_position(cast[ptr CellArea00](self.impl), cast[ptr CellAreaContext00](context.impl), cast[ptr Widget00](widget.impl), cellArea, int32(x), int32(y), allocArea)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -20714,48 +20368,58 @@ proc gtk_cell_area_get_preferred_height(self: ptr CellArea00; context: ptr CellA
     importc, libprag.}
 
 proc getPreferredHeight*(self: CellArea; context: CellAreaContext;
-    widget: Widget; minimumHeight: var int; naturalHeight: var int) =
-  var naturalHeight_00 = int32(naturalHeight)
-  var minimumHeight_00 = int32(minimumHeight)
+    widget: Widget; minimumHeight: var int = cast[var int](nil); naturalHeight: var int = cast[var int](nil)) =
+  var naturalHeight_00: int32
+  var minimumHeight_00: int32
   gtk_cell_area_get_preferred_height(cast[ptr CellArea00](self.impl), cast[ptr CellAreaContext00](context.impl), cast[ptr Widget00](widget.impl), minimumHeight_00, naturalHeight_00)
-  naturalHeight = int(naturalHeight_00)
-  minimumHeight = int(minimumHeight_00)
+  if naturalHeight.addr != nil:
+    naturalHeight = int(naturalHeight_00)
+  if minimumHeight.addr != nil:
+    minimumHeight = int(minimumHeight_00)
 
 proc gtk_cell_area_get_preferred_height_for_width(self: ptr CellArea00; context: ptr CellAreaContext00;
     widget: ptr Widget00; width: int32; minimumHeight: var int32; naturalHeight: var int32) {.
     importc, libprag.}
 
 proc getPreferredHeightForWidth*(self: CellArea; context: CellAreaContext;
-    widget: Widget; width: int; minimumHeight: var int; naturalHeight: var int) =
-  var naturalHeight_00 = int32(naturalHeight)
-  var minimumHeight_00 = int32(minimumHeight)
+    widget: Widget; width: int; minimumHeight: var int = cast[var int](nil);
+    naturalHeight: var int = cast[var int](nil)) =
+  var naturalHeight_00: int32
+  var minimumHeight_00: int32
   gtk_cell_area_get_preferred_height_for_width(cast[ptr CellArea00](self.impl), cast[ptr CellAreaContext00](context.impl), cast[ptr Widget00](widget.impl), int32(width), minimumHeight_00, naturalHeight_00)
-  naturalHeight = int(naturalHeight_00)
-  minimumHeight = int(minimumHeight_00)
+  if naturalHeight.addr != nil:
+    naturalHeight = int(naturalHeight_00)
+  if minimumHeight.addr != nil:
+    minimumHeight = int(minimumHeight_00)
 
 proc gtk_cell_area_get_preferred_width(self: ptr CellArea00; context: ptr CellAreaContext00;
     widget: ptr Widget00; minimumWidth: var int32; naturalWidth: var int32) {.
     importc, libprag.}
 
 proc getPreferredWidth*(self: CellArea; context: CellAreaContext;
-    widget: Widget; minimumWidth: var int; naturalWidth: var int) =
-  var minimumWidth_00 = int32(minimumWidth)
-  var naturalWidth_00 = int32(naturalWidth)
+    widget: Widget; minimumWidth: var int = cast[var int](nil); naturalWidth: var int = cast[var int](nil)) =
+  var minimumWidth_00: int32
+  var naturalWidth_00: int32
   gtk_cell_area_get_preferred_width(cast[ptr CellArea00](self.impl), cast[ptr CellAreaContext00](context.impl), cast[ptr Widget00](widget.impl), minimumWidth_00, naturalWidth_00)
-  minimumWidth = int(minimumWidth_00)
-  naturalWidth = int(naturalWidth_00)
+  if minimumWidth.addr != nil:
+    minimumWidth = int(minimumWidth_00)
+  if naturalWidth.addr != nil:
+    naturalWidth = int(naturalWidth_00)
 
 proc gtk_cell_area_get_preferred_width_for_height(self: ptr CellArea00; context: ptr CellAreaContext00;
     widget: ptr Widget00; height: int32; minimumWidth: var int32; naturalWidth: var int32) {.
     importc, libprag.}
 
 proc getPreferredWidthForHeight*(self: CellArea; context: CellAreaContext;
-    widget: Widget; height: int; minimumWidth: var int; naturalWidth: var int) =
-  var minimumWidth_00 = int32(minimumWidth)
-  var naturalWidth_00 = int32(naturalWidth)
+    widget: Widget; height: int; minimumWidth: var int = cast[var int](nil);
+    naturalWidth: var int = cast[var int](nil)) =
+  var minimumWidth_00: int32
+  var naturalWidth_00: int32
   gtk_cell_area_get_preferred_width_for_height(cast[ptr CellArea00](self.impl), cast[ptr CellAreaContext00](context.impl), cast[ptr Widget00](widget.impl), int32(height), minimumWidth_00, naturalWidth_00)
-  minimumWidth = int(minimumWidth_00)
-  naturalWidth = int(naturalWidth_00)
+  if minimumWidth.addr != nil:
+    minimumWidth = int(minimumWidth_00)
+  if naturalWidth.addr != nil:
+    naturalWidth = int(naturalWidth_00)
 
 proc gtk_cell_area_render(self: ptr CellArea00; context: ptr CellAreaContext00;
     widget: ptr Widget00; cr: ptr cairo.Context00; backgroundArea: gdk.Rectangle;
@@ -21144,23 +20808,6 @@ proc getAction*(self: ActionGroup | gio.SimpleActionGroup | Application | Applic
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc action*(self: ActionGroup | gio.SimpleActionGroup | Application | ApplicationWindow;
-    actionName: cstring): Action =
-  let gobj = gtk_action_group_get_action(cast[ptr ActionGroup00](self.impl), actionName)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_action_group_get_name(self: ptr ActionGroup00): cstring {.
     importc, libprag.}
 
@@ -21188,11 +20835,13 @@ proc getVisible*(self: ActionGroup | gio.SimpleActionGroup | Application | Appli
 proc visible*(self: ActionGroup | gio.SimpleActionGroup | Application | ApplicationWindow): bool =
   toBool(gtk_action_group_get_visible(cast[ptr ActionGroup00](self.impl)))
 
-proc gtk_action_group_list_actions(self: ptr ActionGroup00): ptr pointer {.
+proc gtk_action_group_list_actions(self: ptr ActionGroup00): ptr glib.List {.
     importc, libprag.}
 
-proc listActions*(self: ActionGroup | gio.SimpleActionGroup | Application | ApplicationWindow): ptr pointer =
-  gtk_action_group_list_actions(cast[ptr ActionGroup00](self.impl))
+proc listActions*(self: ActionGroup | gio.SimpleActionGroup | Application | ApplicationWindow): seq[Action] =
+  let resul0 = gtk_action_group_list_actions(cast[ptr ActionGroup00](self.impl))
+  result = glistObjects2seq(Action, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_action_group_remove_action(self: ptr ActionGroup00; action: ptr Action00) {.
     importc, libprag.}
@@ -21981,7 +21630,7 @@ proc initToggleButton*[T](result: var T) {.deprecated.} =
 proc gtk_toggle_button_new_with_label(label: cstring): ptr ToggleButton00 {.
     importc, libprag.}
 
-proc newToggleButtonWithLabel*(label: cstring): ToggleButton =
+proc newToggleButton*(label: cstring): ToggleButton =
   let gobj = gtk_toggle_button_new_with_label(label)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -21997,7 +21646,7 @@ proc newToggleButtonWithLabel*(label: cstring): ToggleButton =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newToggleButtonWithLabel*(tdesc: typedesc; label: cstring): tdesc =
+proc newToggleButton*(tdesc: typedesc; label: cstring): tdesc =
   assert(result is ToggleButton)
   let gobj = gtk_toggle_button_new_with_label(label)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -22014,7 +21663,7 @@ proc newToggleButtonWithLabel*(tdesc: typedesc; label: cstring): tdesc =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initToggleButtonWithLabel*[T](result: var T; label: cstring) {.deprecated.} =
+proc initToggleButton*[T](result: var T; label: cstring) {.deprecated.} =
   assert(result is ToggleButton)
   let gobj = gtk_toggle_button_new_with_label(label)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -22215,7 +21864,7 @@ proc initCheckButton*[T](result: var T) {.deprecated.} =
 proc gtk_check_button_new_with_label(label: cstring): ptr CheckButton00 {.
     importc, libprag.}
 
-proc newCheckButtonWithLabel*(label: cstring): CheckButton =
+proc newCheckButton*(label: cstring): CheckButton =
   let gobj = gtk_check_button_new_with_label(label)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -22231,7 +21880,7 @@ proc newCheckButtonWithLabel*(label: cstring): CheckButton =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newCheckButtonWithLabel*(tdesc: typedesc; label: cstring): tdesc =
+proc newCheckButton*(tdesc: typedesc; label: cstring): tdesc =
   assert(result is CheckButton)
   let gobj = gtk_check_button_new_with_label(label)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -22248,7 +21897,7 @@ proc newCheckButtonWithLabel*(tdesc: typedesc; label: cstring): tdesc =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initCheckButtonWithLabel*[T](result: var T; label: cstring) {.deprecated.} =
+proc initCheckButton*[T](result: var T; label: cstring) {.deprecated.} =
   assert(result is CheckButton)
   let gobj = gtk_check_button_new_with_label(label)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -22450,24 +22099,6 @@ proc gtk_tool_item_get_proxy_menu_item(self: ptr ToolItem00; menuItemId: cstring
     importc, libprag.}
 
 proc getProxyMenuItem*(self: ToolItem; menuItemId: cstring): Widget =
-  let gobj = gtk_tool_item_get_proxy_menu_item(cast[ptr ToolItem00](self.impl), menuItemId)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc proxyMenuItem*(self: ToolItem; menuItemId: cstring): Widget =
   let gobj = gtk_tool_item_get_proxy_menu_item(cast[ptr ToolItem00](self.impl), menuItemId)
   if gobj.isNil:
     return nil
@@ -23180,7 +22811,7 @@ proc scValueChanged*(self: ScaleButton;  p: proc (self: ptr ScaleButton00; value
   g_signal_connect_data(self.impl, "value-changed", cast[GCallback](p), xdata, nil, cf)
 
 proc gtk_scale_button_new(size: int32; min: cdouble; max: cdouble; step: cdouble;
-    icons: cstringArray): ptr ScaleButton00 {.
+    icons: ptr cstring): ptr ScaleButton00 {.
     importc, libprag.}
 
 proc newScaleButton*(size: int; min: cdouble; max: cdouble; step: cdouble;
@@ -23400,7 +23031,7 @@ proc setAdjustment*(self: ScaleButton; adjustment: Adjustment) =
 proc `adjustment=`*(self: ScaleButton; adjustment: Adjustment) =
   gtk_scale_button_set_adjustment(cast[ptr ScaleButton00](self.impl), cast[ptr Adjustment00](adjustment.impl))
 
-proc gtk_scale_button_set_icons(self: ptr ScaleButton00; icons: cstringArray) {.
+proc gtk_scale_button_set_icons(self: ptr ScaleButton00; icons: ptr cstring) {.
     importc, libprag.}
 
 proc setIcons*(self: ScaleButton; icons: varargs[string, `$`]) =
@@ -23547,112 +23178,6 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_radio_tool_button_new(group: ptr pointer): ptr RadioToolButton00 {.
-    importc, libprag.}
-
-proc newRadioToolButton*(group: ptr pointer): RadioToolButton =
-  let gobj = gtk_radio_tool_button_new(group)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc newRadioToolButton*(tdesc: typedesc; group: ptr pointer): tdesc =
-  assert(result is RadioToolButton)
-  let gobj = gtk_radio_tool_button_new(group)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc initRadioToolButton*[T](result: var T; group: ptr pointer) {.deprecated.} =
-  assert(result is RadioToolButton)
-  let gobj = gtk_radio_tool_button_new(group)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_radio_tool_button_new_from_stock(group: ptr pointer; stockId: cstring): ptr RadioToolButton00 {.
-    importc, libprag.}
-
-proc newRadioToolButtonFromStock*(group: ptr pointer; stockId: cstring): RadioToolButton {.deprecated.}  =
-  let gobj = gtk_radio_tool_button_new_from_stock(group, stockId)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc newRadioToolButtonFromStock*(tdesc: typedesc; group: ptr pointer; stockId: cstring): tdesc {.deprecated.}  =
-  assert(result is RadioToolButton)
-  let gobj = gtk_radio_tool_button_new_from_stock(group, stockId)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc initRadioToolButtonFromStock*[T](result: var T; group: ptr pointer; stockId: cstring) {.deprecated.} =
-  assert(result is RadioToolButton)
-  let gobj = gtk_radio_tool_button_new_from_stock(group, stockId)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_radio_tool_button_new_from_widget(group: ptr RadioToolButton00): ptr RadioToolButton00 {.
     importc, libprag.}
 
@@ -23762,24 +23287,6 @@ proc initRadioToolButtonWithStockFromWidget*[T](result: var T; group: RadioToolB
     g_object_unref(result.impl)
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_radio_tool_button_get_group(self: ptr RadioToolButton00): ptr pointer {.
-    importc, libprag.}
-
-proc getGroup*(self: RadioToolButton): ptr pointer =
-  gtk_radio_tool_button_get_group(cast[ptr RadioToolButton00](self.impl))
-
-proc group*(self: RadioToolButton): ptr pointer =
-  gtk_radio_tool_button_get_group(cast[ptr RadioToolButton00](self.impl))
-
-proc gtk_radio_tool_button_set_group(self: ptr RadioToolButton00; group: ptr pointer) {.
-    importc, libprag.}
-
-proc setGroup*(self: RadioToolButton; group: ptr pointer) =
-  gtk_radio_tool_button_set_group(cast[ptr RadioToolButton00](self.impl), group)
-
-proc `group=`*(self: RadioToolButton; group: ptr pointer) =
-  gtk_radio_tool_button_set_group(cast[ptr RadioToolButton00](self.impl), group)
 
 type
   ListBoxRow* = ref object of Bin
@@ -24221,11 +23728,13 @@ when defined(gcDestructors):
 proc scGroupChanged*(self: RadioButton;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "group-changed", cast[GCallback](p), xdata, nil, cf)
 
-proc gtk_radio_button_new(group: ptr pointer): ptr RadioButton00 {.
+proc gtk_radio_button_new(group: ptr glib.SList): ptr RadioButton00 {.
     importc, libprag.}
 
-proc newRadioButton*(group: ptr pointer): RadioButton =
-  let gobj = gtk_radio_button_new(group)
+proc newRadioButton*(group: seq[RadioButton]): RadioButton =
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_button_new(tempResGL)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -24240,9 +23749,11 @@ proc newRadioButton*(group: ptr pointer): RadioButton =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newRadioButton*(tdesc: typedesc; group: ptr pointer): tdesc =
+proc newRadioButton*(tdesc: typedesc; group: seq[RadioButton]): tdesc =
   assert(result is RadioButton)
-  let gobj = gtk_radio_button_new(group)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_button_new(tempResGL)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -24257,9 +23768,11 @@ proc newRadioButton*(tdesc: typedesc; group: ptr pointer): tdesc =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initRadioButton*[T](result: var T; group: ptr pointer) {.deprecated.} =
+proc initRadioButton*[T](result: var T; group: seq[RadioButton]) {.deprecated.} =
   assert(result is RadioButton)
-  let gobj = gtk_radio_button_new(group)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_button_new(tempResGL)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -24327,11 +23840,13 @@ proc initRadioButtonFromWidget*[T](result: var T; radioGroupMember: RadioButton 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_radio_button_new_with_label(group: ptr pointer; label: cstring): ptr RadioButton00 {.
+proc gtk_radio_button_new_with_label(group: ptr glib.SList; label: cstring): ptr RadioButton00 {.
     importc, libprag.}
 
-proc newRadioButtonWithLabel*(group: ptr pointer; label: cstring): RadioButton =
-  let gobj = gtk_radio_button_new_with_label(group, label)
+proc newRadioButtonWithLabel*(group: seq[RadioButton]; label: cstring): RadioButton =
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_button_new_with_label(tempResGL, label)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -24346,9 +23861,11 @@ proc newRadioButtonWithLabel*(group: ptr pointer; label: cstring): RadioButton =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newRadioButtonWithLabel*(tdesc: typedesc; group: ptr pointer; label: cstring): tdesc =
+proc newRadioButtonWithLabel*(tdesc: typedesc; group: seq[RadioButton]; label: cstring): tdesc =
   assert(result is RadioButton)
-  let gobj = gtk_radio_button_new_with_label(group, label)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_button_new_with_label(tempResGL, label)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -24363,9 +23880,11 @@ proc newRadioButtonWithLabel*(tdesc: typedesc; group: ptr pointer; label: cstrin
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initRadioButtonWithLabel*[T](result: var T; group: ptr pointer; label: cstring) {.deprecated.} =
+proc initRadioButtonWithLabel*[T](result: var T; group: seq[RadioButton]; label: cstring) {.deprecated.} =
   assert(result is RadioButton)
-  let gobj = gtk_radio_button_new_with_label(group, label)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_button_new_with_label(tempResGL, label)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -24437,11 +23956,13 @@ proc initRadioButtonWithLabelFromWidget*[T](result: var T; radioGroupMember: Rad
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_radio_button_new_with_mnemonic(group: ptr pointer; label: cstring): ptr RadioButton00 {.
+proc gtk_radio_button_new_with_mnemonic(group: ptr glib.SList; label: cstring): ptr RadioButton00 {.
     importc, libprag.}
 
-proc newRadioButtonWithMnemonic*(group: ptr pointer; label: cstring): RadioButton =
-  let gobj = gtk_radio_button_new_with_mnemonic(group, label)
+proc newRadioButtonWithMnemonic*(group: seq[RadioButton]; label: cstring): RadioButton =
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_button_new_with_mnemonic(tempResGL, label)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -24456,9 +23977,11 @@ proc newRadioButtonWithMnemonic*(group: ptr pointer; label: cstring): RadioButto
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newRadioButtonWithMnemonic*(tdesc: typedesc; group: ptr pointer; label: cstring): tdesc =
+proc newRadioButtonWithMnemonic*(tdesc: typedesc; group: seq[RadioButton]; label: cstring): tdesc =
   assert(result is RadioButton)
-  let gobj = gtk_radio_button_new_with_mnemonic(group, label)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_button_new_with_mnemonic(tempResGL, label)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -24473,9 +23996,11 @@ proc newRadioButtonWithMnemonic*(tdesc: typedesc; group: ptr pointer; label: cst
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initRadioButtonWithMnemonic*[T](result: var T; group: ptr pointer; label: cstring) {.deprecated.} =
+proc initRadioButtonWithMnemonic*[T](result: var T; group: seq[RadioButton]; label: cstring) {.deprecated.} =
   assert(result is RadioButton)
-  let gobj = gtk_radio_button_new_with_mnemonic(group, label)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_button_new_with_mnemonic(tempResGL, label)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -24547,14 +24072,14 @@ proc initRadioButtonWithMnemonicFromWidget*[T](result: var T; radioGroupMember: 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_radio_button_get_group(self: ptr RadioButton00): ptr pointer {.
+proc gtk_radio_button_get_group(self: ptr RadioButton00): ptr glib.SList {.
     importc, libprag.}
 
-proc getGroup*(self: RadioButton): ptr pointer =
-  gtk_radio_button_get_group(cast[ptr RadioButton00](self.impl))
+proc getGroup*(self: RadioButton): seq[RadioButton] =
+  result = gslistObjects2seq(RadioButton, gtk_radio_button_get_group(cast[ptr RadioButton00](self.impl)), false)
 
-proc group*(self: RadioButton): ptr pointer =
-  gtk_radio_button_get_group(cast[ptr RadioButton00](self.impl))
+proc group*(self: RadioButton): seq[RadioButton] =
+  result = gslistObjects2seq(RadioButton, gtk_radio_button_get_group(cast[ptr RadioButton00](self.impl)), false)
 
 proc gtk_radio_button_join_group(self: ptr RadioButton00; groupSource: ptr RadioButton00) {.
     importc, libprag.}
@@ -24562,14 +24087,158 @@ proc gtk_radio_button_join_group(self: ptr RadioButton00; groupSource: ptr Radio
 proc joinGroup*(self: RadioButton; groupSource: RadioButton = nil) =
   gtk_radio_button_join_group(cast[ptr RadioButton00](self.impl), if groupSource.isNil: nil else: cast[ptr RadioButton00](groupSource.impl))
 
-proc gtk_radio_button_set_group(self: ptr RadioButton00; group: ptr pointer) {.
+proc gtk_radio_button_set_group(self: ptr RadioButton00; group: ptr glib.SList) {.
     importc, libprag.}
 
-proc setGroup*(self: RadioButton; group: ptr pointer) =
-  gtk_radio_button_set_group(cast[ptr RadioButton00](self.impl), group)
+proc setGroup*(self: RadioButton; group: seq[RadioButton]) =
+  var tempResGL = seq2GSList(group)
+  gtk_radio_button_set_group(cast[ptr RadioButton00](self.impl), tempResGL)
+  g_slist_free(tempResGL)
 
-proc `group=`*(self: RadioButton; group: ptr pointer) =
-  gtk_radio_button_set_group(cast[ptr RadioButton00](self.impl), group)
+proc `group=`*(self: RadioButton; group: seq[RadioButton]) =
+  var tempResGL = seq2GSList(group)
+  gtk_radio_button_set_group(cast[ptr RadioButton00](self.impl), tempResGL)
+  g_slist_free(tempResGL)
+
+proc gtk_radio_tool_button_new(group: ptr glib.SList): ptr RadioToolButton00 {.
+    importc, libprag.}
+
+proc newRadioToolButton*(group: seq[RadioButton]): RadioToolButton =
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_tool_button_new(tempResGL)
+  g_slist_free(tempResGL)
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtk.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc newRadioToolButton*(tdesc: typedesc; group: seq[RadioButton]): tdesc =
+  assert(result is RadioToolButton)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_tool_button_new(tempResGL)
+  g_slist_free(tempResGL)
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtk.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc initRadioToolButton*[T](result: var T; group: seq[RadioButton]) {.deprecated.} =
+  assert(result is RadioToolButton)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_tool_button_new(tempResGL)
+  g_slist_free(tempResGL)
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtk.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc gtk_radio_tool_button_new_from_stock(group: ptr glib.SList; stockId: cstring): ptr RadioToolButton00 {.
+    importc, libprag.}
+
+proc newRadioToolButtonFromStock*(group: seq[RadioButton]; stockId: cstring): RadioToolButton {.deprecated.}  =
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_tool_button_new_from_stock(tempResGL, stockId)
+  g_slist_free(tempResGL)
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtk.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc newRadioToolButtonFromStock*(tdesc: typedesc; group: seq[RadioButton]; stockId: cstring): tdesc {.deprecated.}  =
+  assert(result is RadioToolButton)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_tool_button_new_from_stock(tempResGL, stockId)
+  g_slist_free(tempResGL)
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtk.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc initRadioToolButtonFromStock*[T](result: var T; group: seq[RadioButton]; stockId: cstring) {.deprecated.} =
+  assert(result is RadioToolButton)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_tool_button_new_from_stock(tempResGL, stockId)
+  g_slist_free(tempResGL)
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gtk.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc gtk_radio_tool_button_get_group(self: ptr RadioToolButton00): ptr glib.SList {.
+    importc, libprag.}
+
+proc getGroup*(self: RadioToolButton): seq[RadioButton] =
+  result = gslistObjects2seq(RadioButton, gtk_radio_tool_button_get_group(cast[ptr RadioToolButton00](self.impl)), false)
+
+proc group*(self: RadioToolButton): seq[RadioButton] =
+  result = gslistObjects2seq(RadioButton, gtk_radio_tool_button_get_group(cast[ptr RadioToolButton00](self.impl)), false)
+
+proc gtk_radio_tool_button_set_group(self: ptr RadioToolButton00; group: ptr glib.SList) {.
+    importc, libprag.}
+
+proc setGroup*(self: RadioToolButton; group: seq[RadioButton]) =
+  var tempResGL = seq2GSList(group)
+  gtk_radio_tool_button_set_group(cast[ptr RadioToolButton00](self.impl), tempResGL)
+  g_slist_free(tempResGL)
+
+proc `group=`*(self: RadioToolButton; group: seq[RadioButton]) =
+  var tempResGL = seq2GSList(group)
+  gtk_radio_tool_button_set_group(cast[ptr RadioToolButton00](self.impl), tempResGL)
+  g_slist_free(tempResGL)
 
 type
   LinkButton* = ref object of Button
@@ -24645,7 +24314,7 @@ proc initLinkButton*[T](result: var T; uri: cstring) {.deprecated.} =
 proc gtk_link_button_new_with_label(uri: cstring; label: cstring): ptr LinkButton00 {.
     importc, libprag.}
 
-proc newLinkButtonWithLabel*(uri: cstring; label: cstring = ""): LinkButton =
+proc newLinkButton*(uri: cstring; label: cstring): LinkButton =
   let gobj = gtk_link_button_new_with_label(uri, safeStringToCString(label))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -24661,7 +24330,7 @@ proc newLinkButtonWithLabel*(uri: cstring; label: cstring = ""): LinkButton =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newLinkButtonWithLabel*(tdesc: typedesc; uri: cstring; label: cstring = ""): tdesc =
+proc newLinkButton*(tdesc: typedesc; uri: cstring; label: cstring): tdesc =
   assert(result is LinkButton)
   let gobj = gtk_link_button_new_with_label(uri, safeStringToCString(label))
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -24678,7 +24347,7 @@ proc newLinkButtonWithLabel*(tdesc: typedesc; uri: cstring; label: cstring = "")
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initLinkButtonWithLabel*[T](result: var T; uri: cstring; label: cstring = "") {.deprecated.} =
+proc initLinkButton*[T](result: var T; uri: cstring; label: cstring) {.deprecated.} =
   assert(result is LinkButton)
   let gobj = gtk_link_button_new_with_label(uri, safeStringToCString(label))
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -25605,11 +25274,13 @@ when defined(gcDestructors):
 proc scGroupChanged*(self: RadioMenuItem;  p: proc (self: ptr gobject.Object00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "group-changed", cast[GCallback](p), xdata, nil, cf)
 
-proc gtk_radio_menu_item_new(group: ptr pointer): ptr RadioMenuItem00 {.
+proc gtk_radio_menu_item_new(group: ptr glib.SList): ptr RadioMenuItem00 {.
     importc, libprag.}
 
-proc newRadioMenuItem*(group: ptr pointer): RadioMenuItem =
-  let gobj = gtk_radio_menu_item_new(group)
+proc newRadioMenuItem*(group: seq[RadioMenuItem]): RadioMenuItem =
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_menu_item_new(tempResGL)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -25624,9 +25295,11 @@ proc newRadioMenuItem*(group: ptr pointer): RadioMenuItem =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newRadioMenuItem*(tdesc: typedesc; group: ptr pointer): tdesc =
+proc newRadioMenuItem*(tdesc: typedesc; group: seq[RadioMenuItem]): tdesc =
   assert(result is RadioMenuItem)
-  let gobj = gtk_radio_menu_item_new(group)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_menu_item_new(tempResGL)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -25641,9 +25314,11 @@ proc newRadioMenuItem*(tdesc: typedesc; group: ptr pointer): tdesc =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initRadioMenuItem*[T](result: var T; group: ptr pointer) {.deprecated.} =
+proc initRadioMenuItem*[T](result: var T; group: seq[RadioMenuItem]) {.deprecated.} =
   assert(result is RadioMenuItem)
-  let gobj = gtk_radio_menu_item_new(group)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_menu_item_new(tempResGL)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -25711,11 +25386,13 @@ proc initRadioMenuItemFromWidget*[T](result: var T; group: RadioMenuItem = nil) 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_radio_menu_item_new_with_label(group: ptr pointer; label: cstring): ptr RadioMenuItem00 {.
+proc gtk_radio_menu_item_new_with_label(group: ptr glib.SList; label: cstring): ptr RadioMenuItem00 {.
     importc, libprag.}
 
-proc newRadioMenuItemWithLabel*(group: ptr pointer; label: cstring): RadioMenuItem =
-  let gobj = gtk_radio_menu_item_new_with_label(group, label)
+proc newRadioMenuItemWithLabel*(group: seq[RadioMenuItem]; label: cstring): RadioMenuItem =
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_menu_item_new_with_label(tempResGL, label)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -25730,9 +25407,11 @@ proc newRadioMenuItemWithLabel*(group: ptr pointer; label: cstring): RadioMenuIt
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newRadioMenuItemWithLabel*(tdesc: typedesc; group: ptr pointer; label: cstring): tdesc =
+proc newRadioMenuItemWithLabel*(tdesc: typedesc; group: seq[RadioMenuItem]; label: cstring): tdesc =
   assert(result is RadioMenuItem)
-  let gobj = gtk_radio_menu_item_new_with_label(group, label)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_menu_item_new_with_label(tempResGL, label)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -25747,9 +25426,11 @@ proc newRadioMenuItemWithLabel*(tdesc: typedesc; group: ptr pointer; label: cstr
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initRadioMenuItemWithLabel*[T](result: var T; group: ptr pointer; label: cstring) {.deprecated.} =
+proc initRadioMenuItemWithLabel*[T](result: var T; group: seq[RadioMenuItem]; label: cstring) {.deprecated.} =
   assert(result is RadioMenuItem)
-  let gobj = gtk_radio_menu_item_new_with_label(group, label)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_menu_item_new_with_label(tempResGL, label)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -25821,11 +25502,13 @@ proc initRadioMenuItemWithLabelFromWidget*[T](result: var T; group: RadioMenuIte
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_radio_menu_item_new_with_mnemonic(group: ptr pointer; label: cstring): ptr RadioMenuItem00 {.
+proc gtk_radio_menu_item_new_with_mnemonic(group: ptr glib.SList; label: cstring): ptr RadioMenuItem00 {.
     importc, libprag.}
 
-proc newRadioMenuItemWithMnemonic*(group: ptr pointer; label: cstring): RadioMenuItem =
-  let gobj = gtk_radio_menu_item_new_with_mnemonic(group, label)
+proc newRadioMenuItemWithMnemonic*(group: seq[RadioMenuItem]; label: cstring): RadioMenuItem =
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_menu_item_new_with_mnemonic(tempResGL, label)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -25840,9 +25523,11 @@ proc newRadioMenuItemWithMnemonic*(group: ptr pointer; label: cstring): RadioMen
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newRadioMenuItemWithMnemonic*(tdesc: typedesc; group: ptr pointer; label: cstring): tdesc =
+proc newRadioMenuItemWithMnemonic*(tdesc: typedesc; group: seq[RadioMenuItem]; label: cstring): tdesc =
   assert(result is RadioMenuItem)
-  let gobj = gtk_radio_menu_item_new_with_mnemonic(group, label)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_menu_item_new_with_mnemonic(tempResGL, label)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -25857,9 +25542,11 @@ proc newRadioMenuItemWithMnemonic*(tdesc: typedesc; group: ptr pointer; label: c
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initRadioMenuItemWithMnemonic*[T](result: var T; group: ptr pointer; label: cstring) {.deprecated.} =
+proc initRadioMenuItemWithMnemonic*[T](result: var T; group: seq[RadioMenuItem]; label: cstring) {.deprecated.} =
   assert(result is RadioMenuItem)
-  let gobj = gtk_radio_menu_item_new_with_mnemonic(group, label)
+  var tempResGL = seq2GSList(group)
+  let gobj = gtk_radio_menu_item_new_with_mnemonic(tempResGL, label)
+  g_slist_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -25931,14 +25618,14 @@ proc initRadioMenuItemWithMnemonicFromWidget*[T](result: var T; group: RadioMenu
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_radio_menu_item_get_group(self: ptr RadioMenuItem00): ptr pointer {.
+proc gtk_radio_menu_item_get_group(self: ptr RadioMenuItem00): ptr glib.SList {.
     importc, libprag.}
 
-proc getGroup*(self: RadioMenuItem): ptr pointer =
-  gtk_radio_menu_item_get_group(cast[ptr RadioMenuItem00](self.impl))
+proc getGroup*(self: RadioMenuItem): seq[RadioMenuItem] =
+  result = gslistObjects2seq(RadioMenuItem, gtk_radio_menu_item_get_group(cast[ptr RadioMenuItem00](self.impl)), false)
 
-proc group*(self: RadioMenuItem): ptr pointer =
-  gtk_radio_menu_item_get_group(cast[ptr RadioMenuItem00](self.impl))
+proc group*(self: RadioMenuItem): seq[RadioMenuItem] =
+  result = gslistObjects2seq(RadioMenuItem, gtk_radio_menu_item_get_group(cast[ptr RadioMenuItem00](self.impl)), false)
 
 proc gtk_radio_menu_item_join_group(self: ptr RadioMenuItem00; groupSource: ptr RadioMenuItem00) {.
     importc, libprag.}
@@ -25946,14 +25633,18 @@ proc gtk_radio_menu_item_join_group(self: ptr RadioMenuItem00; groupSource: ptr 
 proc joinGroup*(self: RadioMenuItem; groupSource: RadioMenuItem = nil) =
   gtk_radio_menu_item_join_group(cast[ptr RadioMenuItem00](self.impl), if groupSource.isNil: nil else: cast[ptr RadioMenuItem00](groupSource.impl))
 
-proc gtk_radio_menu_item_set_group(self: ptr RadioMenuItem00; group: ptr pointer) {.
+proc gtk_radio_menu_item_set_group(self: ptr RadioMenuItem00; group: ptr glib.SList) {.
     importc, libprag.}
 
-proc setGroup*(self: RadioMenuItem; group: ptr pointer) =
-  gtk_radio_menu_item_set_group(cast[ptr RadioMenuItem00](self.impl), group)
+proc setGroup*(self: RadioMenuItem; group: seq[RadioMenuItem]) =
+  var tempResGL = seq2GSList(group)
+  gtk_radio_menu_item_set_group(cast[ptr RadioMenuItem00](self.impl), tempResGL)
+  g_slist_free(tempResGL)
 
-proc `group=`*(self: RadioMenuItem; group: ptr pointer) =
-  gtk_radio_menu_item_set_group(cast[ptr RadioMenuItem00](self.impl), group)
+proc `group=`*(self: RadioMenuItem; group: seq[RadioMenuItem]) =
+  var tempResGL = seq2GSList(group)
+  gtk_radio_menu_item_set_group(cast[ptr RadioMenuItem00](self.impl), tempResGL)
+  g_slist_free(tempResGL)
 
 type
   VolumeButton* = ref object of ScaleButton
@@ -26205,9 +25896,6 @@ proc gtk_font_button_set_font_name(self: ptr FontButton00; fontname: cstring): g
     importc, libprag.}
 
 proc setFontName*(self: FontButton; fontname: cstring): bool =
-  toBool(gtk_font_button_set_font_name(cast[ptr FontButton00](self.impl), fontname))
-
-proc `fontName=`*(self: FontButton; fontname: cstring): bool =
   toBool(gtk_font_button_set_font_name(cast[ptr FontButton00](self.impl), fontname))
 
 proc gtk_font_button_set_show_size(self: ptr FontButton00; showSize: gboolean) {.
@@ -26808,9 +26496,6 @@ proc gtk_popover_get_pointing_to(self: ptr Popover00; rect: var gdk.Rectangle): 
 proc getPointingTo*(self: Popover; rect: var gdk.Rectangle): bool =
   toBool(gtk_popover_get_pointing_to(cast[ptr Popover00](self.impl), rect))
 
-proc pointingTo*(self: Popover; rect: var gdk.Rectangle): bool =
-  toBool(gtk_popover_get_pointing_to(cast[ptr Popover00](self.impl), rect))
-
 proc gtk_popover_get_relative_to(self: ptr Popover00): ptr Widget00 {.
     importc, libprag.}
 
@@ -27030,14 +26715,14 @@ proc getIgnoreHidden*(self: SizeGroup): bool =
 proc ignoreHidden*(self: SizeGroup): bool =
   toBool(gtk_size_group_get_ignore_hidden(cast[ptr SizeGroup00](self.impl)))
 
-proc gtk_size_group_get_widgets(self: ptr SizeGroup00): ptr pointer {.
+proc gtk_size_group_get_widgets(self: ptr SizeGroup00): ptr glib.SList {.
     importc, libprag.}
 
-proc getWidgets*(self: SizeGroup): ptr pointer =
-  gtk_size_group_get_widgets(cast[ptr SizeGroup00](self.impl))
+proc getWidgets*(self: SizeGroup): seq[Widget] =
+  result = gslistObjects2seq(Widget, gtk_size_group_get_widgets(cast[ptr SizeGroup00](self.impl)), false)
 
-proc widgets*(self: SizeGroup): ptr pointer =
-  gtk_size_group_get_widgets(cast[ptr SizeGroup00](self.impl))
+proc widgets*(self: SizeGroup): seq[Widget] =
+  result = gslistObjects2seq(Widget, gtk_size_group_get_widgets(cast[ptr SizeGroup00](self.impl)), false)
 
 proc gtk_size_group_remove_widget(self: ptr SizeGroup00; widget: ptr Widget00) {.
     importc, libprag.}
@@ -27612,36 +27297,11 @@ proc getDefaultRecentManager*(): RecentManager =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc defaultRecentManager*(): RecentManager =
-  let gobj = gtk_recent_manager_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_recent_manager_add_item(self: ptr RecentManager00; uri: cstring): gboolean {.
     importc, libprag.}
 
 proc addItem*(self: RecentManager; uri: cstring): bool =
   toBool(gtk_recent_manager_add_item(cast[ptr RecentManager00](self.impl), uri))
-
-proc gtk_recent_manager_get_items(self: ptr RecentManager00): ptr pointer {.
-    importc, libprag.}
-
-proc getItems*(self: RecentManager): ptr pointer =
-  gtk_recent_manager_get_items(cast[ptr RecentManager00](self.impl))
-
-proc items*(self: RecentManager): ptr pointer =
-  gtk_recent_manager_get_items(cast[ptr RecentManager00](self.impl))
 
 proc gtk_recent_manager_has_item(self: ptr RecentManager00; uri: cstring): gboolean {.
     importc, libprag.}
@@ -27741,17 +27401,21 @@ proc initRecentChooserMenuForManager*[T](result: var T; manager: RecentManager) 
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 type
-  RecentData00* {.pure.} = object
-  RecentData* = ref object
-    impl*: ptr RecentData00
-    ignoreFinalizer*: bool
+  RecentData* {.pure, byRef.} = object
+    displayName*: cstring
+    description*: cstring
+    mimeType*: cstring
+    appName*: cstring
+    appExec*: cstring
+    groups*: ptr cstring
+    isPrivate*: gboolean
 
 proc gtk_recent_manager_add_full(self: ptr RecentManager00; uri: cstring;
-    recentData: ptr RecentData00): gboolean {.
+    recentData: RecentData): gboolean {.
     importc, libprag.}
 
 proc addFull*(self: RecentManager; uri: cstring; recentData: RecentData): bool =
-  toBool(gtk_recent_manager_add_full(cast[ptr RecentManager00](self.impl), uri, cast[ptr RecentData00](recentData.impl)))
+  toBool(gtk_recent_manager_add_full(cast[ptr RecentManager00](self.impl), uri, recentData))
 
 type
   RecentInfo00* {.pure.} = object
@@ -27770,6 +27434,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(gtk_recent_info_get_type(), cast[ptr RecentInfo00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var RecentInfo) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkRecentInfo)
 
 proc gtk_recent_info_unref(self: ptr RecentInfo00) {.
     importc, libprag.}
@@ -27811,29 +27481,18 @@ proc gtk_recent_info_get_application_info(self: ptr RecentInfo00; appName: cstri
 
 proc getApplicationInfo*(self: RecentInfo; appName: cstring;
     appExec: var string; count: var int; time: var int64): bool =
-  var count_00 = uint32(count)
-  var appExec_00 = cstring(appExec)
+  var count_00: uint32
+  var appExec_00: cstring
   result = toBool(gtk_recent_info_get_application_info(cast[ptr RecentInfo00](self.impl), appName, appExec_00, count_00, time))
-  count = int(count_00)
-  appExec = $(appExec_00)
+  if count.addr != nil:
+    count = int(count_00)
+  if appExec.addr != nil:
+    appExec = $(appExec_00)
 
-proc applicationInfo*(self: RecentInfo; appName: cstring;
-    appExec: var string; count: var int; time: var int64): bool =
-  var count_00 = uint32(count)
-  var appExec_00 = cstring(appExec)
-  result = toBool(gtk_recent_info_get_application_info(cast[ptr RecentInfo00](self.impl), appName, appExec_00, count_00, time))
-  count = int(count_00)
-  appExec = $(appExec_00)
-
-proc gtk_recent_info_get_applications(self: ptr RecentInfo00; length: var uint64): cstringArray {.
+proc gtk_recent_info_get_applications(self: ptr RecentInfo00; length: var uint64): ptr cstring {.
     importc, libprag.}
 
-proc getApplications*(self: RecentInfo; length: var uint64): seq[string] =
-  let resul0 = gtk_recent_info_get_applications(cast[ptr RecentInfo00](self.impl), length)
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc applications*(self: RecentInfo; length: var uint64): seq[string] =
+proc getApplications*(self: RecentInfo; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = gtk_recent_info_get_applications(cast[ptr RecentInfo00](self.impl), length)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
@@ -27897,15 +27556,10 @@ proc gicon*(self: RecentInfo): gio.Icon =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_recent_info_get_groups(self: ptr RecentInfo00; length: var uint64): cstringArray {.
+proc gtk_recent_info_get_groups(self: ptr RecentInfo00; length: var uint64): ptr cstring {.
     importc, libprag.}
 
-proc getGroups*(self: RecentInfo; length: var uint64): seq[string] =
-  let resul0 = gtk_recent_info_get_groups(cast[ptr RecentInfo00](self.impl), length)
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc groups*(self: RecentInfo; length: var uint64): seq[string] =
+proc getGroups*(self: RecentInfo; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = gtk_recent_info_get_groups(cast[ptr RecentInfo00](self.impl), length)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
@@ -27914,25 +27568,6 @@ proc gtk_recent_info_get_icon(self: ptr RecentInfo00; size: int32): ptr gdkpixbu
     importc, libprag.}
 
 proc getIcon*(self: RecentInfo; size: int): gdkpixbuf.Pixbuf =
-  let gobj = gtk_recent_info_get_icon(cast[ptr RecentInfo00](self.impl), int32(size))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdkpixbuf.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc icon*(self: RecentInfo; size: int): gdkpixbuf.Pixbuf =
   let gobj = gtk_recent_info_get_icon(cast[ptr RecentInfo00](self.impl), int32(size))
   if gobj.isNil:
     return nil
@@ -28093,6 +27728,19 @@ proc createAppInfo*(self: RecentInfo; appName: cstring = ""): gio.AppInfo =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
+proc gtk_recent_manager_get_items(self: ptr RecentManager00): ptr glib.List {.
+    importc, libprag.}
+
+proc getItems*(self: RecentManager): seq[RecentInfo] =
+  let resul0 = gtk_recent_manager_get_items(cast[ptr RecentManager00](self.impl))
+  result = glistStructs2seq[RecentInfo](resul0, false)
+  g_list_free(resul0)
+
+proc items*(self: RecentManager): seq[RecentInfo] =
+  let resul0 = gtk_recent_manager_get_items(cast[ptr RecentManager00](self.impl))
+  result = glistStructs2seq[RecentInfo](resul0, false)
+  g_list_free(resul0)
+
 proc gtk_recent_manager_lookup_item(self: ptr RecentManager00; uri: cstring;
     error: ptr ptr glib.Error = nil): ptr RecentInfo00 {.
     importc, libprag.}
@@ -28181,17 +27829,22 @@ proc gtk_alignment_get_padding(self: ptr Alignment00; paddingTop: var uint32;
     paddingBottom: var uint32; paddingLeft: var uint32; paddingRight: var uint32) {.
     importc, libprag.}
 
-proc getPadding*(self: Alignment; paddingTop: var int; paddingBottom: var int;
-    paddingLeft: var int; paddingRight: var int) =
-  var paddingTop_00 = uint32(paddingTop)
-  var paddingRight_00 = uint32(paddingRight)
-  var paddingBottom_00 = uint32(paddingBottom)
-  var paddingLeft_00 = uint32(paddingLeft)
+proc getPadding*(self: Alignment; paddingTop: var int = cast[var int](nil);
+    paddingBottom: var int = cast[var int](nil); paddingLeft: var int = cast[var int](nil);
+    paddingRight: var int = cast[var int](nil)) =
+  var paddingTop_00: uint32
+  var paddingRight_00: uint32
+  var paddingBottom_00: uint32
+  var paddingLeft_00: uint32
   gtk_alignment_get_padding(cast[ptr Alignment00](self.impl), paddingTop_00, paddingBottom_00, paddingLeft_00, paddingRight_00)
-  paddingTop = int(paddingTop_00)
-  paddingRight = int(paddingRight_00)
-  paddingBottom = int(paddingBottom_00)
-  paddingLeft = int(paddingLeft_00)
+  if paddingTop.addr != nil:
+    paddingTop = int(paddingTop_00)
+  if paddingRight.addr != nil:
+    paddingRight = int(paddingRight_00)
+  if paddingBottom.addr != nil:
+    paddingBottom = int(paddingBottom_00)
+  if paddingLeft.addr != nil:
+    paddingLeft = int(paddingLeft_00)
 
 proc gtk_alignment_set(self: ptr Alignment00; xalign: cfloat; yalign: cfloat;
     xscale: cfloat; yscale: cfloat) {.
@@ -28850,7 +28503,8 @@ proc label*(self: Frame): string =
 proc gtk_frame_get_label_align(self: ptr Frame00; xalign: var cfloat; yalign: var cfloat) {.
     importc, libprag.}
 
-proc getLabelAlign*(self: Frame; xalign: var cfloat; yalign: var cfloat) =
+proc getLabelAlign*(self: Frame; xalign: var cfloat = cast[var cfloat](nil);
+    yalign: var cfloat = cast[var cfloat](nil)) =
   gtk_frame_get_label_align(cast[ptr Frame00](self.impl), xalign, yalign)
 
 proc gtk_frame_get_label_widget(self: ptr Frame00): ptr Widget00 {.
@@ -29154,31 +28808,10 @@ proc getNthPage*(self: Assistant; pageNum: int): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc nthPage*(self: Assistant; pageNum: int): Widget =
-  let gobj = gtk_assistant_get_nth_page(cast[ptr Assistant00](self.impl), int32(pageNum))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_assistant_get_page_complete(self: ptr Assistant00; page: ptr Widget00): gboolean {.
     importc, libprag.}
 
 proc getPageComplete*(self: Assistant; page: Widget): bool =
-  toBool(gtk_assistant_get_page_complete(cast[ptr Assistant00](self.impl), cast[ptr Widget00](page.impl)))
-
-proc pageComplete*(self: Assistant; page: Widget): bool =
   toBool(gtk_assistant_get_page_complete(cast[ptr Assistant00](self.impl), cast[ptr Widget00](page.impl)))
 
 proc gtk_assistant_get_page_has_padding(self: ptr Assistant00; page: ptr Widget00): gboolean {.
@@ -29187,29 +28820,10 @@ proc gtk_assistant_get_page_has_padding(self: ptr Assistant00; page: ptr Widget0
 proc getPageHasPadding*(self: Assistant; page: Widget): bool =
   toBool(gtk_assistant_get_page_has_padding(cast[ptr Assistant00](self.impl), cast[ptr Widget00](page.impl)))
 
-proc pageHasPadding*(self: Assistant; page: Widget): bool =
-  toBool(gtk_assistant_get_page_has_padding(cast[ptr Assistant00](self.impl), cast[ptr Widget00](page.impl)))
-
 proc gtk_assistant_get_page_header_image(self: ptr Assistant00; page: ptr Widget00): ptr gdkpixbuf.Pixbuf00 {.
     importc, libprag.}
 
 proc getPageHeaderImage*(self: Assistant; page: Widget): gdkpixbuf.Pixbuf =
-  let gobj = gtk_assistant_get_page_header_image(cast[ptr Assistant00](self.impl), cast[ptr Widget00](page.impl))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdkpixbuf.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc pageHeaderImage*(self: Assistant; page: Widget): gdkpixbuf.Pixbuf =
   let gobj = gtk_assistant_get_page_header_image(cast[ptr Assistant00](self.impl), cast[ptr Widget00](page.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -29244,29 +28858,10 @@ proc getPageSideImage*(self: Assistant; page: Widget): gdkpixbuf.Pixbuf =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc pageSideImage*(self: Assistant; page: Widget): gdkpixbuf.Pixbuf =
-  let gobj = gtk_assistant_get_page_side_image(cast[ptr Assistant00](self.impl), cast[ptr Widget00](page.impl))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdkpixbuf.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_assistant_get_page_title(self: ptr Assistant00; page: ptr Widget00): cstring {.
     importc, libprag.}
 
 proc getPageTitle*(self: Assistant; page: Widget): string =
-  result = $gtk_assistant_get_page_title(cast[ptr Assistant00](self.impl), cast[ptr Widget00](page.impl))
-
-proc pageTitle*(self: Assistant; page: Widget): string =
   result = $gtk_assistant_get_page_title(cast[ptr Assistant00](self.impl), cast[ptr Widget00](page.impl))
 
 proc gtk_assistant_insert_page(self: ptr Assistant00; page: ptr Widget00;
@@ -29371,9 +28966,6 @@ proc gtk_assistant_get_page_type(self: ptr Assistant00; page: ptr Widget00): Ass
 proc getPageType*(self: Assistant; page: Widget): AssistantPageType =
   gtk_assistant_get_page_type(cast[ptr Assistant00](self.impl), cast[ptr Widget00](page.impl))
 
-proc pageType*(self: Assistant; page: Widget): AssistantPageType =
-  gtk_assistant_get_page_type(cast[ptr Assistant00](self.impl), cast[ptr Widget00](page.impl))
-
 proc gtk_assistant_set_page_type(self: ptr Assistant00; page: ptr Widget00;
     `type`: AssistantPageType) {.
     importc, libprag.}
@@ -29400,13 +28992,11 @@ type
 
   AttachOptions* {.size: sizeof(cint).} = set[AttachFlag]
 
-const BINARY_AGE* = 2420'i32
+const BINARY_AGE* = 2424'i32
 
 type
-  BindingArg00* {.pure.} = object
-  BindingArg* = ref object
-    impl*: ptr BindingArg00
-    ignoreFinalizer*: bool
+  BindingArg* {.pure, byRef.} = object
+    argType*: GType
 
 type
   BindingEntry00* {.pure.} = object
@@ -29447,12 +29037,14 @@ proc addSignalFromString*(bindingSet: BindingSet; signalDesc: cstring): glib.Tok
   gtk_binding_entry_add_signal_from_string(cast[ptr BindingSet00](bindingSet.impl), signalDesc)
 
 proc gtk_binding_entry_add_signall(bindingSet: ptr BindingSet00; keyval: uint32;
-    modifiers: gdk.ModifierType; signalName: cstring; bindingArgs: ptr pointer) {.
+    modifiers: gdk.ModifierType; signalName: cstring; bindingArgs: ptr glib.SList) {.
     importc, libprag.}
 
 proc addSignall*(bindingSet: BindingSet; keyval: int; modifiers: gdk.ModifierType;
-    signalName: cstring; bindingArgs: ptr pointer) =
-  gtk_binding_entry_add_signall(cast[ptr BindingSet00](bindingSet.impl), uint32(keyval), modifiers, signalName, bindingArgs)
+    signalName: cstring; bindingArgs: seq[BindingArg]) =
+  var tempResGL = seq2GSList(bindingArgs)
+  gtk_binding_entry_add_signall(cast[ptr BindingSet00](bindingSet.impl), uint32(keyval), modifiers, signalName, tempResGL)
+  g_slist_free(tempResGL)
 
 proc gtk_binding_entry_remove(bindingSet: ptr BindingSet00; keyval: uint32;
     modifiers: gdk.ModifierType) {.
@@ -29492,10 +29084,11 @@ proc addPath*(self: BindingSet; pathType: PathType; pathPattern: cstring;
   gtk_binding_set_add_path(cast[ptr BindingSet00](self.impl), pathType, pathPattern, priority)
 
 type
-  BindingSignal00* {.pure.} = object
-  BindingSignal* = ref object
-    impl*: ptr BindingSignal00
-    ignoreFinalizer*: bool
+  BindingSignal* {.pure, byRef.} = object
+    next*: ptr BindingSignal
+    signalName*: cstring
+    nArgs*: uint32
+    args*: ptr BindingArg
 
 type
   BorderStyle* {.size: sizeof(cint), pure.} = enum
@@ -29792,7 +29385,7 @@ proc addFromString*(self: Builder; buffer: cstring; length: uint64): int =
   result = int(resul0)
 
 proc gtk_builder_add_objects_from_file(self: ptr Builder00; filename: cstring;
-    objectIds: cstringArray; error: ptr ptr glib.Error = nil): uint32 {.
+    objectIds: ptr cstring; error: ptr ptr glib.Error = nil): uint32 {.
     importc, libprag.}
 
 proc addObjectsFromFile*(self: Builder; filename: cstring;
@@ -29808,7 +29401,7 @@ proc addObjectsFromFile*(self: Builder; filename: cstring;
   result = int(resul0)
 
 proc gtk_builder_add_objects_from_resource(self: ptr Builder00; resourcePath: cstring;
-    objectIds: cstringArray; error: ptr ptr glib.Error = nil): uint32 {.
+    objectIds: ptr cstring; error: ptr ptr glib.Error = nil): uint32 {.
     importc, libprag.}
 
 proc addObjectsFromResource*(self: Builder; resourcePath: cstring;
@@ -29824,7 +29417,7 @@ proc addObjectsFromResource*(self: Builder; resourcePath: cstring;
   result = int(resul0)
 
 proc gtk_builder_add_objects_from_string(self: ptr Builder00; buffer: cstring;
-    length: uint64; objectIds: cstringArray; error: ptr ptr glib.Error = nil): uint32 {.
+    length: uint64; objectIds: ptr cstring; error: ptr ptr glib.Error = nil): uint32 {.
     importc, libprag.}
 
 proc addObjectsFromString*(self: Builder; buffer: cstring;
@@ -29925,14 +29518,18 @@ proc getObject*(self: Builder; name: cstring): gobject.Object =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_builder_get_objects(self: ptr Builder00): ptr pointer {.
+proc gtk_builder_get_objects(self: ptr Builder00): ptr glib.SList {.
     importc, libprag.}
 
-proc getObjects*(self: Builder): ptr pointer =
-  gtk_builder_get_objects(cast[ptr Builder00](self.impl))
+proc getObjects*(self: Builder): seq[gobject.Object] =
+  let resul0 = gtk_builder_get_objects(cast[ptr Builder00](self.impl))
+  result = gslistObjects2seq(gobject.Object, resul0, false)
+  g_slist_free(resul0)
 
-proc objects*(self: Builder): ptr pointer =
-  gtk_builder_get_objects(cast[ptr Builder00](self.impl))
+proc objects*(self: Builder): seq[gobject.Object] =
+  let resul0 = gtk_builder_get_objects(cast[ptr Builder00](self.impl))
+  result = gslistObjects2seq(gobject.Object, resul0, false)
+  g_slist_free(resul0)
 
 proc gtk_builder_get_translation_domain(self: ptr Builder00): cstring {.
     importc, libprag.}
@@ -29947,9 +29544,6 @@ proc gtk_builder_get_type_from_name(self: ptr Builder00; typeName: cstring): GTy
     importc, libprag.}
 
 proc getTypeFromName*(self: Builder; typeName: cstring): GType =
-  gtk_builder_get_type_from_name(cast[ptr Builder00](self.impl), typeName)
-
-proc typeFromName*(self: Builder; typeName: cstring): GType =
   gtk_builder_get_type_from_name(cast[ptr Builder00](self.impl), typeName)
 
 proc gtk_builder_set_application(self: ptr Builder00; application: ptr Application00) {.
@@ -30202,11 +29796,13 @@ proc gtk_icon_view_convert_widget_to_bin_window_coords(self: ptr IconView00;
 
 proc convertWidgetToBinWindowCoords*(self: IconView; wx: int;
     wy: int; bx: var int; by: var int) =
-  var bx_00 = int32(bx)
-  var by_00 = int32(by)
+  var bx_00: int32
+  var by_00: int32
   gtk_icon_view_convert_widget_to_bin_window_coords(cast[ptr IconView00](self.impl), int32(wx), int32(wy), bx_00, by_00)
-  bx = int(bx_00)
-  by = int(by_00)
+  if bx.addr != nil:
+    bx = int(bx_00)
+  if by.addr != nil:
+    by = int(by_00)
 
 proc gtk_icon_view_create_drag_icon(self: ptr IconView00; path: ptr TreePath00): ptr cairo.Surface00 {.
     importc, libprag.}
@@ -30215,7 +29811,7 @@ proc createDragIcon*(self: IconView; path: TreePath): cairo.Surface =
   fnew(result, gBoxedFreeCairoSurface)
   result.impl = gtk_icon_view_create_drag_icon(cast[ptr IconView00](self.impl), cast[ptr TreePath00](path.impl))
 
-proc gtk_icon_view_enable_model_drag_dest(self: ptr IconView00; targets: TargetEntry00Array;
+proc gtk_icon_view_enable_model_drag_dest(self: ptr IconView00; targets: ptr TargetEntry00;
     nTargets: int32; actions: gdk.DragAction) {.
     importc, libprag.}
 
@@ -30227,7 +29823,7 @@ proc enableModelDragDest*(self: IconView; targets: seq[TargetEntry];
   gtk_icon_view_enable_model_drag_dest(cast[ptr IconView00](self.impl), seq2TargetEntryArray(targets, fs469n23), int32(nTargets), actions)
 
 proc gtk_icon_view_enable_model_drag_source(self: ptr IconView00; startButtonMask: gdk.ModifierType;
-    targets: TargetEntry00Array; nTargets: int32; actions: gdk.DragAction) {.
+    targets: ptr TargetEntry00; nTargets: int32; actions: gdk.DragAction) {.
     importc, libprag.}
 
 proc enableModelDragSource*(self: IconView; startButtonMask: gdk.ModifierType;
@@ -30254,10 +29850,6 @@ proc getCellRect*(self: IconView; path: TreePath; cell: CellRenderer = nil;
     rect: var gdk.Rectangle): bool =
   toBool(gtk_icon_view_get_cell_rect(cast[ptr IconView00](self.impl), cast[ptr TreePath00](path.impl), if cell.isNil: nil else: cast[ptr CellRenderer00](cell.impl), rect))
 
-proc cellRect*(self: IconView; path: TreePath; cell: CellRenderer = nil;
-    rect: var gdk.Rectangle): bool =
-  toBool(gtk_icon_view_get_cell_rect(cast[ptr IconView00](self.impl), cast[ptr TreePath00](path.impl), if cell.isNil: nil else: cast[ptr CellRenderer00](cell.impl), rect))
-
 proc gtk_icon_view_get_column_spacing(self: ptr IconView00): int32 {.
     importc, libprag.}
 
@@ -30280,43 +29872,34 @@ proc gtk_icon_view_get_cursor(self: ptr IconView00; path: var ptr TreePath00;
     cell: var ptr CellRenderer00): gboolean {.
     importc, libprag.}
 
-proc getCursor*(self: IconView; path: var TreePath; cell: var CellRenderer): bool =
-  fnew(path, gBoxedFreeGtkTreePath)
-  fnew(cell, gtk.finalizeGObject)
-  cell.ignoreFinalizer = true
-  toBool(gtk_icon_view_get_cursor(cast[ptr IconView00](self.impl), cast[var ptr TreePath00](addr path.impl), cast[var ptr CellRenderer00](addr cell.impl)))
-
-proc cursor*(self: IconView; path: var TreePath; cell: var CellRenderer): bool =
-  fnew(path, gBoxedFreeGtkTreePath)
-  fnew(cell, gtk.finalizeGObject)
-  cell.ignoreFinalizer = true
-  toBool(gtk_icon_view_get_cursor(cast[ptr IconView00](self.impl), cast[var ptr TreePath00](addr path.impl), cast[var ptr CellRenderer00](addr cell.impl)))
+proc getCursor*(self: IconView; path: var TreePath = cast[var TreePath](nil);
+    cell: var CellRenderer = cast[var CellRenderer](nil)): bool =
+  if addr(path) != nil:
+    fnew(path, gBoxedFreeGtkTreePath)
+  if addr(cell) != nil:
+    fnew(cell, gtk.finalizeGObject)
+  if addr(cell) != nil:
+    cell.ignoreFinalizer = true
+  toBool(gtk_icon_view_get_cursor(cast[ptr IconView00](self.impl), cast[var ptr TreePath00](if addr(path) == nil: nil else: addr path.impl), cast[var ptr CellRenderer00](if addr(cell) == nil: nil else: addr cell.impl)))
 
 proc gtk_icon_view_get_item_at_pos(self: ptr IconView00; x: int32; y: int32;
     path: var ptr TreePath00; cell: var ptr CellRenderer00): gboolean {.
     importc, libprag.}
 
-proc getItemAtPos*(self: IconView; x: int; y: int; path: var TreePath;
-    cell: var CellRenderer): bool =
-  fnew(path, gBoxedFreeGtkTreePath)
-  fnew(cell, gtk.finalizeGObject)
-  cell.ignoreFinalizer = true
-  toBool(gtk_icon_view_get_item_at_pos(cast[ptr IconView00](self.impl), int32(x), int32(y), cast[var ptr TreePath00](addr path.impl), cast[var ptr CellRenderer00](addr cell.impl)))
-
-proc itemAtPos*(self: IconView; x: int; y: int; path: var TreePath;
-    cell: var CellRenderer): bool =
-  fnew(path, gBoxedFreeGtkTreePath)
-  fnew(cell, gtk.finalizeGObject)
-  cell.ignoreFinalizer = true
-  toBool(gtk_icon_view_get_item_at_pos(cast[ptr IconView00](self.impl), int32(x), int32(y), cast[var ptr TreePath00](addr path.impl), cast[var ptr CellRenderer00](addr cell.impl)))
+proc getItemAtPos*(self: IconView; x: int; y: int; path: var TreePath = cast[var TreePath](nil);
+    cell: var CellRenderer = cast[var CellRenderer](nil)): bool =
+  if addr(path) != nil:
+    fnew(path, gBoxedFreeGtkTreePath)
+  if addr(cell) != nil:
+    fnew(cell, gtk.finalizeGObject)
+  if addr(cell) != nil:
+    cell.ignoreFinalizer = true
+  toBool(gtk_icon_view_get_item_at_pos(cast[ptr IconView00](self.impl), int32(x), int32(y), cast[var ptr TreePath00](if addr(path) == nil: nil else: addr path.impl), cast[var ptr CellRenderer00](if addr(cell) == nil: nil else: addr cell.impl)))
 
 proc gtk_icon_view_get_item_column(self: ptr IconView00; path: ptr TreePath00): int32 {.
     importc, libprag.}
 
 proc getItemColumn*(self: IconView; path: TreePath): int =
-  int(gtk_icon_view_get_item_column(cast[ptr IconView00](self.impl), cast[ptr TreePath00](path.impl)))
-
-proc itemColumn*(self: IconView; path: TreePath): int =
   int(gtk_icon_view_get_item_column(cast[ptr IconView00](self.impl), cast[ptr TreePath00](path.impl)))
 
 proc gtk_icon_view_get_item_orientation(self: ptr IconView00): Orientation {.
@@ -30341,9 +29924,6 @@ proc gtk_icon_view_get_item_row(self: ptr IconView00; path: ptr TreePath00): int
     importc, libprag.}
 
 proc getItemRow*(self: IconView; path: TreePath): int =
-  int(gtk_icon_view_get_item_row(cast[ptr IconView00](self.impl), cast[ptr TreePath00](path.impl)))
-
-proc itemRow*(self: IconView; path: TreePath): int =
   int(gtk_icon_view_get_item_row(cast[ptr IconView00](self.impl), cast[ptr TreePath00](path.impl)))
 
 proc gtk_icon_view_get_item_width(self: ptr IconView00): int32 {.
@@ -30422,13 +30002,6 @@ proc getPathAtPos*(self: IconView; x: int; y: int): TreePath =
   fnew(result, gBoxedFreeGtkTreePath)
   result.impl = impl0
 
-proc pathAtPos*(self: IconView; x: int; y: int): TreePath =
-  let impl0 = gtk_icon_view_get_path_at_pos(cast[ptr IconView00](self.impl), int32(x), int32(y))
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreeGtkTreePath)
-  result.impl = impl0
-
 proc gtk_icon_view_get_pixbuf_column(self: ptr IconView00): int32 {.
     importc, libprag.}
 
@@ -30456,14 +30029,18 @@ proc getRowSpacing*(self: IconView): int =
 proc rowSpacing*(self: IconView): int =
   int(gtk_icon_view_get_row_spacing(cast[ptr IconView00](self.impl)))
 
-proc gtk_icon_view_get_selected_items(self: ptr IconView00): ptr pointer {.
+proc gtk_icon_view_get_selected_items(self: ptr IconView00): ptr glib.List {.
     importc, libprag.}
 
-proc getSelectedItems*(self: IconView): ptr pointer =
-  gtk_icon_view_get_selected_items(cast[ptr IconView00](self.impl))
+proc getSelectedItems*(self: IconView): seq[TreePath] =
+  let resul0 = gtk_icon_view_get_selected_items(cast[ptr IconView00](self.impl))
+  result = glistStructs2seq[TreePath](resul0, false)
+  g_list_free(resul0)
 
-proc selectedItems*(self: IconView): ptr pointer =
-  gtk_icon_view_get_selected_items(cast[ptr IconView00](self.impl))
+proc selectedItems*(self: IconView): seq[TreePath] =
+  let resul0 = gtk_icon_view_get_selected_items(cast[ptr IconView00](self.impl))
+  result = glistStructs2seq[TreePath](resul0, false)
+  g_list_free(resul0)
 
 proc gtk_icon_view_get_spacing(self: ptr IconView00): int32 {.
     importc, libprag.}
@@ -30498,26 +30075,17 @@ proc gtk_icon_view_get_tooltip_context(self: ptr IconView00; x: var int32;
     importc, libprag.}
 
 proc getTooltipContext*(self: IconView; x: var int; y: var int;
-    keyboardTip: bool; model: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore);
-    path: var TreePath; iter: var TreeIter): bool =
-  new(model)
-  model.ignoreFinalizer = true
-  fnew(path, gBoxedFreeGtkTreePath)
+    keyboardTip: bool; model: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore) = cast[var TreeModel](nil);
+    path: var TreePath = cast[var TreePath](nil); iter: var TreeIter = cast[var TreeIter](nil)): bool =
+  if addr(model) != nil:
+    new(model)
+  if addr(model) != nil:
+    model.ignoreFinalizer = true
+  if addr(path) != nil:
+    fnew(path, gBoxedFreeGtkTreePath)
   var y_00 = int32(y)
   var x_00 = int32(x)
-  result = toBool(gtk_icon_view_get_tooltip_context(cast[ptr IconView00](self.impl), x_00, y_00, gboolean(keyboardTip), cast[var ptr TreeModel00](addr model.impl), cast[var ptr TreePath00](addr path.impl), iter))
-  y = int(y_00)
-  x = int(x_00)
-
-proc tooltipContext*(self: IconView; x: var int; y: var int;
-    keyboardTip: bool; model: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore);
-    path: var TreePath; iter: var TreeIter): bool =
-  new(model)
-  model.ignoreFinalizer = true
-  fnew(path, gBoxedFreeGtkTreePath)
-  var y_00 = int32(y)
-  var x_00 = int32(x)
-  result = toBool(gtk_icon_view_get_tooltip_context(cast[ptr IconView00](self.impl), x_00, y_00, gboolean(keyboardTip), cast[var ptr TreeModel00](addr model.impl), cast[var ptr TreePath00](addr path.impl), iter))
+  result = toBool(gtk_icon_view_get_tooltip_context(cast[ptr IconView00](self.impl), x_00, y_00, gboolean(keyboardTip), cast[var ptr TreeModel00](if addr(model) == nil: nil else: addr model.impl), cast[var ptr TreePath00](if addr(path) == nil: nil else: addr path.impl), iter))
   y = int(y_00)
   x = int(x_00)
 
@@ -30525,17 +30093,13 @@ proc gtk_icon_view_get_visible_range(self: ptr IconView00; startPath: var ptr Tr
     endPath: var ptr TreePath00): gboolean {.
     importc, libprag.}
 
-proc getVisibleRange*(self: IconView; startPath: var TreePath;
-    endPath: var TreePath): bool =
-  fnew(startPath, gBoxedFreeGtkTreePath)
-  fnew(endPath, gBoxedFreeGtkTreePath)
-  toBool(gtk_icon_view_get_visible_range(cast[ptr IconView00](self.impl), cast[var ptr TreePath00](addr startPath.impl), cast[var ptr TreePath00](addr endPath.impl)))
-
-proc visibleRange*(self: IconView; startPath: var TreePath;
-    endPath: var TreePath): bool =
-  fnew(startPath, gBoxedFreeGtkTreePath)
-  fnew(endPath, gBoxedFreeGtkTreePath)
-  toBool(gtk_icon_view_get_visible_range(cast[ptr IconView00](self.impl), cast[var ptr TreePath00](addr startPath.impl), cast[var ptr TreePath00](addr endPath.impl)))
+proc getVisibleRange*(self: IconView; startPath: var TreePath = cast[var TreePath](nil);
+    endPath: var TreePath = cast[var TreePath](nil)): bool =
+  if addr(startPath) != nil:
+    fnew(startPath, gBoxedFreeGtkTreePath)
+  if addr(endPath) != nil:
+    fnew(endPath, gBoxedFreeGtkTreePath)
+  toBool(gtk_icon_view_get_visible_range(cast[ptr IconView00](self.impl), cast[var ptr TreePath00](if addr(startPath) == nil: nil else: addr startPath.impl), cast[var ptr TreePath00](if addr(endPath) == nil: nil else: addr endPath.impl)))
 
 proc gtk_icon_view_item_activated(self: ptr IconView00; path: ptr TreePath00) {.
     importc, libprag.}
@@ -31594,46 +31158,10 @@ proc getChildAtIndex*(self: FlowBox; idx: int): FlowBoxChild =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc childAtIndex*(self: FlowBox; idx: int): FlowBoxChild =
-  let gobj = gtk_flow_box_get_child_at_index(cast[ptr FlowBox00](self.impl), int32(idx))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_flow_box_get_child_at_pos(self: ptr FlowBox00; x: int32; y: int32): ptr FlowBoxChild00 {.
     importc, libprag.}
 
 proc getChildAtPos*(self: FlowBox; x: int; y: int): FlowBoxChild =
-  let gobj = gtk_flow_box_get_child_at_pos(cast[ptr FlowBox00](self.impl), int32(x), int32(y))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc childAtPos*(self: FlowBox; x: int; y: int): FlowBoxChild =
   let gobj = gtk_flow_box_get_child_at_pos(cast[ptr FlowBox00](self.impl), int32(x), int32(y))
   if gobj.isNil:
     return nil
@@ -31696,14 +31224,18 @@ proc getRowSpacing*(self: FlowBox): int =
 proc rowSpacing*(self: FlowBox): int =
   int(gtk_flow_box_get_row_spacing(cast[ptr FlowBox00](self.impl)))
 
-proc gtk_flow_box_get_selected_children(self: ptr FlowBox00): ptr pointer {.
+proc gtk_flow_box_get_selected_children(self: ptr FlowBox00): ptr glib.List {.
     importc, libprag.}
 
-proc getSelectedChildren*(self: FlowBox): ptr pointer =
-  gtk_flow_box_get_selected_children(cast[ptr FlowBox00](self.impl))
+proc getSelectedChildren*(self: FlowBox): seq[FlowBoxChild] =
+  let resul0 = gtk_flow_box_get_selected_children(cast[ptr FlowBox00](self.impl))
+  result = glistObjects2seq(FlowBoxChild, resul0, false)
+  g_list_free(resul0)
 
-proc selectedChildren*(self: FlowBox): ptr pointer =
-  gtk_flow_box_get_selected_children(cast[ptr FlowBox00](self.impl))
+proc selectedChildren*(self: FlowBox): seq[FlowBoxChild] =
+  let resul0 = gtk_flow_box_get_selected_children(cast[ptr FlowBox00](self.impl))
+  result = glistObjects2seq(FlowBoxChild, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_flow_box_insert(self: ptr FlowBox00; widget: ptr Widget00; position: int32) {.
     importc, libprag.}
@@ -32421,28 +31953,35 @@ proc gtk_tree_view_column_cell_get_position(self: ptr TreeViewColumn00; cellRend
     importc, libprag.}
 
 proc cellGetPosition*(self: TreeViewColumn; cellRenderer: CellRenderer;
-    xOffset: var int; width: var int): bool =
-  var width_00 = int32(width)
-  var xOffset_00 = int32(xOffset)
+    xOffset: var int = cast[var int](nil); width: var int = cast[var int](nil)): bool =
+  var width_00: int32
+  var xOffset_00: int32
   result = toBool(gtk_tree_view_column_cell_get_position(cast[ptr TreeViewColumn00](self.impl), cast[ptr CellRenderer00](cellRenderer.impl), xOffset_00, width_00))
-  width = int(width_00)
-  xOffset = int(xOffset_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if xOffset.addr != nil:
+    xOffset = int(xOffset_00)
 
 proc gtk_tree_view_column_cell_get_size(self: ptr TreeViewColumn00; cellArea: gdk.Rectangle;
     xOffset: var int32; yOffset: var int32; width: var int32; height: var int32) {.
     importc, libprag.}
 
-proc cellGetSize*(self: TreeViewColumn; cellArea: gdk.Rectangle = cast[ptr gdk.Rectangle](nil)[];
-    xOffset: var int; yOffset: var int; width: var int; height: var int) =
-  var width_00 = int32(width)
-  var yOffset_00 = int32(yOffset)
-  var xOffset_00 = int32(xOffset)
-  var height_00 = int32(height)
+proc cellGetSize*(self: TreeViewColumn; cellArea: gdk.Rectangle = cast[var gdk.Rectangle](nil);
+    xOffset: var int = cast[var int](nil); yOffset: var int = cast[var int](nil);
+    width: var int = cast[var int](nil); height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var yOffset_00: int32
+  var xOffset_00: int32
+  var height_00: int32
   gtk_tree_view_column_cell_get_size(cast[ptr TreeViewColumn00](self.impl), cellArea, xOffset_00, yOffset_00, width_00, height_00)
-  width = int(width_00)
-  yOffset = int(yOffset_00)
-  xOffset = int(xOffset_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if yOffset.addr != nil:
+    yOffset = int(yOffset_00)
+  if xOffset.addr != nil:
+    xOffset = int(xOffset_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_tree_view_column_cell_is_visible(self: ptr TreeViewColumn00): gboolean {.
     importc, libprag.}
@@ -33152,12 +32691,15 @@ proc gtk_range_get_slider_range(self: ptr Range00; sliderStart: var int32;
     sliderEnd: var int32) {.
     importc, libprag.}
 
-proc getSliderRange*(self: Range; sliderStart: var int; sliderEnd: var int) =
-  var sliderEnd_00 = int32(sliderEnd)
-  var sliderStart_00 = int32(sliderStart)
+proc getSliderRange*(self: Range; sliderStart: var int = cast[var int](nil);
+    sliderEnd: var int = cast[var int](nil)) =
+  var sliderEnd_00: int32
+  var sliderStart_00: int32
   gtk_range_get_slider_range(cast[ptr Range00](self.impl), sliderStart_00, sliderEnd_00)
-  sliderEnd = int(sliderEnd_00)
-  sliderStart = int(sliderStart_00)
+  if sliderEnd.addr != nil:
+    sliderEnd = int(sliderEnd_00)
+  if sliderStart.addr != nil:
+    sliderStart = int(sliderStart_00)
 
 proc gtk_range_get_slider_size_fixed(self: ptr Range00): gboolean {.
     importc, libprag.}
@@ -33517,12 +33059,15 @@ proc layout*(self: Scale): pango.Layout =
 proc gtk_scale_get_layout_offsets(self: ptr Scale00; x: var int32; y: var int32) {.
     importc, libprag.}
 
-proc getLayoutOffsets*(self: Scale; x: var int; y: var int) =
-  var y_00 = int32(y)
-  var x_00 = int32(x)
+proc getLayoutOffsets*(self: Scale; x: var int = cast[var int](nil);
+    y: var int = cast[var int](nil)) =
+  var y_00: int32
+  var x_00: int32
   gtk_scale_get_layout_offsets(cast[ptr Scale00](self.impl), x_00, y_00)
-  y = int(y_00)
-  x = int(x_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
 
 proc gtk_scale_get_value_pos(self: ptr Scale00): PositionType {.
     importc, libprag.}
@@ -33891,9 +33436,6 @@ proc gtk_statusbar_get_context_id(self: ptr Statusbar00; contextDescription: cst
 proc getContextId*(self: Statusbar; contextDescription: cstring): int =
   int(gtk_statusbar_get_context_id(cast[ptr Statusbar00](self.impl), contextDescription))
 
-proc contextId*(self: Statusbar; contextDescription: cstring): int =
-  int(gtk_statusbar_get_context_id(cast[ptr Statusbar00](self.impl), contextDescription))
-
 proc gtk_statusbar_get_message_area(self: ptr Statusbar00): ptr Box00 {.
     importc, libprag.}
 
@@ -34029,20 +33571,10 @@ proc getDragTargetGroup*(): TargetEntry =
   result.impl = gtk_tool_palette_get_drag_target_group()
   result.ignoreFinalizer = true
 
-proc dragTargetGroup*(): TargetEntry =
-  fnew(result, gBoxedFreeGtkTargetEntry)
-  result.impl = gtk_tool_palette_get_drag_target_group()
-  result.ignoreFinalizer = true
-
 proc gtk_tool_palette_get_drag_target_item(): ptr TargetEntry00 {.
     importc, libprag.}
 
 proc getDragTargetItem*(): TargetEntry =
-  fnew(result, gBoxedFreeGtkTargetEntry)
-  result.impl = gtk_tool_palette_get_drag_target_item()
-  result.ignoreFinalizer = true
-
-proc dragTargetItem*(): TargetEntry =
   fnew(result, gBoxedFreeGtkTargetEntry)
   result.impl = gtk_tool_palette_get_drag_target_item()
   result.ignoreFinalizer = true
@@ -34066,44 +33598,10 @@ proc getDragItem*(self: ToolPalette; selection: SelectionData): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc dragItem*(self: ToolPalette; selection: SelectionData): Widget =
-  let gobj = gtk_tool_palette_get_drag_item(cast[ptr ToolPalette00](self.impl), cast[ptr SelectionData00](selection.impl))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_tool_palette_get_drop_item(self: ptr ToolPalette00; x: int32; y: int32): ptr ToolItem00 {.
     importc, libprag.}
 
 proc getDropItem*(self: ToolPalette; x: int; y: int): ToolItem =
-  let gobj = gtk_tool_palette_get_drop_item(cast[ptr ToolPalette00](self.impl), int32(x), int32(y))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc dropItem*(self: ToolPalette; x: int; y: int): ToolItem =
   let gobj = gtk_tool_palette_get_drop_item(cast[ptr ToolPalette00](self.impl), int32(x), int32(y))
   if gobj.isNil:
     return nil
@@ -34729,9 +34227,6 @@ proc gtk_cell_view_get_size_of_row(self: ptr CellView00; path: ptr TreePath00;
 proc getSizeOfRow*(self: CellView; path: TreePath; requisition: var Requisition): bool =
   toBool(gtk_cell_view_get_size_of_row(cast[ptr CellView00](self.impl), cast[ptr TreePath00](path.impl), requisition))
 
-proc sizeOfRow*(self: CellView; path: TreePath; requisition: var Requisition): bool =
-  toBool(gtk_cell_view_get_size_of_row(cast[ptr CellView00](self.impl), cast[ptr TreePath00](path.impl), requisition))
-
 proc gtk_cell_view_set_background_color(self: ptr CellView00; color: gdk.Color) {.
     importc, libprag.}
 
@@ -34872,16 +34367,10 @@ proc gtk_toolbar_get_drop_index(self: ptr Toolbar00; x: int32; y: int32): int32 
 proc getDropIndex*(self: Toolbar; x: int; y: int): int =
   int(gtk_toolbar_get_drop_index(cast[ptr Toolbar00](self.impl), int32(x), int32(y)))
 
-proc dropIndex*(self: Toolbar; x: int; y: int): int =
-  int(gtk_toolbar_get_drop_index(cast[ptr Toolbar00](self.impl), int32(x), int32(y)))
-
 proc gtk_toolbar_get_item_index(self: ptr Toolbar00; item: ptr ToolItem00): int32 {.
     importc, libprag.}
 
 proc getItemIndex*(self: Toolbar; item: ToolItem): int =
-  int(gtk_toolbar_get_item_index(cast[ptr Toolbar00](self.impl), cast[ptr ToolItem00](item.impl)))
-
-proc itemIndex*(self: Toolbar; item: ToolItem): int =
   int(gtk_toolbar_get_item_index(cast[ptr Toolbar00](self.impl), cast[ptr ToolItem00](item.impl)))
 
 proc gtk_toolbar_get_n_items(self: ptr Toolbar00): int32 {.
@@ -34897,24 +34386,6 @@ proc gtk_toolbar_get_nth_item(self: ptr Toolbar00; n: int32): ptr ToolItem00 {.
     importc, libprag.}
 
 proc getNthItem*(self: Toolbar; n: int): ToolItem =
-  let gobj = gtk_toolbar_get_nth_item(cast[ptr Toolbar00](self.impl), int32(n))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc nthItem*(self: Toolbar; n: int): ToolItem =
   let gobj = gtk_toolbar_get_nth_item(cast[ptr Toolbar00](self.impl), int32(n))
   if gobj.isNil:
     return nil
@@ -35278,14 +34749,14 @@ proc getCurrentValue*(self: RadioAction): int =
 proc currentValue*(self: RadioAction): int =
   int(gtk_radio_action_get_current_value(cast[ptr RadioAction00](self.impl)))
 
-proc gtk_radio_action_get_group(self: ptr RadioAction00): ptr pointer {.
+proc gtk_radio_action_get_group(self: ptr RadioAction00): ptr glib.SList {.
     importc, libprag.}
 
-proc getGroup*(self: RadioAction): ptr pointer =
-  gtk_radio_action_get_group(cast[ptr RadioAction00](self.impl))
+proc getGroup*(self: RadioAction): seq[RadioAction] =
+  result = gslistObjects2seq(RadioAction, gtk_radio_action_get_group(cast[ptr RadioAction00](self.impl)), false)
 
-proc group*(self: RadioAction): ptr pointer =
-  gtk_radio_action_get_group(cast[ptr RadioAction00](self.impl))
+proc group*(self: RadioAction): seq[RadioAction] =
+  result = gslistObjects2seq(RadioAction, gtk_radio_action_get_group(cast[ptr RadioAction00](self.impl)), false)
 
 proc gtk_radio_action_join_group(self: ptr RadioAction00; groupSource: ptr RadioAction00) {.
     importc, libprag.}
@@ -35302,14 +34773,18 @@ proc setCurrentValue*(self: RadioAction; currentValue: int) =
 proc `currentValue=`*(self: RadioAction; currentValue: int) =
   gtk_radio_action_set_current_value(cast[ptr RadioAction00](self.impl), int32(currentValue))
 
-proc gtk_radio_action_set_group(self: ptr RadioAction00; group: ptr pointer) {.
+proc gtk_radio_action_set_group(self: ptr RadioAction00; group: ptr glib.SList) {.
     importc, libprag.}
 
-proc setGroup*(self: RadioAction; group: ptr pointer) =
-  gtk_radio_action_set_group(cast[ptr RadioAction00](self.impl), group)
+proc setGroup*(self: RadioAction; group: seq[RadioAction]) =
+  var tempResGL = seq2GSList(group)
+  gtk_radio_action_set_group(cast[ptr RadioAction00](self.impl), tempResGL)
+  g_slist_free(tempResGL)
 
-proc `group=`*(self: RadioAction; group: ptr pointer) =
-  gtk_radio_action_set_group(cast[ptr RadioAction00](self.impl), group)
+proc `group=`*(self: RadioAction; group: seq[RadioAction]) =
+  var tempResGL = seq2GSList(group)
+  gtk_radio_action_set_group(cast[ptr RadioAction00](self.impl), tempResGL)
+  g_slist_free(tempResGL)
 
 type
   Scrollbar* = ref object of Range
@@ -35979,9 +35454,6 @@ proc gtk_font_selection_dialog_set_font_name(self: ptr FontSelectionDialog00;
 proc setFontName*(self: FontSelectionDialog; fontname: cstring): bool =
   toBool(gtk_font_selection_dialog_set_font_name(cast[ptr FontSelectionDialog00](self.impl), fontname))
 
-proc `fontName=`*(self: FontSelectionDialog; fontname: cstring): bool =
-  toBool(gtk_font_selection_dialog_set_font_name(cast[ptr FontSelectionDialog00](self.impl), fontname))
-
 proc gtk_font_selection_dialog_set_preview_text(self: ptr FontSelectionDialog00;
     text: cstring) {.
     importc, libprag.}
@@ -36183,30 +35655,14 @@ proc getAction*(self: UIManager; path: cstring): Action =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc action*(self: UIManager; path: cstring): Action =
-  let gobj = gtk_ui_manager_get_action(cast[ptr UIManager00](self.impl), path)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_ui_manager_get_action_groups(self: ptr UIManager00): ptr pointer {.
+proc gtk_ui_manager_get_action_groups(self: ptr UIManager00): ptr glib.List {.
     importc, libprag.}
 
-proc getActionGroups*(self: UIManager): ptr pointer =
-  gtk_ui_manager_get_action_groups(cast[ptr UIManager00](self.impl))
+proc getActionGroups*(self: UIManager): seq[ActionGroup] =
+  result = glistObjects2seq(ActionGroup, gtk_ui_manager_get_action_groups(cast[ptr UIManager00](self.impl)), false)
 
-proc actionGroups*(self: UIManager): ptr pointer =
-  gtk_ui_manager_get_action_groups(cast[ptr UIManager00](self.impl))
+proc actionGroups*(self: UIManager): seq[ActionGroup] =
+  result = glistObjects2seq(ActionGroup, gtk_ui_manager_get_action_groups(cast[ptr UIManager00](self.impl)), false)
 
 proc gtk_ui_manager_get_add_tearoffs(self: ptr UIManager00): gboolean {.
     importc, libprag.}
@@ -36234,22 +35690,6 @@ proc gtk_ui_manager_get_widget(self: ptr UIManager00; path: cstring): ptr Widget
     importc, libprag.}
 
 proc getWidget*(self: UIManager; path: cstring): Widget =
-  let gobj = gtk_ui_manager_get_widget(cast[ptr UIManager00](self.impl), path)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc widget*(self: UIManager; path: cstring): Widget =
   let gobj = gtk_ui_manager_get_widget(cast[ptr UIManager00](self.impl), path)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -36389,20 +35829,21 @@ proc initColorSelection*[T](result: var T) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_color_selection_palette_from_string(str: cstring; colors: var gdk.ColorArray;
+proc gtk_color_selection_palette_from_string(str: cstring; colors: var ptr gdk.Color;
     nColors: var int32): gboolean {.
     importc, libprag.}
 
-proc paletteFromString*(str: cstring; colors: var gdk.ColorArray;
+proc paletteFromString*(str: cstring; colors: var ptr gdk.Color;
     nColors: var int): bool =
-  var nColors_00 = int32(nColors)
+  var nColors_00: int32
   result = toBool(gtk_color_selection_palette_from_string(str, colors, nColors_00))
-  nColors = int(nColors_00)
+  if nColors.addr != nil:
+    nColors = int(nColors_00)
 
-proc gtk_color_selection_palette_to_string(colors: gdk.ColorArray; nColors: int32): cstring {.
+proc gtk_color_selection_palette_to_string(colors: ptr gdk.Color; nColors: int32): cstring {.
     importc, libprag.}
 
-proc paletteToString*(colors: gdk.ColorArray; nColors: int): string =
+proc paletteToString*(colors: ptr gdk.Color; nColors: int): string =
   let resul0 = gtk_color_selection_palette_to_string(colors, int32(nColors))
   result = $resul0
   cogfree(resul0)
@@ -36620,16 +36061,10 @@ proc gtk_button_box_get_child_non_homogeneous(self: ptr ButtonBox00; child: ptr 
 proc getChildNonHomogeneous*(self: ButtonBox; child: Widget): bool =
   toBool(gtk_button_box_get_child_non_homogeneous(cast[ptr ButtonBox00](self.impl), cast[ptr Widget00](child.impl)))
 
-proc childNonHomogeneous*(self: ButtonBox; child: Widget): bool =
-  toBool(gtk_button_box_get_child_non_homogeneous(cast[ptr ButtonBox00](self.impl), cast[ptr Widget00](child.impl)))
-
 proc gtk_button_box_get_child_secondary(self: ptr ButtonBox00; child: ptr Widget00): gboolean {.
     importc, libprag.}
 
 proc getChildSecondary*(self: ButtonBox; child: Widget): bool =
-  toBool(gtk_button_box_get_child_secondary(cast[ptr ButtonBox00](self.impl), cast[ptr Widget00](child.impl)))
-
-proc childSecondary*(self: ButtonBox; child: Widget): bool =
   toBool(gtk_button_box_get_child_secondary(cast[ptr ButtonBox00](self.impl), cast[ptr Widget00](child.impl)))
 
 proc gtk_button_box_set_child_non_homogeneous(self: ptr ButtonBox00; child: ptr Widget00;
@@ -37116,10 +36551,10 @@ when defined(gcDestructors):
 proc scDragActionAsk*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; actions: int32; xdata: pointer): int32 {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "drag-action-ask", cast[GCallback](p), xdata, nil, cf)
 
-proc scDragActionRequested*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; context: ptr gdk.DragContext00; destFile: ptr gio.GFile00; sourceFileList: ptr pointer; xdata: pointer): int32 {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scDragActionRequested*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; context: ptr gdk.DragContext00; destFile: ptr gio.GFile00; sourceFileList: ptr glib.List; xdata: pointer): int32 {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "drag-action-requested", cast[GCallback](p), xdata, nil, cf)
 
-proc scDragPerformDrop*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; destFile: ptr gio.GFile00; sourceFileList: ptr pointer; action: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+proc scDragPerformDrop*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; destFile: ptr gio.GFile00; sourceFileList: ptr glib.List; action: int32; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "drag-perform-drop", cast[GCallback](p), xdata, nil, cf)
 
 proc scMount*(self: PlacesSidebar;  p: proc (self: ptr PlacesSidebar00; mountOperation: ptr gio.MountOperation00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
@@ -37283,25 +36718,6 @@ proc getNthBookmark*(self: PlacesSidebar; n: int): gio.GFile =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc nthBookmark*(self: PlacesSidebar; n: int): gio.GFile =
-  let gobj = gtk_places_sidebar_get_nth_bookmark(cast[ptr PlacesSidebar00](self.impl), int32(n))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_places_sidebar_get_open_flags(self: ptr PlacesSidebar00): PlacesOpenFlags {.
     importc, libprag.}
 
@@ -37374,11 +36790,13 @@ proc getShowTrash*(self: PlacesSidebar): bool =
 proc showTrash*(self: PlacesSidebar): bool =
   toBool(gtk_places_sidebar_get_show_trash(cast[ptr PlacesSidebar00](self.impl)))
 
-proc gtk_places_sidebar_list_shortcuts(self: ptr PlacesSidebar00): ptr pointer {.
+proc gtk_places_sidebar_list_shortcuts(self: ptr PlacesSidebar00): ptr glib.SList {.
     importc, libprag.}
 
-proc listShortcuts*(self: PlacesSidebar): ptr pointer =
-  gtk_places_sidebar_list_shortcuts(cast[ptr PlacesSidebar00](self.impl))
+proc listShortcuts*(self: PlacesSidebar): seq[gio.GFile] =
+  let resul0 = gtk_places_sidebar_list_shortcuts(cast[ptr PlacesSidebar00](self.impl))
+  result = gslistObjects2seq(gio.GFile, resul0, true)
+  g_slist_free(resul0)
 
 proc gtk_places_sidebar_remove_shortcut(self: ptr PlacesSidebar00; location: ptr gio.GFile00) {.
     importc, libprag.}
@@ -37828,8 +37246,8 @@ proc gtk_text_view_get_cursor_locations(self: ptr TextView00; iter: TextIter;
     strong: var gdk.Rectangle; weak: var gdk.Rectangle) {.
     importc, libprag.}
 
-proc getCursorLocations*(self: TextView; iter: TextIter = cast[ptr TextIter](nil)[];
-    strong: var gdk.Rectangle; weak: var gdk.Rectangle) =
+proc getCursorLocations*(self: TextView; iter: TextIter = cast[var TextIter](nil);
+    strong: var gdk.Rectangle = cast[var gdk.Rectangle](nil); weak: var gdk.Rectangle = cast[var gdk.Rectangle](nil)) =
   gtk_text_view_get_cursor_locations(cast[ptr TextView00](self.impl), iter, strong, weak)
 
 proc gtk_text_view_get_cursor_visible(self: ptr TextView00): gboolean {.
@@ -37931,25 +37349,16 @@ proc getIterAtLocation*(self: TextView; iter: var TextIter;
     x: int; y: int): bool =
   toBool(gtk_text_view_get_iter_at_location(cast[ptr TextView00](self.impl), iter, int32(x), int32(y)))
 
-proc iterAtLocation*(self: TextView; iter: var TextIter;
-    x: int; y: int): bool =
-  toBool(gtk_text_view_get_iter_at_location(cast[ptr TextView00](self.impl), iter, int32(x), int32(y)))
-
 proc gtk_text_view_get_iter_at_position(self: ptr TextView00; iter: var TextIter;
     trailing: var int32; x: int32; y: int32): gboolean {.
     importc, libprag.}
 
 proc getIterAtPosition*(self: TextView; iter: var TextIter;
-    trailing: var int; x: int; y: int): bool =
-  var trailing_00 = int32(trailing)
+    trailing: var int = cast[var int](nil); x: int; y: int): bool =
+  var trailing_00: int32
   result = toBool(gtk_text_view_get_iter_at_position(cast[ptr TextView00](self.impl), iter, trailing_00, int32(x), int32(y)))
-  trailing = int(trailing_00)
-
-proc iterAtPosition*(self: TextView; iter: var TextIter;
-    trailing: var int; x: int; y: int): bool =
-  var trailing_00 = int32(trailing)
-  result = toBool(gtk_text_view_get_iter_at_position(cast[ptr TextView00](self.impl), iter, trailing_00, int32(x), int32(y)))
-  trailing = int(trailing_00)
+  if trailing.addr != nil:
+    trailing = int(trailing_00)
 
 proc gtk_text_view_get_iter_location(self: ptr TextView00; iter: TextIter;
     location: var gdk.Rectangle) {.
@@ -37982,9 +37391,10 @@ proc gtk_text_view_get_line_at_y(self: ptr TextView00; targetIter: var TextIter;
 
 proc getLineAtY*(self: TextView; targetIter: var TextIter;
     y: int; lineTop: var int) =
-  var lineTop_00 = int32(lineTop)
+  var lineTop_00: int32
   gtk_text_view_get_line_at_y(cast[ptr TextView00](self.impl), targetIter, int32(y), lineTop_00)
-  lineTop = int(lineTop_00)
+  if lineTop.addr != nil:
+    lineTop = int(lineTop_00)
 
 proc gtk_text_view_get_line_yrange(self: ptr TextView00; iter: TextIter;
     y: var int32; height: var int32) {.
@@ -37992,11 +37402,13 @@ proc gtk_text_view_get_line_yrange(self: ptr TextView00; iter: TextIter;
 
 proc getLineYrange*(self: TextView; iter: TextIter; y: var int;
     height: var int) =
-  var y_00 = int32(y)
-  var height_00 = int32(height)
+  var y_00: int32
+  var height_00: int32
   gtk_text_view_get_line_yrange(cast[ptr TextView00](self.impl), iter, y_00, height_00)
-  y = int(y_00)
-  height = int(height_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_text_view_get_monospace(self: ptr TextView00): gboolean {.
     importc, libprag.}
@@ -38497,24 +37909,6 @@ proc getActionWidget*(self: Notebook; packType: PackType): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc actionWidget*(self: Notebook; packType: PackType): Widget =
-  let gobj = gtk_notebook_get_action_widget(cast[ptr Notebook00](self.impl), packType)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_notebook_get_current_page(self: ptr Notebook00): int32 {.
     importc, libprag.}
 
@@ -38560,34 +37954,10 @@ proc getMenuLabel*(self: Notebook; child: Widget): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc menuLabel*(self: Notebook; child: Widget): Widget =
-  let gobj = gtk_notebook_get_menu_label(cast[ptr Notebook00](self.impl), cast[ptr Widget00](child.impl))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_notebook_get_menu_label_text(self: ptr Notebook00; child: ptr Widget00): cstring {.
     importc, libprag.}
 
 proc getMenuLabelText*(self: Notebook; child: Widget): string =
-  let resul0 = gtk_notebook_get_menu_label_text(cast[ptr Notebook00](self.impl), cast[ptr Widget00](child.impl))
-  if resul0.isNil:
-    return
-  result = $resul0
-
-proc menuLabelText*(self: Notebook; child: Widget): string =
   let resul0 = gtk_notebook_get_menu_label_text(cast[ptr Notebook00](self.impl), cast[ptr Widget00](child.impl))
   if resul0.isNil:
     return
@@ -38606,24 +37976,6 @@ proc gtk_notebook_get_nth_page(self: ptr Notebook00; pageNum: int32): ptr Widget
     importc, libprag.}
 
 proc getNthPage*(self: Notebook; pageNum: int): Widget =
-  let gobj = gtk_notebook_get_nth_page(cast[ptr Notebook00](self.impl), int32(pageNum))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc nthPage*(self: Notebook; pageNum: int): Widget =
   let gobj = gtk_notebook_get_nth_page(cast[ptr Notebook00](self.impl), int32(pageNum))
   if gobj.isNil:
     return nil
@@ -38674,9 +38026,6 @@ proc gtk_notebook_get_tab_detachable(self: ptr Notebook00; child: ptr Widget00):
 proc getTabDetachable*(self: Notebook; child: Widget): bool =
   toBool(gtk_notebook_get_tab_detachable(cast[ptr Notebook00](self.impl), cast[ptr Widget00](child.impl)))
 
-proc tabDetachable*(self: Notebook; child: Widget): bool =
-  toBool(gtk_notebook_get_tab_detachable(cast[ptr Notebook00](self.impl), cast[ptr Widget00](child.impl)))
-
 proc gtk_notebook_get_tab_hborder(self: ptr Notebook00): uint16 {.
     importc, libprag.}
 
@@ -38707,34 +38056,10 @@ proc getTabLabel*(self: Notebook; child: Widget): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc tabLabel*(self: Notebook; child: Widget): Widget =
-  let gobj = gtk_notebook_get_tab_label(cast[ptr Notebook00](self.impl), cast[ptr Widget00](child.impl))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_notebook_get_tab_label_text(self: ptr Notebook00; child: ptr Widget00): cstring {.
     importc, libprag.}
 
 proc getTabLabelText*(self: Notebook; child: Widget): string =
-  let resul0 = gtk_notebook_get_tab_label_text(cast[ptr Notebook00](self.impl), cast[ptr Widget00](child.impl))
-  if resul0.isNil:
-    return
-  result = $resul0
-
-proc tabLabelText*(self: Notebook; child: Widget): string =
   let resul0 = gtk_notebook_get_tab_label_text(cast[ptr Notebook00](self.impl), cast[ptr Widget00](child.impl))
   if resul0.isNil:
     return
@@ -38753,9 +38078,6 @@ proc gtk_notebook_get_tab_reorderable(self: ptr Notebook00; child: ptr Widget00)
     importc, libprag.}
 
 proc getTabReorderable*(self: Notebook; child: Widget): bool =
-  toBool(gtk_notebook_get_tab_reorderable(cast[ptr Notebook00](self.impl), cast[ptr Widget00](child.impl)))
-
-proc tabReorderable*(self: Notebook; child: Widget): bool =
   toBool(gtk_notebook_get_tab_reorderable(cast[ptr Notebook00](self.impl), cast[ptr Widget00](child.impl)))
 
 proc gtk_notebook_get_tab_vborder(self: ptr Notebook00): uint16 {.
@@ -40179,9 +39501,6 @@ proc gtk_font_selection_set_font_name(self: ptr FontSelection00; fontname: cstri
 proc setFontName*(self: FontSelection; fontname: cstring): bool =
   toBool(gtk_font_selection_set_font_name(cast[ptr FontSelection00](self.impl), fontname))
 
-proc `fontName=`*(self: FontSelection; fontname: cstring): bool =
-  toBool(gtk_font_selection_set_font_name(cast[ptr FontSelection00](self.impl), fontname))
-
 proc gtk_font_selection_set_preview_text(self: ptr FontSelection00; text: cstring) {.
     importc, libprag.}
 
@@ -40444,9 +39763,6 @@ proc gtk_overlay_get_overlay_pass_through(self: ptr Overlay00; widget: ptr Widge
 proc getOverlayPassThrough*(self: Overlay; widget: Widget): bool =
   toBool(gtk_overlay_get_overlay_pass_through(cast[ptr Overlay00](self.impl), cast[ptr Widget00](widget.impl)))
 
-proc overlayPassThrough*(self: Overlay; widget: Widget): bool =
-  toBool(gtk_overlay_get_overlay_pass_through(cast[ptr Overlay00](self.impl), cast[ptr Widget00](widget.impl)))
-
 proc gtk_overlay_reorder_overlay(self: ptr Overlay00; child: ptr Widget00;
     index: int32) {.
     importc, libprag.}
@@ -40655,8 +39971,8 @@ proc gtk_grid_attach(self: ptr Grid00; child: ptr Widget00; left: int32;
     top: int32; width: int32; height: int32) {.
     importc, libprag.}
 
-proc attach*(self: Grid; child: Widget; left: int; top: int; width: int;
-    height: int) =
+proc attach*(self: Grid; child: Widget; left: int; top: int; width: int = 1;
+    height: int = 1) =
   gtk_grid_attach(cast[ptr Grid00](self.impl), cast[ptr Widget00](child.impl), int32(left), int32(top), int32(width), int32(height))
 
 proc gtk_grid_attach_next_to(self: ptr Grid00; child: ptr Widget00; sibling: ptr Widget00;
@@ -40697,24 +40013,6 @@ proc getChildAt*(self: Grid; left: int; top: int): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc childAt*(self: Grid; left: int; top: int): Widget =
-  let gobj = gtk_grid_get_child_at(cast[ptr Grid00](self.impl), int32(left), int32(top))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_grid_get_column_homogeneous(self: ptr Grid00): gboolean {.
     importc, libprag.}
 
@@ -40737,9 +40035,6 @@ proc gtk_grid_get_row_baseline_position(self: ptr Grid00; row: int32): BaselineP
     importc, libprag.}
 
 proc getRowBaselinePosition*(self: Grid; row: int): BaselinePosition =
-  gtk_grid_get_row_baseline_position(cast[ptr Grid00](self.impl), int32(row))
-
-proc rowBaselinePosition*(self: Grid; row: int): BaselinePosition =
   gtk_grid_get_row_baseline_position(cast[ptr Grid00](self.impl), int32(row))
 
 proc gtk_grid_get_row_homogeneous(self: ptr Grid00): gboolean {.
@@ -41441,35 +40736,43 @@ proc gtk_image_get_gicon(self: ptr Image00; gicon: var ptr gio.Icon00; size: var
     importc, libprag.}
 
 proc getGicon*(self: Image | LockButtonAccessible | RadioButtonAccessible | LinkButtonAccessible | ImageCellAccessible | MenuButtonAccessible | ToggleButtonAccessible | ArrowAccessible | ScaleButtonAccessible | ButtonAccessible | ImageAccessible | SpinnerAccessible;
-    gicon: var gio.Icon; size: var int) =
-  new(gicon)
-  gicon.ignoreFinalizer = true
-  var size_00 = int32(size)
-  gtk_image_get_gicon(cast[ptr Image00](self.impl), cast[var ptr gio.Icon00](addr gicon.impl), size_00)
-  size = int(size_00)
+    gicon: var gio.Icon = cast[var gio.Icon](nil); size: var int = cast[var int](nil)) =
+  if addr(gicon) != nil:
+    new(gicon)
+  if addr(gicon) != nil:
+    gicon.ignoreFinalizer = true
+  var size_00: int32
+  gtk_image_get_gicon(cast[ptr Image00](self.impl), cast[var ptr gio.Icon00](if addr(gicon) == nil: nil else: addr gicon.impl), size_00)
+  if size.addr != nil:
+    size = int(size_00)
 
 proc gtk_image_get_icon_name(self: ptr Image00; iconName: var cstring; size: var int32) {.
     importc, libprag.}
 
 proc getIconName*(self: Image | LockButtonAccessible | RadioButtonAccessible | LinkButtonAccessible | ImageCellAccessible | MenuButtonAccessible | ToggleButtonAccessible | ArrowAccessible | ScaleButtonAccessible | ButtonAccessible | ImageAccessible | SpinnerAccessible;
-    iconName: var string; size: var int) =
-  var iconName_00 = cstring(iconName)
-  var size_00 = int32(size)
+    iconName: var string = cast[var string](nil); size: var int = cast[var int](nil)) =
+  var iconName_00: cstring
+  var size_00: int32
   gtk_image_get_icon_name(cast[ptr Image00](self.impl), iconName_00, size_00)
-  iconName = $(iconName_00)
-  size = int(size_00)
+  if iconName.addr != nil:
+    iconName = $(iconName_00)
+  if size.addr != nil:
+    size = int(size_00)
 
 proc gtk_image_get_icon_set(self: ptr Image00; iconSet: var ptr IconSet00;
     size: var int32) {.
     importc, libprag.}
 
 proc getIconSet*(self: Image | LockButtonAccessible | RadioButtonAccessible | LinkButtonAccessible | ImageCellAccessible | MenuButtonAccessible | ToggleButtonAccessible | ArrowAccessible | ScaleButtonAccessible | ButtonAccessible | ImageAccessible | SpinnerAccessible;
-    iconSet: var IconSet; size: var int) =
-  fnew(iconSet, gBoxedFreeGtkIconSet)
-  iconSet.ignoreFinalizer = true
-  var size_00 = int32(size)
-  gtk_image_get_icon_set(cast[ptr Image00](self.impl), cast[var ptr IconSet00](addr iconSet.impl), size_00)
-  size = int(size_00)
+    iconSet: var IconSet = cast[var IconSet](nil); size: var int = cast[var int](nil)) =
+  if addr(iconSet) != nil:
+    fnew(iconSet, gBoxedFreeGtkIconSet)
+  if addr(iconSet) != nil:
+    iconSet.ignoreFinalizer = true
+  var size_00: int32
+  gtk_image_get_icon_set(cast[ptr Image00](self.impl), cast[var ptr IconSet00](if addr(iconSet) == nil: nil else: addr iconSet.impl), size_00)
+  if size.addr != nil:
+    size = int(size_00)
 
 proc gtk_image_get_pixbuf(self: ptr Image00): ptr gdkpixbuf.Pixbuf00 {.
     importc, libprag.}
@@ -41523,12 +40826,14 @@ proc gtk_image_get_stock(self: ptr Image00; stockId: var cstring; size: var int3
     importc, libprag.}
 
 proc getStock*(self: Image | LockButtonAccessible | RadioButtonAccessible | LinkButtonAccessible | ImageCellAccessible | MenuButtonAccessible | ToggleButtonAccessible | ArrowAccessible | ScaleButtonAccessible | ButtonAccessible | ImageAccessible | SpinnerAccessible;
-    stockId: var string; size: var int) =
-  var stockId_00 = cstring(stockId)
-  var size_00 = int32(size)
+    stockId: var string = cast[var string](nil); size: var int = cast[var int](nil)) =
+  var stockId_00: cstring
+  var size_00: int32
   gtk_image_get_stock(cast[ptr Image00](self.impl), stockId_00, size_00)
-  stockId = $(stockId_00)
-  size = int(size_00)
+  if stockId.addr != nil:
+    stockId = $(stockId_00)
+  if size.addr != nil:
+    size = int(size_00)
 
 proc gtk_image_get_storage_type(self: ptr Image00): ImageType {.
     importc, libprag.}
@@ -41682,20 +40987,19 @@ proc gtk_text_view_buffer_to_window_coords(self: ptr TextView00; win: TextWindow
     importc, libprag.}
 
 proc bufferToWindowCoords*(self: TextView; win: TextWindowType;
-    bufferX: int; bufferY: int; windowX: var int; windowY: var int) =
-  var windowY_00 = int32(windowY)
-  var windowX_00 = int32(windowX)
+    bufferX: int; bufferY: int; windowX: var int = cast[var int](nil); windowY: var int = cast[var int](nil)) =
+  var windowY_00: int32
+  var windowX_00: int32
   gtk_text_view_buffer_to_window_coords(cast[ptr TextView00](self.impl), win, int32(bufferX), int32(bufferY), windowX_00, windowY_00)
-  windowY = int(windowY_00)
-  windowX = int(windowX_00)
+  if windowY.addr != nil:
+    windowY = int(windowY_00)
+  if windowX.addr != nil:
+    windowX = int(windowX_00)
 
 proc gtk_text_view_get_border_window_size(self: ptr TextView00; `type`: TextWindowType): int32 {.
     importc, libprag.}
 
 proc getBorderWindowSize*(self: TextView; `type`: TextWindowType): int =
-  int(gtk_text_view_get_border_window_size(cast[ptr TextView00](self.impl), `type`))
-
-proc borderWindowSize*(self: TextView; `type`: TextWindowType): int =
   int(gtk_text_view_get_border_window_size(cast[ptr TextView00](self.impl), `type`))
 
 proc gtk_text_view_get_window(self: ptr TextView00; win: TextWindowType): ptr gdk.Window00 {.
@@ -41719,31 +41023,10 @@ proc getWindow*(self: TextView; win: TextWindowType): gdk.Window =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc window*(self: TextView; win: TextWindowType): gdk.Window =
-  let gobj = gtk_text_view_get_window(cast[ptr TextView00](self.impl), win)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_text_view_get_window_type(self: ptr TextView00; window: ptr gdk.Window00): TextWindowType {.
     importc, libprag.}
 
 proc getWindowType*(self: TextView; window: gdk.Window): TextWindowType =
-  gtk_text_view_get_window_type(cast[ptr TextView00](self.impl), cast[ptr gdk.Window00](window.impl))
-
-proc windowType*(self: TextView; window: gdk.Window): TextWindowType =
   gtk_text_view_get_window_type(cast[ptr TextView00](self.impl), cast[ptr gdk.Window00](window.impl))
 
 proc gtk_text_view_set_border_window_size(self: ptr TextView00; `type`: TextWindowType;
@@ -41759,12 +41042,14 @@ proc gtk_text_view_window_to_buffer_coords(self: ptr TextView00; win: TextWindow
     importc, libprag.}
 
 proc windowToBufferCoords*(self: TextView; win: TextWindowType;
-    windowX: int; windowY: int; bufferX: var int; bufferY: var int) =
-  var bufferY_00 = int32(bufferY)
-  var bufferX_00 = int32(bufferX)
+    windowX: int; windowY: int; bufferX: var int = cast[var int](nil); bufferY: var int = cast[var int](nil)) =
+  var bufferY_00: int32
+  var bufferX_00: int32
   gtk_text_view_window_to_buffer_coords(cast[ptr TextView00](self.impl), win, int32(windowX), int32(windowY), bufferX_00, bufferY_00)
-  bufferY = int(bufferY_00)
-  bufferX = int(bufferX_00)
+  if bufferY.addr != nil:
+    bufferY = int(bufferY_00)
+  if bufferX.addr != nil:
+    bufferX = int(bufferX_00)
 
 type
   TreeViewAccessible* = ref object of ContainerAccessible
@@ -41805,9 +41090,6 @@ proc gtk_table_get_col_spacing(self: ptr Table00; column: uint32): uint32 {.
 proc getColSpacing*(self: Table | TreeViewAccessible; column: int): int =
   int(gtk_table_get_col_spacing(cast[ptr Table00](self.impl), uint32(column)))
 
-proc colSpacing*(self: Table | TreeViewAccessible; column: int): int =
-  int(gtk_table_get_col_spacing(cast[ptr Table00](self.impl), uint32(column)))
-
 proc gtk_table_get_default_col_spacing(self: ptr Table00): uint32 {.
     importc, libprag.}
 
@@ -41841,19 +41123,18 @@ proc gtk_table_get_row_spacing(self: ptr Table00; row: uint32): uint32 {.
 proc getRowSpacing*(self: Table | TreeViewAccessible; row: int): int =
   int(gtk_table_get_row_spacing(cast[ptr Table00](self.impl), uint32(row)))
 
-proc rowSpacing*(self: Table | TreeViewAccessible; row: int): int =
-  int(gtk_table_get_row_spacing(cast[ptr Table00](self.impl), uint32(row)))
-
 proc gtk_table_get_size(self: ptr Table00; rows: var uint32; columns: var uint32) {.
     importc, libprag.}
 
-proc getSize*(self: Table | TreeViewAccessible; rows: var int;
-    columns: var int) =
-  var rows_00 = uint32(rows)
-  var columns_00 = uint32(columns)
+proc getSize*(self: Table | TreeViewAccessible; rows: var int = cast[var int](nil);
+    columns: var int = cast[var int](nil)) =
+  var rows_00: uint32
+  var columns_00: uint32
   gtk_table_get_size(cast[ptr Table00](self.impl), rows_00, columns_00)
-  rows = int(rows_00)
-  columns = int(columns_00)
+  if rows.addr != nil:
+    rows = int(rows_00)
+  if columns.addr != nil:
+    columns = int(columns_00)
 
 proc gtk_table_resize(self: ptr Table00; rows: uint32; columns: uint32) {.
     importc, libprag.}
@@ -41938,8 +41219,8 @@ proc gtk_scrolled_window_get_policy(self: ptr ScrolledWindow00; hscrollbarPolicy
     vscrollbarPolicy: var PolicyType) {.
     importc, libprag.}
 
-proc getPolicy*(self: ScrolledWindow; hscrollbarPolicy: var PolicyType;
-    vscrollbarPolicy: var PolicyType) =
+proc getPolicy*(self: ScrolledWindow; hscrollbarPolicy: var PolicyType = cast[var PolicyType](nil);
+    vscrollbarPolicy: var PolicyType = cast[var PolicyType](nil)) =
   gtk_scrolled_window_get_policy(cast[ptr ScrolledWindow00](self.impl), hscrollbarPolicy, vscrollbarPolicy)
 
 proc gtk_scrolled_window_set_policy(self: ptr ScrolledWindow00; hscrollbarPolicy: PolicyType;
@@ -41999,14 +41280,13 @@ proc addUi*(self: UIManager; mergeId: int; path: cstring;
     name: cstring; action: cstring = ""; `type`: UIManagerItemType; top: bool) =
   gtk_ui_manager_add_ui(cast[ptr UIManager00](self.impl), uint32(mergeId), path, name, safeStringToCString(action), `type`, gboolean(top))
 
-proc gtk_ui_manager_get_toplevels(self: ptr UIManager00; types: UIManagerItemType): ptr pointer {.
+proc gtk_ui_manager_get_toplevels(self: ptr UIManager00; types: UIManagerItemType): ptr glib.SList {.
     importc, libprag.}
 
-proc getToplevels*(self: UIManager; types: UIManagerItemType): ptr pointer =
-  gtk_ui_manager_get_toplevels(cast[ptr UIManager00](self.impl), types)
-
-proc toplevels*(self: UIManager; types: UIManagerItemType): ptr pointer =
-  gtk_ui_manager_get_toplevels(cast[ptr UIManager00](self.impl), types)
+proc getToplevels*(self: UIManager; types: UIManagerItemType): seq[Widget] =
+  let resul0 = gtk_ui_manager_get_toplevels(cast[ptr UIManager00](self.impl), types)
+  result = gslistObjects2seq(Widget, resul0, false)
+  g_slist_free(resul0)
 
 type
   Stack* = ref object of Container
@@ -42093,24 +41373,6 @@ proc gtk_stack_get_child_by_name(self: ptr Stack00; name: cstring): ptr Widget00
     importc, libprag.}
 
 proc getChildByName*(self: Stack; name: cstring): Widget =
-  let gobj = gtk_stack_get_child_by_name(cast[ptr Stack00](self.impl), name)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc childByName*(self: Stack; name: cstring): Widget =
   let gobj = gtk_stack_get_child_by_name(cast[ptr Stack00](self.impl), name)
   if gobj.isNil:
     return nil
@@ -42746,23 +42008,23 @@ proc gtk_calendar_get_date(self: ptr Calendar00; year: var uint32; month: var ui
     day: var uint32) {.
     importc, libprag.}
 
-proc getDate*(self: Calendar; year: var int; month: var int;
-    day: var int) =
-  var day_00 = uint32(day)
-  var year_00 = uint32(year)
-  var month_00 = uint32(month)
+proc getDate*(self: Calendar; year: var int = cast[var int](nil);
+    month: var int = cast[var int](nil); day: var int = cast[var int](nil)) =
+  var day_00: uint32
+  var year_00: uint32
+  var month_00: uint32
   gtk_calendar_get_date(cast[ptr Calendar00](self.impl), year_00, month_00, day_00)
-  day = int(day_00)
-  year = int(year_00)
-  month = int(month_00)
+  if day.addr != nil:
+    day = int(day_00)
+  if year.addr != nil:
+    year = int(year_00)
+  if month.addr != nil:
+    month = int(month_00)
 
 proc gtk_calendar_get_day_is_marked(self: ptr Calendar00; day: uint32): gboolean {.
     importc, libprag.}
 
 proc getDayIsMarked*(self: Calendar; day: int): bool =
-  toBool(gtk_calendar_get_day_is_marked(cast[ptr Calendar00](self.impl), uint32(day)))
-
-proc dayIsMarked*(self: Calendar; day: int): bool =
   toBool(gtk_calendar_get_day_is_marked(cast[ptr Calendar00](self.impl), uint32(day)))
 
 proc gtk_calendar_get_detail_height_rows(self: ptr Calendar00): int32 {.
@@ -43455,11 +42717,13 @@ proc gtk_tree_view_convert_bin_window_to_tree_coords(self: ptr TreeView00;
 
 proc convertBinWindowToTreeCoords*(self: TreeView; bx: int;
     by: int; tx: var int; ty: var int) =
-  var tx_00 = int32(tx)
-  var ty_00 = int32(ty)
+  var tx_00: int32
+  var ty_00: int32
   gtk_tree_view_convert_bin_window_to_tree_coords(cast[ptr TreeView00](self.impl), int32(bx), int32(by), tx_00, ty_00)
-  tx = int(tx_00)
-  ty = int(ty_00)
+  if tx.addr != nil:
+    tx = int(tx_00)
+  if ty.addr != nil:
+    ty = int(ty_00)
 
 proc gtk_tree_view_convert_bin_window_to_widget_coords(self: ptr TreeView00;
     bx: int32; by: int32; wx: var int32; wy: var int32) {.
@@ -43467,11 +42731,13 @@ proc gtk_tree_view_convert_bin_window_to_widget_coords(self: ptr TreeView00;
 
 proc convertBinWindowToWidgetCoords*(self: TreeView; bx: int;
     by: int; wx: var int; wy: var int) =
-  var wy_00 = int32(wy)
-  var wx_00 = int32(wx)
+  var wy_00: int32
+  var wx_00: int32
   gtk_tree_view_convert_bin_window_to_widget_coords(cast[ptr TreeView00](self.impl), int32(bx), int32(by), wx_00, wy_00)
-  wy = int(wy_00)
-  wx = int(wx_00)
+  if wy.addr != nil:
+    wy = int(wy_00)
+  if wx.addr != nil:
+    wx = int(wx_00)
 
 proc gtk_tree_view_convert_tree_to_bin_window_coords(self: ptr TreeView00;
     tx: int32; ty: int32; bx: var int32; by: var int32) {.
@@ -43479,11 +42745,13 @@ proc gtk_tree_view_convert_tree_to_bin_window_coords(self: ptr TreeView00;
 
 proc convertTreeToBinWindowCoords*(self: TreeView; tx: int;
     ty: int; bx: var int; by: var int) =
-  var bx_00 = int32(bx)
-  var by_00 = int32(by)
+  var bx_00: int32
+  var by_00: int32
   gtk_tree_view_convert_tree_to_bin_window_coords(cast[ptr TreeView00](self.impl), int32(tx), int32(ty), bx_00, by_00)
-  bx = int(bx_00)
-  by = int(by_00)
+  if bx.addr != nil:
+    bx = int(bx_00)
+  if by.addr != nil:
+    by = int(by_00)
 
 proc gtk_tree_view_convert_tree_to_widget_coords(self: ptr TreeView00; tx: int32;
     ty: int32; wx: var int32; wy: var int32) {.
@@ -43491,11 +42759,13 @@ proc gtk_tree_view_convert_tree_to_widget_coords(self: ptr TreeView00; tx: int32
 
 proc convertTreeToWidgetCoords*(self: TreeView; tx: int;
     ty: int; wx: var int; wy: var int) =
-  var wy_00 = int32(wy)
-  var wx_00 = int32(wx)
+  var wy_00: int32
+  var wx_00: int32
   gtk_tree_view_convert_tree_to_widget_coords(cast[ptr TreeView00](self.impl), int32(tx), int32(ty), wx_00, wy_00)
-  wy = int(wy_00)
-  wx = int(wx_00)
+  if wy.addr != nil:
+    wy = int(wy_00)
+  if wx.addr != nil:
+    wx = int(wx_00)
 
 proc gtk_tree_view_convert_widget_to_bin_window_coords(self: ptr TreeView00;
     wx: int32; wy: int32; bx: var int32; by: var int32) {.
@@ -43503,11 +42773,13 @@ proc gtk_tree_view_convert_widget_to_bin_window_coords(self: ptr TreeView00;
 
 proc convertWidgetToBinWindowCoords*(self: TreeView; wx: int;
     wy: int; bx: var int; by: var int) =
-  var bx_00 = int32(bx)
-  var by_00 = int32(by)
+  var bx_00: int32
+  var by_00: int32
   gtk_tree_view_convert_widget_to_bin_window_coords(cast[ptr TreeView00](self.impl), int32(wx), int32(wy), bx_00, by_00)
-  bx = int(bx_00)
-  by = int(by_00)
+  if bx.addr != nil:
+    bx = int(bx_00)
+  if by.addr != nil:
+    by = int(by_00)
 
 proc gtk_tree_view_convert_widget_to_tree_coords(self: ptr TreeView00; wx: int32;
     wy: int32; tx: var int32; ty: var int32) {.
@@ -43515,11 +42787,13 @@ proc gtk_tree_view_convert_widget_to_tree_coords(self: ptr TreeView00; wx: int32
 
 proc convertWidgetToTreeCoords*(self: TreeView; wx: int;
     wy: int; tx: var int; ty: var int) =
-  var tx_00 = int32(tx)
-  var ty_00 = int32(ty)
+  var tx_00: int32
+  var ty_00: int32
   gtk_tree_view_convert_widget_to_tree_coords(cast[ptr TreeView00](self.impl), int32(wx), int32(wy), tx_00, ty_00)
-  tx = int(tx_00)
-  ty = int(ty_00)
+  if tx.addr != nil:
+    tx = int(tx_00)
+  if ty.addr != nil:
+    ty = int(ty_00)
 
 proc gtk_tree_view_create_row_drag_icon(self: ptr TreeView00; path: ptr TreePath00): ptr cairo.Surface00 {.
     importc, libprag.}
@@ -43528,7 +42802,7 @@ proc createRowDragIcon*(self: TreeView; path: TreePath): cairo.Surface =
   fnew(result, gBoxedFreeCairoSurface)
   result.impl = gtk_tree_view_create_row_drag_icon(cast[ptr TreeView00](self.impl), cast[ptr TreePath00](path.impl))
 
-proc gtk_tree_view_enable_model_drag_dest(self: ptr TreeView00; targets: TargetEntry00Array;
+proc gtk_tree_view_enable_model_drag_dest(self: ptr TreeView00; targets: ptr TargetEntry00;
     nTargets: int32; actions: gdk.DragAction) {.
     importc, libprag.}
 
@@ -43540,7 +42814,7 @@ proc enableModelDragDest*(self: TreeView; targets: seq[TargetEntry];
   gtk_tree_view_enable_model_drag_dest(cast[ptr TreeView00](self.impl), seq2TargetEntryArray(targets, fs469n23), int32(nTargets), actions)
 
 proc gtk_tree_view_enable_model_drag_source(self: ptr TreeView00; startButtonMask: gdk.ModifierType;
-    targets: TargetEntry00Array; nTargets: int32; actions: gdk.DragAction) {.
+    targets: ptr TargetEntry00; nTargets: int32; actions: gdk.DragAction) {.
     importc, libprag.}
 
 proc enableModelDragSource*(self: TreeView; startButtonMask: gdk.ModifierType;
@@ -43654,42 +42928,32 @@ proc getColumn*(self: TreeView; n: int): TreeViewColumn =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc column*(self: TreeView; n: int): TreeViewColumn =
-  let gobj = gtk_tree_view_get_column(cast[ptr TreeView00](self.impl), int32(n))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc gtk_tree_view_get_columns(self: ptr TreeView00): ptr pointer {.
+proc gtk_tree_view_get_columns(self: ptr TreeView00): ptr glib.List {.
     importc, libprag.}
 
-proc getColumns*(self: TreeView): ptr pointer =
-  gtk_tree_view_get_columns(cast[ptr TreeView00](self.impl))
+proc getColumns*(self: TreeView): seq[TreeViewColumn] =
+  let resul0 = gtk_tree_view_get_columns(cast[ptr TreeView00](self.impl))
+  result = glistObjects2seq(TreeViewColumn, resul0, false)
+  g_list_free(resul0)
 
-proc columns*(self: TreeView): ptr pointer =
-  gtk_tree_view_get_columns(cast[ptr TreeView00](self.impl))
+proc columns*(self: TreeView): seq[TreeViewColumn] =
+  let resul0 = gtk_tree_view_get_columns(cast[ptr TreeView00](self.impl))
+  result = glistObjects2seq(TreeViewColumn, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_tree_view_get_cursor(self: ptr TreeView00; path: var ptr TreePath00;
     focusColumn: var ptr TreeViewColumn00) {.
     importc, libprag.}
 
-proc getCursor*(self: TreeView; path: var TreePath; focusColumn: var TreeViewColumn) =
-  fnew(path, gBoxedFreeGtkTreePath)
-  fnew(focusColumn, gtk.finalizeGObject)
-  focusColumn.ignoreFinalizer = true
-  gtk_tree_view_get_cursor(cast[ptr TreeView00](self.impl), cast[var ptr TreePath00](addr path.impl), cast[var ptr TreeViewColumn00](addr focusColumn.impl))
+proc getCursor*(self: TreeView; path: var TreePath = cast[var TreePath](nil);
+    focusColumn: var TreeViewColumn = cast[var TreeViewColumn](nil)) =
+  if addr(path) != nil:
+    fnew(path, gBoxedFreeGtkTreePath)
+  if addr(focusColumn) != nil:
+    fnew(focusColumn, gtk.finalizeGObject)
+  if addr(focusColumn) != nil:
+    focusColumn.ignoreFinalizer = true
+  gtk_tree_view_get_cursor(cast[ptr TreeView00](self.impl), cast[var ptr TreePath00](if addr(path) == nil: nil else: addr path.impl), cast[var ptr TreeViewColumn00](if addr(focusColumn) == nil: nil else: addr focusColumn.impl))
 
 proc gtk_tree_view_get_enable_search(self: ptr TreeView00): gboolean {.
     importc, libprag.}
@@ -43886,27 +43150,22 @@ proc gtk_tree_view_get_path_at_pos(self: ptr TreeView00; x: int32; y: int32;
     cellY: var int32): gboolean {.
     importc, libprag.}
 
-proc getPathAtPos*(self: TreeView; x: int; y: int; path: var TreePath;
-    column: var TreeViewColumn; cellX: var int; cellY: var int): bool =
-  fnew(path, gBoxedFreeGtkTreePath)
-  fnew(column, gtk.finalizeGObject)
-  column.ignoreFinalizer = true
-  var cellX_00 = int32(cellX)
-  var cellY_00 = int32(cellY)
-  result = toBool(gtk_tree_view_get_path_at_pos(cast[ptr TreeView00](self.impl), int32(x), int32(y), cast[var ptr TreePath00](addr path.impl), cast[var ptr TreeViewColumn00](addr column.impl), cellX_00, cellY_00))
-  cellX = int(cellX_00)
-  cellY = int(cellY_00)
-
-proc pathAtPos*(self: TreeView; x: int; y: int; path: var TreePath;
-    column: var TreeViewColumn; cellX: var int; cellY: var int): bool =
-  fnew(path, gBoxedFreeGtkTreePath)
-  fnew(column, gtk.finalizeGObject)
-  column.ignoreFinalizer = true
-  var cellX_00 = int32(cellX)
-  var cellY_00 = int32(cellY)
-  result = toBool(gtk_tree_view_get_path_at_pos(cast[ptr TreeView00](self.impl), int32(x), int32(y), cast[var ptr TreePath00](addr path.impl), cast[var ptr TreeViewColumn00](addr column.impl), cellX_00, cellY_00))
-  cellX = int(cellX_00)
-  cellY = int(cellY_00)
+proc getPathAtPos*(self: TreeView; x: int; y: int; path: var TreePath = cast[var TreePath](nil);
+    column: var TreeViewColumn = cast[var TreeViewColumn](nil); cellX: var int = cast[var int](nil);
+    cellY: var int = cast[var int](nil)): bool =
+  if addr(path) != nil:
+    fnew(path, gBoxedFreeGtkTreePath)
+  if addr(column) != nil:
+    fnew(column, gtk.finalizeGObject)
+  if addr(column) != nil:
+    column.ignoreFinalizer = true
+  var cellX_00: int32
+  var cellY_00: int32
+  result = toBool(gtk_tree_view_get_path_at_pos(cast[ptr TreeView00](self.impl), int32(x), int32(y), cast[var ptr TreePath00](if addr(path) == nil: nil else: addr path.impl), cast[var ptr TreeViewColumn00](if addr(column) == nil: nil else: addr column.impl), cellX_00, cellY_00))
+  if cellX.addr != nil:
+    cellX = int(cellX_00)
+  if cellY.addr != nil:
+    cellY = int(cellY_00)
 
 proc gtk_tree_view_get_reorderable(self: ptr TreeView00): gboolean {.
     importc, libprag.}
@@ -44003,26 +43262,17 @@ proc gtk_tree_view_get_tooltip_context(self: ptr TreeView00; x: var int32;
     importc, libprag.}
 
 proc getTooltipContext*(self: TreeView; x: var int; y: var int;
-    keyboardTip: bool; model: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore);
-    path: var TreePath; iter: var TreeIter): bool =
-  new(model)
-  model.ignoreFinalizer = true
-  fnew(path, gBoxedFreeGtkTreePath)
+    keyboardTip: bool; model: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore) = cast[var TreeModel](nil);
+    path: var TreePath = cast[var TreePath](nil); iter: var TreeIter = cast[var TreeIter](nil)): bool =
+  if addr(model) != nil:
+    new(model)
+  if addr(model) != nil:
+    model.ignoreFinalizer = true
+  if addr(path) != nil:
+    fnew(path, gBoxedFreeGtkTreePath)
   var y_00 = int32(y)
   var x_00 = int32(x)
-  result = toBool(gtk_tree_view_get_tooltip_context(cast[ptr TreeView00](self.impl), x_00, y_00, gboolean(keyboardTip), cast[var ptr TreeModel00](addr model.impl), cast[var ptr TreePath00](addr path.impl), iter))
-  y = int(y_00)
-  x = int(x_00)
-
-proc tooltipContext*(self: TreeView; x: var int; y: var int;
-    keyboardTip: bool; model: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore);
-    path: var TreePath; iter: var TreeIter): bool =
-  new(model)
-  model.ignoreFinalizer = true
-  fnew(path, gBoxedFreeGtkTreePath)
-  var y_00 = int32(y)
-  var x_00 = int32(x)
-  result = toBool(gtk_tree_view_get_tooltip_context(cast[ptr TreeView00](self.impl), x_00, y_00, gboolean(keyboardTip), cast[var ptr TreeModel00](addr model.impl), cast[var ptr TreePath00](addr path.impl), iter))
+  result = toBool(gtk_tree_view_get_tooltip_context(cast[ptr TreeView00](self.impl), x_00, y_00, gboolean(keyboardTip), cast[var ptr TreeModel00](if addr(model) == nil: nil else: addr model.impl), cast[var ptr TreePath00](if addr(path) == nil: nil else: addr path.impl), iter))
   y = int(y_00)
   x = int(x_00)
 
@@ -44065,17 +43315,13 @@ proc gtk_tree_view_get_visible_range(self: ptr TreeView00; startPath: var ptr Tr
     endPath: var ptr TreePath00): gboolean {.
     importc, libprag.}
 
-proc getVisibleRange*(self: TreeView; startPath: var TreePath;
-    endPath: var TreePath): bool =
-  fnew(startPath, gBoxedFreeGtkTreePath)
-  fnew(endPath, gBoxedFreeGtkTreePath)
-  toBool(gtk_tree_view_get_visible_range(cast[ptr TreeView00](self.impl), cast[var ptr TreePath00](addr startPath.impl), cast[var ptr TreePath00](addr endPath.impl)))
-
-proc visibleRange*(self: TreeView; startPath: var TreePath;
-    endPath: var TreePath): bool =
-  fnew(startPath, gBoxedFreeGtkTreePath)
-  fnew(endPath, gBoxedFreeGtkTreePath)
-  toBool(gtk_tree_view_get_visible_range(cast[ptr TreeView00](self.impl), cast[var ptr TreePath00](addr startPath.impl), cast[var ptr TreePath00](addr endPath.impl)))
+proc getVisibleRange*(self: TreeView; startPath: var TreePath = cast[var TreePath](nil);
+    endPath: var TreePath = cast[var TreePath](nil)): bool =
+  if addr(startPath) != nil:
+    fnew(startPath, gBoxedFreeGtkTreePath)
+  if addr(endPath) != nil:
+    fnew(endPath, gBoxedFreeGtkTreePath)
+  toBool(gtk_tree_view_get_visible_range(cast[ptr TreeView00](self.impl), cast[var ptr TreePath00](if addr(startPath) == nil: nil else: addr startPath.impl), cast[var ptr TreePath00](if addr(endPath) == nil: nil else: addr endPath.impl)))
 
 proc gtk_tree_view_get_visible_rect(self: ptr TreeView00; visibleRect: var gdk.Rectangle) {.
     importc, libprag.}
@@ -44096,16 +43342,22 @@ proc gtk_tree_view_is_blank_at_pos(self: ptr TreeView00; x: int32; y: int32;
     cellY: var int32): gboolean {.
     importc, libprag.}
 
-proc isBlankAtPos*(self: TreeView; x: int; y: int; path: var TreePath;
-    column: var TreeViewColumn; cellX: var int; cellY: var int): bool =
-  fnew(path, gBoxedFreeGtkTreePath)
-  fnew(column, gtk.finalizeGObject)
-  column.ignoreFinalizer = true
-  var cellX_00 = int32(cellX)
-  var cellY_00 = int32(cellY)
-  result = toBool(gtk_tree_view_is_blank_at_pos(cast[ptr TreeView00](self.impl), int32(x), int32(y), cast[var ptr TreePath00](addr path.impl), cast[var ptr TreeViewColumn00](addr column.impl), cellX_00, cellY_00))
-  cellX = int(cellX_00)
-  cellY = int(cellY_00)
+proc isBlankAtPos*(self: TreeView; x: int; y: int; path: var TreePath = cast[var TreePath](nil);
+    column: var TreeViewColumn = cast[var TreeViewColumn](nil); cellX: var int = cast[var int](nil);
+    cellY: var int = cast[var int](nil)): bool =
+  if addr(path) != nil:
+    fnew(path, gBoxedFreeGtkTreePath)
+  if addr(column) != nil:
+    fnew(column, gtk.finalizeGObject)
+  if addr(column) != nil:
+    column.ignoreFinalizer = true
+  var cellX_00: int32
+  var cellY_00: int32
+  result = toBool(gtk_tree_view_is_blank_at_pos(cast[ptr TreeView00](self.impl), int32(x), int32(y), cast[var ptr TreePath00](if addr(path) == nil: nil else: addr path.impl), cast[var ptr TreeViewColumn00](if addr(column) == nil: nil else: addr column.impl), cellX_00, cellY_00))
+  if cellX.addr != nil:
+    cellX = int(cellX_00)
+  if cellY.addr != nil:
+    cellY = int(cellY_00)
 
 proc gtk_tree_view_is_rubber_banding_active(self: ptr TreeView00): gboolean {.
     importc, libprag.}
@@ -45104,11 +44356,13 @@ proc gtk_gl_area_get_required_version(self: ptr GLArea00; major: var int32;
     importc, libprag.}
 
 proc getRequiredVersion*(self: GLArea; major: var int; minor: var int) =
-  var major_00 = int32(major)
-  var minor_00 = int32(minor)
+  var major_00: int32
+  var minor_00: int32
   gtk_gl_area_get_required_version(cast[ptr GLArea00](self.impl), major_00, minor_00)
-  major = int(major_00)
-  minor = int(minor_00)
+  if major.addr != nil:
+    major = int(major_00)
+  if minor.addr != nil:
+    minor = int(minor_00)
 
 proc gtk_gl_area_get_use_es(self: ptr GLArea00): gboolean {.
     importc, libprag.}
@@ -45219,30 +44473,25 @@ proc gtk_tree_selection_get_selected(self: ptr TreeSelection00; model: var ptr T
     iter: var TreeIter): gboolean {.
     importc, libprag.}
 
-proc getSelected*(self: TreeSelection; model: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore);
-    iter: var TreeIter): bool =
-  new(model)
-  model.ignoreFinalizer = true
-  toBool(gtk_tree_selection_get_selected(cast[ptr TreeSelection00](self.impl), cast[var ptr TreeModel00](addr model.impl), iter))
+proc getSelected*(self: TreeSelection; model: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore) = cast[var TreeModel](nil);
+    iter: var TreeIter = cast[var TreeIter](nil)): bool =
+  if addr(model) != nil:
+    new(model)
+  if addr(model) != nil:
+    model.ignoreFinalizer = true
+  toBool(gtk_tree_selection_get_selected(cast[ptr TreeSelection00](self.impl), cast[var ptr TreeModel00](if addr(model) == nil: nil else: addr model.impl), iter))
 
-proc selected*(self: TreeSelection; model: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore);
-    iter: var TreeIter): bool =
-  new(model)
-  model.ignoreFinalizer = true
-  toBool(gtk_tree_selection_get_selected(cast[ptr TreeSelection00](self.impl), cast[var ptr TreeModel00](addr model.impl), iter))
-
-proc gtk_tree_selection_get_selected_rows(self: ptr TreeSelection00; model: var ptr TreeModel00): ptr pointer {.
+proc gtk_tree_selection_get_selected_rows(self: ptr TreeSelection00; model: var ptr TreeModel00): ptr glib.List {.
     importc, libprag.}
 
-proc getSelectedRows*(self: TreeSelection; model: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore)): ptr pointer =
-  new(model)
-  model.ignoreFinalizer = true
-  gtk_tree_selection_get_selected_rows(cast[ptr TreeSelection00](self.impl), cast[var ptr TreeModel00](addr model.impl))
-
-proc selectedRows*(self: TreeSelection; model: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore)): ptr pointer =
-  new(model)
-  model.ignoreFinalizer = true
-  gtk_tree_selection_get_selected_rows(cast[ptr TreeSelection00](self.impl), cast[var ptr TreeModel00](addr model.impl))
+proc getSelectedRows*(self: TreeSelection; model: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore) = cast[var TreeModel](nil)): seq[TreePath] =
+  if addr(model) != nil:
+    new(model)
+  if addr(model) != nil:
+    model.ignoreFinalizer = true
+  let resul0 = gtk_tree_selection_get_selected_rows(cast[ptr TreeSelection00](self.impl), cast[var ptr TreeModel00](if addr(model) == nil: nil else: addr model.impl))
+  result = glistStructs2seq[TreePath](resul0, false)
+  g_list_free(resul0)
 
 proc gtk_tree_selection_get_tree_view(self: ptr TreeSelection00): ptr TreeView00 {.
     importc, libprag.}
@@ -45390,23 +44639,20 @@ proc gtk_tree_view_get_dest_row_at_pos(self: ptr TreeView00; dragX: int32;
     importc, libprag.}
 
 proc getDestRowAtPos*(self: TreeView; dragX: int; dragY: int;
-    path: var TreePath; pos: var TreeViewDropPosition): bool =
-  fnew(path, gBoxedFreeGtkTreePath)
-  toBool(gtk_tree_view_get_dest_row_at_pos(cast[ptr TreeView00](self.impl), int32(dragX), int32(dragY), cast[var ptr TreePath00](addr path.impl), pos))
-
-proc destRowAtPos*(self: TreeView; dragX: int; dragY: int;
-    path: var TreePath; pos: var TreeViewDropPosition): bool =
-  fnew(path, gBoxedFreeGtkTreePath)
-  toBool(gtk_tree_view_get_dest_row_at_pos(cast[ptr TreeView00](self.impl), int32(dragX), int32(dragY), cast[var ptr TreePath00](addr path.impl), pos))
+    path: var TreePath = cast[var TreePath](nil); pos: var TreeViewDropPosition = cast[var TreeViewDropPosition](nil)): bool =
+  if addr(path) != nil:
+    fnew(path, gBoxedFreeGtkTreePath)
+  toBool(gtk_tree_view_get_dest_row_at_pos(cast[ptr TreeView00](self.impl), int32(dragX), int32(dragY), cast[var ptr TreePath00](if addr(path) == nil: nil else: addr path.impl), pos))
 
 proc gtk_tree_view_get_drag_dest_row(self: ptr TreeView00; path: var ptr TreePath00;
     pos: var TreeViewDropPosition) {.
     importc, libprag.}
 
-proc getDragDestRow*(self: TreeView; path: var TreePath;
-    pos: var TreeViewDropPosition) =
-  fnew(path, gBoxedFreeGtkTreePath)
-  gtk_tree_view_get_drag_dest_row(cast[ptr TreeView00](self.impl), cast[var ptr TreePath00](addr path.impl), pos)
+proc getDragDestRow*(self: TreeView; path: var TreePath = cast[var TreePath](nil);
+    pos: var TreeViewDropPosition = cast[var TreeViewDropPosition](nil)) =
+  if addr(path) != nil:
+    fnew(path, gBoxedFreeGtkTreePath)
+  gtk_tree_view_get_drag_dest_row(cast[ptr TreeView00](self.impl), cast[var ptr TreePath00](if addr(path) == nil: nil else: addr path.impl), pos)
 
 proc gtk_tree_view_set_drag_dest_row(self: ptr TreeView00; path: ptr TreePath00;
     pos: TreeViewDropPosition) {.
@@ -45542,24 +44788,29 @@ proc name*(size: int): string =
 proc gtk_icon_size_lookup(size: int32; width: var int32; height: var int32): gboolean {.
     importc, libprag.}
 
-proc lookup*(size: int; width: var int; height: var int): bool =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+proc lookup*(size: int; width: var int = cast[var int](nil);
+    height: var int = cast[var int](nil)): bool =
+  var width_00: int32
+  var height_00: int32
   result = toBool(gtk_icon_size_lookup(int32(size), width_00, height_00))
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_icon_size_lookup_for_settings(settings: ptr Settings00; size: int32;
     width: var int32; height: var int32): gboolean {.
     importc, libprag.}
 
-proc lookupForSettings*(settings: Settings; size: int; width: var int;
-    height: var int): bool =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+proc lookupForSettings*(settings: Settings; size: int; width: var int = cast[var int](nil);
+    height: var int = cast[var int](nil)): bool =
+  var width_00: int32
+  var height_00: int32
   result = toBool(gtk_icon_size_lookup_for_settings(cast[ptr Settings00](settings.impl), int32(size), width_00, height_00))
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_icon_size_register(name: cstring; width: int32; height: int32): int32 {.
     importc, libprag.}
@@ -45823,22 +45074,6 @@ proc getDropItem*(self: ToolItemGroup; x: int; y: int): ToolItem =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc dropItem*(self: ToolItemGroup; x: int; y: int): ToolItem =
-  let gobj = gtk_tool_item_group_get_drop_item(cast[ptr ToolItemGroup00](self.impl), int32(x), int32(y))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_tool_item_group_get_ellipsize(self: ptr ToolItemGroup00): pango.EllipsizeMode {.
     importc, libprag.}
 
@@ -45861,9 +45096,6 @@ proc gtk_tool_item_group_get_item_position(self: ptr ToolItemGroup00; item: ptr 
     importc, libprag.}
 
 proc getItemPosition*(self: ToolItemGroup; item: ToolItem): int =
-  int(gtk_tool_item_group_get_item_position(cast[ptr ToolItemGroup00](self.impl), cast[ptr ToolItem00](item.impl)))
-
-proc itemPosition*(self: ToolItemGroup; item: ToolItem): int =
   int(gtk_tool_item_group_get_item_position(cast[ptr ToolItemGroup00](self.impl), cast[ptr ToolItem00](item.impl)))
 
 proc gtk_tool_item_group_get_label(self: ptr ToolItemGroup00): cstring {.
@@ -45923,22 +45155,6 @@ proc gtk_tool_item_group_get_nth_item(self: ptr ToolItemGroup00; index: uint32):
     importc, libprag.}
 
 proc getNthItem*(self: ToolItemGroup; index: int): ToolItem =
-  let gobj = gtk_tool_item_group_get_nth_item(cast[ptr ToolItemGroup00](self.impl), uint32(index))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc nthItem*(self: ToolItemGroup; index: int): ToolItem =
   let gobj = gtk_tool_item_group_get_nth_item(cast[ptr ToolItemGroup00](self.impl), uint32(index))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -46035,31 +45251,10 @@ proc getDropGroup*(self: ToolPalette; x: int; y: int): ToolItemGroup =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc dropGroup*(self: ToolPalette; x: int; y: int): ToolItemGroup =
-  let gobj = gtk_tool_palette_get_drop_group(cast[ptr ToolPalette00](self.impl), int32(x), int32(y))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_tool_palette_get_exclusive(self: ptr ToolPalette00; group: ptr ToolItemGroup00): gboolean {.
     importc, libprag.}
 
 proc getExclusive*(self: ToolPalette; group: ToolItemGroup): bool =
-  toBool(gtk_tool_palette_get_exclusive(cast[ptr ToolPalette00](self.impl), cast[ptr ToolItemGroup00](group.impl)))
-
-proc exclusive*(self: ToolPalette; group: ToolItemGroup): bool =
   toBool(gtk_tool_palette_get_exclusive(cast[ptr ToolPalette00](self.impl), cast[ptr ToolItemGroup00](group.impl)))
 
 proc gtk_tool_palette_get_expand(self: ptr ToolPalette00; group: ptr ToolItemGroup00): gboolean {.
@@ -46068,16 +45263,10 @@ proc gtk_tool_palette_get_expand(self: ptr ToolPalette00; group: ptr ToolItemGro
 proc getExpand*(self: ToolPalette; group: ToolItemGroup): bool =
   toBool(gtk_tool_palette_get_expand(cast[ptr ToolPalette00](self.impl), cast[ptr ToolItemGroup00](group.impl)))
 
-proc expand*(self: ToolPalette; group: ToolItemGroup): bool =
-  toBool(gtk_tool_palette_get_expand(cast[ptr ToolPalette00](self.impl), cast[ptr ToolItemGroup00](group.impl)))
-
 proc gtk_tool_palette_get_group_position(self: ptr ToolPalette00; group: ptr ToolItemGroup00): int32 {.
     importc, libprag.}
 
 proc getGroupPosition*(self: ToolPalette; group: ToolItemGroup): int =
-  int(gtk_tool_palette_get_group_position(cast[ptr ToolPalette00](self.impl), cast[ptr ToolItemGroup00](group.impl)))
-
-proc groupPosition*(self: ToolPalette; group: ToolItemGroup): int =
   int(gtk_tool_palette_get_group_position(cast[ptr ToolPalette00](self.impl), cast[ptr ToolItemGroup00](group.impl)))
 
 proc gtk_tool_palette_set_exclusive(self: ptr ToolPalette00; group: ptr ToolItemGroup00;
@@ -46341,46 +45530,10 @@ proc getRowAtIndex*(self: ListBox; index: int): ListBoxRow =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc rowAtIndex*(self: ListBox; index: int): ListBoxRow =
-  let gobj = gtk_list_box_get_row_at_index(cast[ptr ListBox00](self.impl), int32(index))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_list_box_get_row_at_y(self: ptr ListBox00; y: int32): ptr ListBoxRow00 {.
     importc, libprag.}
 
 proc getRowAtY*(self: ListBox; y: int): ListBoxRow =
-  let gobj = gtk_list_box_get_row_at_y(cast[ptr ListBox00](self.impl), int32(y))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc rowAtY*(self: ListBox; y: int): ListBoxRow =
   let gobj = gtk_list_box_get_row_at_y(cast[ptr ListBox00](self.impl), int32(y))
   if gobj.isNil:
     return nil
@@ -46433,14 +45586,18 @@ proc selectedRow*(self: ListBox): ListBoxRow =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_list_box_get_selected_rows(self: ptr ListBox00): ptr pointer {.
+proc gtk_list_box_get_selected_rows(self: ptr ListBox00): ptr glib.List {.
     importc, libprag.}
 
-proc getSelectedRows*(self: ListBox): ptr pointer =
-  gtk_list_box_get_selected_rows(cast[ptr ListBox00](self.impl))
+proc getSelectedRows*(self: ListBox): seq[ListBoxRow] =
+  let resul0 = gtk_list_box_get_selected_rows(cast[ptr ListBox00](self.impl))
+  result = glistObjects2seq(ListBoxRow, resul0, false)
+  g_list_free(resul0)
 
-proc selectedRows*(self: ListBox): ptr pointer =
-  gtk_list_box_get_selected_rows(cast[ptr ListBox00](self.impl))
+proc selectedRows*(self: ListBox): seq[ListBoxRow] =
+  let resul0 = gtk_list_box_get_selected_rows(cast[ptr ListBox00](self.impl))
+  result = glistObjects2seq(ListBoxRow, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_list_box_insert(self: ptr ListBox00; child: ptr Widget00; position: int32) {.
     importc, libprag.}
@@ -46915,11 +46072,13 @@ proc gtk_hsv_get_metrics(self: ptr HSV00; size: var int32; ringWidth: var int32)
     importc, libprag.}
 
 proc getMetrics*(self: HSV; size: var int; ringWidth: var int) =
-  var ringWidth_00 = int32(ringWidth)
-  var size_00 = int32(size)
+  var ringWidth_00: int32
+  var size_00: int32
   gtk_hsv_get_metrics(cast[ptr HSV00](self.impl), size_00, ringWidth_00)
-  ringWidth = int(ringWidth_00)
-  size = int(size_00)
+  if ringWidth.addr != nil:
+    ringWidth = int(ringWidth_00)
+  if size.addr != nil:
+    size = int(size_00)
 
 proc gtk_hsv_is_adjusting(self: ptr HSV00): gboolean {.
     importc, libprag.}
@@ -47176,9 +46335,6 @@ proc gtk_level_bar_get_offset_value(self: ptr LevelBar00; name: cstring;
     importc, libprag.}
 
 proc getOffsetValue*(self: LevelBar; name: cstring = ""; value: var cdouble): bool =
-  toBool(gtk_level_bar_get_offset_value(cast[ptr LevelBar00](self.impl), safeStringToCString(name), value))
-
-proc offsetValue*(self: LevelBar; name: cstring = ""; value: var cdouble): bool =
   toBool(gtk_level_bar_get_offset_value(cast[ptr LevelBar00](self.impl), safeStringToCString(name), value))
 
 proc gtk_level_bar_get_value(self: ptr LevelBar00): cdouble {.
@@ -47843,12 +46999,15 @@ proc hadjustment*(self: Layout): Adjustment =
 proc gtk_layout_get_size(self: ptr Layout00; width: var uint32; height: var uint32) {.
     importc, libprag.}
 
-proc getSize*(self: Layout; width: var int; height: var int) =
-  var width_00 = uint32(width)
-  var height_00 = uint32(height)
+proc getSize*(self: Layout; width: var int = cast[var int](nil);
+    height: var int = cast[var int](nil)) =
+  var width_00: uint32
+  var height_00: uint32
   gtk_layout_get_size(cast[ptr Layout00](self.impl), width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_layout_get_vadjustment(self: ptr Layout00): ptr Adjustment00 {.
     importc, libprag.}
@@ -48000,23 +47159,6 @@ proc getInternalChild*(self: Buildable | IconView | Spinner | Box | Viewport | S
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc internalChild*(self: Buildable | IconView | Spinner | Box | Viewport | ShortcutLabel | TearoffMenuItem | FileFilter | ShortcutsGroup | FlowBox | VPaned | VBox | FontChooserWidget | Label | TreeViewColumn | OffscreenWindow | ComboBoxText | HScale | MenuBar | Statusbar | ToolPalette | FileChooserButton | CheckButton | CellView | ToggleToolButton | IconFactory | Toolbar | ModelButton | ShortcutsWindow | DrawingArea | RadioAction | HScrollbar | SpinButton | ScaleButton | CellArea | VScrollbar | StackSidebar | Plug | MenuShell | ListStore | FontSelectionDialog | UIManager | ShortcutsSection | ColorSelection | ButtonBox | PlacesSidebar | Table | TextView | Window | Notebook | Widget | VSeparator | StackSwitcher | SeparatorToolItem | Image | Misc | HPaned | Separator | AppChooserButton | ScrolledWindow | Switch | VButtonBox | FontSelection | AspectFrame | HBox | EntryCompletion | Paned | CellAreaBox | ActionGroup | Overlay | AboutDialog | ActionBar | RecentChooserWidget | ToolItem | Grid | ProgressBar | HSeparator | Menu | HandleBox | Socket | Entry | RadioToolButton | SearchEntry | Dialog | AppChooserDialog | ListBoxRow | ColorButton | Scale | Stack | FileChooserWidget | RadioButton | FileChooserDialog | Bin | LinkButton | AccelLabel | Frame | ImageMenuItem | Arrow | MenuToolButton | FontChooserDialog | MessageDialog | RecentChooserDialog | Calendar | Scrollbar | HeaderBar | RecentAction | SearchBar | ToggleButton | Invisible | TreeView | Popover | ColorChooserDialog | ColorChooserWidget | EventBox | VScale | ShortcutsShortcut | LockButton | TreeStore | ColorSelectionDialog | ComboBox | CheckMenuItem | MenuItem | Fixed | TextTagTable | Alignment | GLArea | AppChooserWidget | RadioMenuItem | Container | ToolItemGroup | HButtonBox | SizeGroup | VolumeButton | RecentChooserMenu | FontButton | SeparatorMenuItem | ListBox | Expander | HSV | Button | PopoverMenu | MenuButton | LevelBar | Action | Range | FlowBoxChild | InfoBar | Revealer | ToolButton | RecentFilter | ApplicationWindow | Assistant | Layout | ToggleAction;
-    builder: Builder; childname: cstring): gobject.Object =
-  let gobj = gtk_buildable_get_internal_child(cast[ptr Buildable00](self.impl), cast[ptr Builder00](builder.impl), childname)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gobject.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_buildable_get_name(self: ptr Buildable00): cstring {.
     importc, libprag.}
 
@@ -48046,18 +47188,6 @@ proc buildableSetName*(self: Buildable | IconView | Spinner | Box | Viewport | S
   gtk_buildable_set_name(cast[ptr Buildable00](self.impl), name)
 
 type
-  RecentFilterInfo00* {.pure.} = object
-  RecentFilterInfo* = ref object
-    impl*: ptr RecentFilterInfo00
-    ignoreFinalizer*: bool
-
-proc gtk_recent_filter_filter(self: ptr RecentFilter00; filterInfo: ptr RecentFilterInfo00): gboolean {.
-    importc, libprag.}
-
-proc filter*(self: RecentFilter; filterInfo: RecentFilterInfo): bool =
-  toBool(gtk_recent_filter_filter(cast[ptr RecentFilter00](self.impl), cast[ptr RecentFilterInfo00](filterInfo.impl)))
-
-type
   RecentFilterFlag* {.size: sizeof(cint), pure.} = enum
     uri = 0
     displayName = 1
@@ -48067,6 +47197,22 @@ type
     age = 5
 
   RecentFilterFlags* {.size: sizeof(cint).} = set[RecentFilterFlag]
+
+type
+  RecentFilterInfo* {.pure, byRef.} = object
+    contains*: RecentFilterFlags
+    uri*: cstring
+    displayName*: cstring
+    mimeType*: cstring
+    applications*: ptr cstring
+    groups*: ptr cstring
+    age*: int32
+
+proc gtk_recent_filter_filter(self: ptr RecentFilter00; filterInfo: RecentFilterInfo): gboolean {.
+    importc, libprag.}
+
+proc filter*(self: RecentFilter; filterInfo: RecentFilterInfo): bool =
+  toBool(gtk_recent_filter_filter(cast[ptr RecentFilter00](self.impl), filterInfo))
 
 proc gtk_recent_filter_get_needed(self: ptr RecentFilter00): RecentFilterFlags {.
     importc, libprag.}
@@ -48244,18 +47390,6 @@ proc `sortOrder=`*(self: TreeViewColumn; order: SortType) =
   gtk_tree_view_column_set_sort_order(cast[ptr TreeViewColumn00](self.impl), order)
 
 type
-  FileFilterInfo00* {.pure.} = object
-  FileFilterInfo* = ref object
-    impl*: ptr FileFilterInfo00
-    ignoreFinalizer*: bool
-
-proc gtk_file_filter_filter(self: ptr FileFilter00; filterInfo: ptr FileFilterInfo00): gboolean {.
-    importc, libprag.}
-
-proc filter*(self: FileFilter; filterInfo: FileFilterInfo): bool =
-  toBool(gtk_file_filter_filter(cast[ptr FileFilter00](self.impl), cast[ptr FileFilterInfo00](filterInfo.impl)))
-
-type
   FileFilterFlag* {.size: sizeof(cint), pure.} = enum
     filename = 0
     uri = 1
@@ -48263,6 +47397,20 @@ type
     mimeType = 3
 
   FileFilterFlags* {.size: sizeof(cint).} = set[FileFilterFlag]
+
+type
+  FileFilterInfo* {.pure, byRef.} = object
+    contains*: FileFilterFlags
+    filename*: cstring
+    uri*: cstring
+    displayName*: cstring
+    mimeType*: cstring
+
+proc gtk_file_filter_filter(self: ptr FileFilter00; filterInfo: FileFilterInfo): gboolean {.
+    importc, libprag.}
+
+proc filter*(self: FileFilter; filterInfo: FileFilterInfo): bool =
+  toBool(gtk_file_filter_filter(cast[ptr FileFilter00](self.impl), filterInfo))
 
 proc gtk_file_filter_get_needed(self: ptr FileFilter00): FileFilterFlags {.
     importc, libprag.}
@@ -48287,23 +47435,20 @@ proc gtk_icon_view_get_dest_item_at_pos(self: ptr IconView00; dragX: int32;
     importc, libprag.}
 
 proc getDestItemAtPos*(self: IconView; dragX: int; dragY: int;
-    path: var TreePath; pos: var IconViewDropPosition): bool =
-  fnew(path, gBoxedFreeGtkTreePath)
-  toBool(gtk_icon_view_get_dest_item_at_pos(cast[ptr IconView00](self.impl), int32(dragX), int32(dragY), cast[var ptr TreePath00](addr path.impl), pos))
-
-proc destItemAtPos*(self: IconView; dragX: int; dragY: int;
-    path: var TreePath; pos: var IconViewDropPosition): bool =
-  fnew(path, gBoxedFreeGtkTreePath)
-  toBool(gtk_icon_view_get_dest_item_at_pos(cast[ptr IconView00](self.impl), int32(dragX), int32(dragY), cast[var ptr TreePath00](addr path.impl), pos))
+    path: var TreePath = cast[var TreePath](nil); pos: var IconViewDropPosition = cast[var IconViewDropPosition](nil)): bool =
+  if addr(path) != nil:
+    fnew(path, gBoxedFreeGtkTreePath)
+  toBool(gtk_icon_view_get_dest_item_at_pos(cast[ptr IconView00](self.impl), int32(dragX), int32(dragY), cast[var ptr TreePath00](if addr(path) == nil: nil else: addr path.impl), pos))
 
 proc gtk_icon_view_get_drag_dest_item(self: ptr IconView00; path: var ptr TreePath00;
     pos: var IconViewDropPosition) {.
     importc, libprag.}
 
-proc getDragDestItem*(self: IconView; path: var TreePath;
-    pos: var IconViewDropPosition) =
-  fnew(path, gBoxedFreeGtkTreePath)
-  gtk_icon_view_get_drag_dest_item(cast[ptr IconView00](self.impl), cast[var ptr TreePath00](addr path.impl), pos)
+proc getDragDestItem*(self: IconView; path: var TreePath = cast[var TreePath](nil);
+    pos: var IconViewDropPosition = cast[var IconViewDropPosition](nil)) =
+  if addr(path) != nil:
+    fnew(path, gBoxedFreeGtkTreePath)
+  gtk_icon_view_get_drag_dest_item(cast[ptr IconView00](self.impl), cast[var ptr TreePath00](if addr(path) == nil: nil else: addr path.impl), pos)
 
 proc gtk_icon_view_set_drag_dest_item(self: ptr IconView00; path: ptr TreePath00;
     pos: IconViewDropPosition) {.
@@ -48515,15 +47660,19 @@ proc gtk_cell_accessible_parent_get_cell_extents(self: ptr CellAccessibleParent0
 proc getCellExtents*(self: CellAccessibleParent | TreeViewAccessible;
     cell: CellAccessible; x: var int; y: var int; width: var int; height: var int;
     coordType: atk.CoordType) =
-  var width_00 = int32(width)
-  var y_00 = int32(y)
-  var x_00 = int32(x)
-  var height_00 = int32(height)
+  var width_00: int32
+  var y_00: int32
+  var x_00: int32
+  var height_00: int32
   gtk_cell_accessible_parent_get_cell_extents(cast[ptr CellAccessibleParent00](self.impl), cast[ptr CellAccessible00](cell.impl), x_00, y_00, width_00, height_00, coordType)
-  width = int(width_00)
-  y = int(y_00)
-  x = int(x_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gtk_cell_accessible_parent_get_cell_position(self: ptr CellAccessibleParent00;
     cell: ptr CellAccessible00; row: var int32; column: var int32) {.
@@ -48531,21 +47680,19 @@ proc gtk_cell_accessible_parent_get_cell_position(self: ptr CellAccessibleParent
 
 proc getCellPosition*(self: CellAccessibleParent | TreeViewAccessible;
     cell: CellAccessible; row: var int; column: var int) =
-  var row_00 = int32(row)
-  var column_00 = int32(column)
+  var row_00: int32
+  var column_00: int32
   gtk_cell_accessible_parent_get_cell_position(cast[ptr CellAccessibleParent00](self.impl), cast[ptr CellAccessible00](cell.impl), row_00, column_00)
-  row = int(row_00)
-  column = int(column_00)
+  if row.addr != nil:
+    row = int(row_00)
+  if column.addr != nil:
+    column = int(column_00)
 
 proc gtk_cell_accessible_parent_get_child_index(self: ptr CellAccessibleParent00;
     cell: ptr CellAccessible00): int32 {.
     importc, libprag.}
 
 proc getChildIndex*(self: CellAccessibleParent | TreeViewAccessible;
-    cell: CellAccessible): int =
-  int(gtk_cell_accessible_parent_get_child_index(cast[ptr CellAccessibleParent00](self.impl), cast[ptr CellAccessible00](cell.impl)))
-
-proc childIndex*(self: CellAccessibleParent | TreeViewAccessible;
     cell: CellAccessible): int =
   int(gtk_cell_accessible_parent_get_child_index(cast[ptr CellAccessibleParent00](self.impl), cast[ptr CellAccessible00](cell.impl)))
 
@@ -48557,10 +47704,6 @@ proc getColumnHeaderCells*(self: CellAccessibleParent | TreeViewAccessible;
     cell: CellAccessible): ptr PtrArray00 =
   gtk_cell_accessible_parent_get_column_header_cells(cast[ptr CellAccessibleParent00](self.impl), cast[ptr CellAccessible00](cell.impl))
 
-proc columnHeaderCells*(self: CellAccessibleParent | TreeViewAccessible;
-    cell: CellAccessible): ptr PtrArray00 =
-  gtk_cell_accessible_parent_get_column_header_cells(cast[ptr CellAccessibleParent00](self.impl), cast[ptr CellAccessible00](cell.impl))
-
 proc gtk_cell_accessible_parent_get_renderer_state(self: ptr CellAccessibleParent00;
     cell: ptr CellAccessible00): CellRendererState {.
     importc, libprag.}
@@ -48569,19 +47712,11 @@ proc getRendererState*(self: CellAccessibleParent | TreeViewAccessible;
     cell: CellAccessible): CellRendererState =
   gtk_cell_accessible_parent_get_renderer_state(cast[ptr CellAccessibleParent00](self.impl), cast[ptr CellAccessible00](cell.impl))
 
-proc rendererState*(self: CellAccessibleParent | TreeViewAccessible;
-    cell: CellAccessible): CellRendererState =
-  gtk_cell_accessible_parent_get_renderer_state(cast[ptr CellAccessibleParent00](self.impl), cast[ptr CellAccessible00](cell.impl))
-
 proc gtk_cell_accessible_parent_get_row_header_cells(self: ptr CellAccessibleParent00;
     cell: ptr CellAccessible00): ptr PtrArray00 {.
     importc, libprag.}
 
 proc getRowHeaderCells*(self: CellAccessibleParent | TreeViewAccessible;
-    cell: CellAccessible): ptr PtrArray00 =
-  gtk_cell_accessible_parent_get_row_header_cells(cast[ptr CellAccessibleParent00](self.impl), cast[ptr CellAccessible00](cell.impl))
-
-proc rowHeaderCells*(self: CellAccessibleParent | TreeViewAccessible;
     cell: CellAccessible): ptr PtrArray00 =
   gtk_cell_accessible_parent_get_row_header_cells(cast[ptr CellAccessibleParent00](self.impl), cast[ptr CellAccessible00](cell.impl))
 
@@ -48689,14 +47824,18 @@ proc area*(self: CellLayout | IconView | TreeViewColumn | ComboBoxText | CellVie
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_cell_layout_get_cells(self: ptr CellLayout00): ptr pointer {.
+proc gtk_cell_layout_get_cells(self: ptr CellLayout00): ptr glib.List {.
     importc, libprag.}
 
-proc getCells*(self: CellLayout | IconView | TreeViewColumn | ComboBoxText | CellView | CellArea | AppChooserButton | EntryCompletion | CellAreaBox | ComboBox): ptr pointer =
-  gtk_cell_layout_get_cells(cast[ptr CellLayout00](self.impl))
+proc getCells*(self: CellLayout | IconView | TreeViewColumn | ComboBoxText | CellView | CellArea | AppChooserButton | EntryCompletion | CellAreaBox | ComboBox): seq[CellRenderer] =
+  let resul0 = gtk_cell_layout_get_cells(cast[ptr CellLayout00](self.impl))
+  result = glistObjects2seq(CellRenderer, resul0, false)
+  g_list_free(resul0)
 
-proc cells*(self: CellLayout | IconView | TreeViewColumn | ComboBoxText | CellView | CellArea | AppChooserButton | EntryCompletion | CellAreaBox | ComboBox): ptr pointer =
-  gtk_cell_layout_get_cells(cast[ptr CellLayout00](self.impl))
+proc cells*(self: CellLayout | IconView | TreeViewColumn | ComboBoxText | CellView | CellArea | AppChooserButton | EntryCompletion | CellAreaBox | ComboBox): seq[CellRenderer] =
+  let resul0 = gtk_cell_layout_get_cells(cast[ptr CellLayout00](self.impl))
+  result = glistObjects2seq(CellRenderer, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_cell_layout_pack_end(self: ptr CellLayout00; cell: ptr CellRenderer00;
     expand: gboolean) {.
@@ -49394,17 +48533,17 @@ proc requestImage*(self: Clipboard; callback: ClipboardImageReceivedFunc;
 type
   ClipboardReceivedFunc* = proc (clipboard: ptr Clipboard00; selectionData: ptr SelectionData00; data: pointer) {.cdecl.}
 
-proc gtk_clipboard_request_contents(self: ptr Clipboard00; target: ptr gdk.Atom00;
+proc gtk_clipboard_request_contents(self: ptr Clipboard00; target: gdk.Atom;
     callback: ClipboardReceivedFunc; userData: pointer) {.
     importc, libprag.}
 
 proc requestContents*(self: Clipboard; target: gdk.Atom; callback: ClipboardReceivedFunc;
     userData: pointer) =
-  gtk_clipboard_request_contents(cast[ptr Clipboard00](self.impl), cast[ptr gdk.Atom00](target.impl), callback, userData)
+  gtk_clipboard_request_contents(cast[ptr Clipboard00](self.impl), target, callback, userData)
 
 type
-  ClipboardRichTextReceivedFunc* = proc (clipboard: ptr Clipboard00; format: ptr gdk.Atom00; text: cstring;
-    length: uint64; data: pointer) {.cdecl.}
+  ClipboardRichTextReceivedFunc* = proc (clipboard: ptr Clipboard00; format: gdk.Atom; text: cstring; length: uint64;
+    data: pointer) {.cdecl.}
 
 proc gtk_clipboard_request_rich_text(self: ptr Clipboard00; buffer: ptr TextBuffer00;
     callback: ClipboardRichTextReceivedFunc; userData: pointer) {.
@@ -49415,7 +48554,7 @@ proc requestRichText*(self: Clipboard; buffer: TextBuffer;
   gtk_clipboard_request_rich_text(cast[ptr Clipboard00](self.impl), cast[ptr TextBuffer00](buffer.impl), callback, userData)
 
 type
-  ClipboardTargetsReceivedFunc* = proc (clipboard: ptr Clipboard00; atoms: ptr gdk.Atom00Array; nAtoms: int32;
+  ClipboardTargetsReceivedFunc* = proc (clipboard: ptr Clipboard00; atoms: ptr ptr gdk.Atom; nAtoms: int32;
     data: pointer) {.cdecl.}
 
 proc gtk_clipboard_request_targets(self: ptr Clipboard00; callback: ClipboardTargetsReceivedFunc;
@@ -49438,7 +48577,7 @@ proc requestText*(self: Clipboard; callback: ClipboardTextReceivedFunc;
   gtk_clipboard_request_text(cast[ptr Clipboard00](self.impl), callback, userData)
 
 type
-  ClipboardURIReceivedFunc* = proc (clipboard: ptr Clipboard00; uris: cstringArray; data: pointer) {.cdecl.}
+  ClipboardURIReceivedFunc* = proc (clipboard: ptr Clipboard00; uris: ptr cstring; data: pointer) {.cdecl.}
 
 proc gtk_clipboard_request_uris(self: ptr Clipboard00; callback: ClipboardURIReceivedFunc;
     userData: pointer) {.
@@ -49456,11 +48595,11 @@ proc scColorActivated*(self: ColorChooser | ColorButton | ColorChooserDialog | C
   g_signal_connect_data(self.impl, "color-activated", cast[GCallback](p), xdata, nil, cf)
 
 proc gtk_color_chooser_add_palette(self: ptr ColorChooser00; orientation: Orientation;
-    colorsPerLine: int32; nColors: int32; colors: gdk.RGBAArray) {.
+    colorsPerLine: int32; nColors: int32; colors: ptr gdk.RGBA) {.
     importc, libprag.}
 
 proc addPalette*(self: ColorChooser | ColorButton | ColorChooserDialog | ColorChooserWidget;
-    orientation: Orientation; colorsPerLine: int; nColors: int; colors: gdk.RGBAArray) =
+    orientation: Orientation; colorsPerLine: int; nColors: int; colors: ptr gdk.RGBA) =
   gtk_color_chooser_add_palette(cast[ptr ColorChooser00](self.impl), orientation, int32(colorsPerLine), int32(nColors), colors)
 
 proc gtk_color_chooser_get_rgba(self: ptr ColorChooser00; color: var gdk.RGBA) {.
@@ -49502,10 +48641,10 @@ proc `useAlpha=`*(self: ColorChooser | ColorButton | ColorChooserDialog | ColorC
   gtk_color_chooser_set_use_alpha(cast[ptr ColorChooser00](self.impl), gboolean(useAlpha))
 
 type
-  ColorSelectionChangePaletteFunc* = proc (colors: gdk.ColorArray; nColors: int32) {.cdecl.}
+  ColorSelectionChangePaletteFunc* = proc (colors: ptr gdk.Color; nColors: int32) {.cdecl.}
 
 type
-  ColorSelectionChangePaletteWithScreenFunc* = proc (screen: ptr gdk.Screen00; colors: gdk.ColorArray; nColors: int32) {.cdecl.}
+  ColorSelectionChangePaletteWithScreenFunc* = proc (screen: ptr gdk.Screen00; colors: ptr gdk.Color; nColors: int32) {.cdecl.}
 
 type
   CssProviderError* {.size: sizeof(cint), pure.} = enum
@@ -49588,12 +48727,6 @@ proc getChars*(self: Editable | SpinButton | Entry | SearchEntry;
   result = $resul0
   cogfree(resul0)
 
-proc chars*(self: Editable | SpinButton | Entry | SearchEntry;
-    startPos: int; endPos: int): string =
-  let resul0 = gtk_editable_get_chars(cast[ptr Editable00](self.impl), int32(startPos), int32(endPos))
-  result = $resul0
-  cogfree(resul0)
-
 proc gtk_editable_get_editable(self: ptr Editable00): gboolean {.
     importc, libprag.}
 
@@ -49617,20 +48750,14 @@ proc gtk_editable_get_selection_bounds(self: ptr Editable00; startPos: var int32
     importc, libprag.}
 
 proc getSelectionBounds*(self: Editable | SpinButton | Entry | SearchEntry;
-    startPos: var int; endPos: var int): bool =
-  var endPos_00 = int32(endPos)
-  var startPos_00 = int32(startPos)
+    startPos: var int = cast[var int](nil); endPos: var int = cast[var int](nil)): bool =
+  var endPos_00: int32
+  var startPos_00: int32
   result = toBool(gtk_editable_get_selection_bounds(cast[ptr Editable00](self.impl), startPos_00, endPos_00))
-  endPos = int(endPos_00)
-  startPos = int(startPos_00)
-
-proc selectionBounds*(self: Editable | SpinButton | Entry | SearchEntry;
-    startPos: var int; endPos: var int): bool =
-  var endPos_00 = int32(endPos)
-  var startPos_00 = int32(startPos)
-  result = toBool(gtk_editable_get_selection_bounds(cast[ptr Editable00](self.impl), startPos_00, endPos_00))
-  endPos = int(endPos_00)
-  startPos = int(startPos_00)
+  if endPos.addr != nil:
+    endPos = int(endPos_00)
+  if startPos.addr != nil:
+    startPos = int(startPos_00)
 
 proc gtk_editable_insert_text(self: ptr Editable00; newText: cstring; newTextLength: int32;
     position: var int32) {.
@@ -49945,29 +49072,26 @@ proc gtk_im_context_get_preedit_string(self: ptr IMContext00; str: var cstring;
 proc getPreeditString*(self: IMContext; str: var string;
     attrs: var pango.AttrList; cursorPos: var int) =
   fnew(attrs, gBoxedFreePangoAttrList)
-  var cursorPos_00 = int32(cursorPos)
-  var str_00 = cstring(str)
+  var cursorPos_00: int32
+  var str_00: cstring
   gtk_im_context_get_preedit_string(cast[ptr IMContext00](self.impl), str_00, cast[var ptr pango.AttrList00](addr attrs.impl), cursorPos_00)
-  cursorPos = int(cursorPos_00)
-  str = $(str_00)
+  if cursorPos.addr != nil:
+    cursorPos = int(cursorPos_00)
+  if str.addr != nil:
+    str = $(str_00)
 
 proc gtk_im_context_get_surrounding(self: ptr IMContext00; text: var cstring;
     cursorIndex: var int32): gboolean {.
     importc, libprag.}
 
 proc getSurrounding*(self: IMContext; text: var string; cursorIndex: var int): bool =
-  var text_00 = cstring(text)
-  var cursorIndex_00 = int32(cursorIndex)
+  var text_00: cstring
+  var cursorIndex_00: int32
   result = toBool(gtk_im_context_get_surrounding(cast[ptr IMContext00](self.impl), text_00, cursorIndex_00))
-  text = $(text_00)
-  cursorIndex = int(cursorIndex_00)
-
-proc surrounding*(self: IMContext; text: var string; cursorIndex: var int): bool =
-  var text_00 = cstring(text)
-  var cursorIndex_00 = int32(cursorIndex)
-  result = toBool(gtk_im_context_get_surrounding(cast[ptr IMContext00](self.impl), text_00, cursorIndex_00))
-  text = $(text_00)
-  cursorIndex = int(cursorIndex_00)
+  if text.addr != nil:
+    text = $(text_00)
+  if cursorIndex.addr != nil:
+    cursorIndex = int(cursorIndex_00)
 
 proc gtk_im_context_reset(self: ptr IMContext00) {.
     importc, libprag.}
@@ -50551,7 +49675,7 @@ proc scUpdatePreview*(self: FileChooser | FileChooserButton | FileChooserNative 
   g_signal_connect_data(self.impl, "update-preview", cast[GCallback](p), xdata, nil, cf)
 
 proc gtk_file_chooser_add_choice(self: ptr FileChooser00; id: cstring; label: cstring;
-    options: cstringArray; optionLabels: cstringArray) {.
+    options: ptr cstring; optionLabels: ptr cstring) {.
     importc, libprag.}
 
 proc addChoice*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
@@ -50567,6 +49691,7 @@ proc gtk_file_chooser_add_filter(self: ptr FileChooser00; filter: ptr FileFilter
 
 proc addFilter*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
     filter: FileFilter) =
+  filter.ignoreFinalizer = true
   gtk_file_chooser_add_filter(cast[ptr FileChooser00](self.impl), cast[ptr FileFilter00](filter.impl))
 
 proc gtk_file_chooser_add_shortcut_folder(self: ptr FileChooser00; folder: cstring;
@@ -50610,10 +49735,6 @@ proc gtk_file_chooser_get_choice(self: ptr FileChooser00; id: cstring): cstring 
     importc, libprag.}
 
 proc getChoice*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    id: cstring): string =
-  result = $gtk_file_chooser_get_choice(cast[ptr FileChooser00](self.impl), id)
-
-proc choice*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
     id: cstring): string =
   result = $gtk_file_chooser_get_choice(cast[ptr FileChooser00](self.impl), id)
 
@@ -50812,23 +49933,29 @@ proc filename*(self: FileChooser | FileChooserButton | FileChooserNative | FileC
   result = $resul0
   cogfree(resul0)
 
-proc gtk_file_chooser_get_filenames(self: ptr FileChooser00): ptr pointer {.
+proc gtk_file_chooser_get_filenames(self: ptr FileChooser00): ptr glib.SList {.
     importc, libprag.}
 
-proc getFilenames*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): ptr pointer =
-  gtk_file_chooser_get_filenames(cast[ptr FileChooser00](self.impl))
+proc getFilenames*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): seq[cstring] =
+  let resul0 = gtk_file_chooser_get_filenames(cast[ptr FileChooser00](self.impl))
+  g_slist_free(resul0)
 
-proc filenames*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): ptr pointer =
-  gtk_file_chooser_get_filenames(cast[ptr FileChooser00](self.impl))
+proc filenames*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): seq[cstring] =
+  let resul0 = gtk_file_chooser_get_filenames(cast[ptr FileChooser00](self.impl))
+  g_slist_free(resul0)
 
-proc gtk_file_chooser_get_files(self: ptr FileChooser00): ptr pointer {.
+proc gtk_file_chooser_get_files(self: ptr FileChooser00): ptr glib.SList {.
     importc, libprag.}
 
-proc getFiles*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): ptr pointer =
-  gtk_file_chooser_get_files(cast[ptr FileChooser00](self.impl))
+proc getFiles*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): seq[gio.GFile] =
+  let resul0 = gtk_file_chooser_get_files(cast[ptr FileChooser00](self.impl))
+  result = gslistObjects2seq(gio.GFile, resul0, true)
+  g_slist_free(resul0)
 
-proc files*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): ptr pointer =
-  gtk_file_chooser_get_files(cast[ptr FileChooser00](self.impl))
+proc files*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): seq[gio.GFile] =
+  let resul0 = gtk_file_chooser_get_files(cast[ptr FileChooser00](self.impl))
+  result = gslistObjects2seq(gio.GFile, resul0, true)
+  g_slist_free(resul0)
 
 proc gtk_file_chooser_get_filter(self: ptr FileChooser00): ptr FileFilter00 {.
     importc, libprag.}
@@ -51036,14 +50163,16 @@ proc uri*(self: FileChooser | FileChooserButton | FileChooserNative | FileChoose
   result = $resul0
   cogfree(resul0)
 
-proc gtk_file_chooser_get_uris(self: ptr FileChooser00): ptr pointer {.
+proc gtk_file_chooser_get_uris(self: ptr FileChooser00): ptr glib.SList {.
     importc, libprag.}
 
-proc getUris*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): ptr pointer =
-  gtk_file_chooser_get_uris(cast[ptr FileChooser00](self.impl))
+proc getUris*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): seq[cstring] =
+  let resul0 = gtk_file_chooser_get_uris(cast[ptr FileChooser00](self.impl))
+  g_slist_free(resul0)
 
-proc uris*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): ptr pointer =
-  gtk_file_chooser_get_uris(cast[ptr FileChooser00](self.impl))
+proc uris*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): seq[cstring] =
+  let resul0 = gtk_file_chooser_get_uris(cast[ptr FileChooser00](self.impl))
+  g_slist_free(resul0)
 
 proc gtk_file_chooser_get_use_preview_label(self: ptr FileChooser00): gboolean {.
     importc, libprag.}
@@ -51054,23 +50183,31 @@ proc getUsePreviewLabel*(self: FileChooser | FileChooserButton | FileChooserNati
 proc usePreviewLabel*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): bool =
   toBool(gtk_file_chooser_get_use_preview_label(cast[ptr FileChooser00](self.impl)))
 
-proc gtk_file_chooser_list_filters(self: ptr FileChooser00): ptr pointer {.
+proc gtk_file_chooser_list_filters(self: ptr FileChooser00): ptr glib.SList {.
     importc, libprag.}
 
-proc listFilters*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): ptr pointer =
-  gtk_file_chooser_list_filters(cast[ptr FileChooser00](self.impl))
+proc listFilters*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): seq[FileFilter] =
+  let resul0 = gtk_file_chooser_list_filters(cast[ptr FileChooser00](self.impl))
+  result = gslistObjects2seq(FileFilter, resul0, false)
+  g_slist_free(resul0)
 
-proc gtk_file_chooser_list_shortcut_folder_uris(self: ptr FileChooser00): ptr pointer {.
+proc gtk_file_chooser_list_shortcut_folder_uris(self: ptr FileChooser00): ptr glib.SList {.
     importc, libprag.}
 
-proc listShortcutFolderUris*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): ptr pointer =
-  gtk_file_chooser_list_shortcut_folder_uris(cast[ptr FileChooser00](self.impl))
+proc listShortcutFolderUris*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): seq[cstring] =
+  let resul0 = gtk_file_chooser_list_shortcut_folder_uris(cast[ptr FileChooser00](self.impl))
+  if resul0.isNil:
+    return
+  g_slist_free(resul0)
 
-proc gtk_file_chooser_list_shortcut_folders(self: ptr FileChooser00): ptr pointer {.
+proc gtk_file_chooser_list_shortcut_folders(self: ptr FileChooser00): ptr glib.SList {.
     importc, libprag.}
 
-proc listShortcutFolders*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): ptr pointer =
-  gtk_file_chooser_list_shortcut_folders(cast[ptr FileChooser00](self.impl))
+proc listShortcutFolders*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog): seq[cstring] =
+  let resul0 = gtk_file_chooser_list_shortcut_folders(cast[ptr FileChooser00](self.impl))
+  if resul0.isNil:
+    return
+  g_slist_free(resul0)
 
 proc gtk_file_chooser_remove_choice(self: ptr FileChooser00; id: cstring) {.
     importc, libprag.}
@@ -51184,10 +50321,6 @@ proc setCurrentFolder*(self: FileChooser | FileChooserButton | FileChooserNative
     filename: cstring): bool =
   toBool(gtk_file_chooser_set_current_folder(cast[ptr FileChooser00](self.impl), filename))
 
-proc `currentFolder=`*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    filename: cstring): bool =
-  toBool(gtk_file_chooser_set_current_folder(cast[ptr FileChooser00](self.impl), filename))
-
 proc gtk_file_chooser_set_current_folder_file(self: ptr FileChooser00; file: ptr gio.GFile00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
@@ -51202,24 +50335,10 @@ proc setCurrentFolderFile*(self: FileChooser | FileChooserButton | FileChooserNa
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc `currentFolderFile=`*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    file: gio.GFile): bool =
-  var gerror: ptr glib.Error
-  let resul0 = gtk_file_chooser_set_current_folder_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.GFile00](file.impl), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
 proc gtk_file_chooser_set_current_folder_uri(self: ptr FileChooser00; uri: cstring): gboolean {.
     importc, libprag.}
 
 proc setCurrentFolderUri*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    uri: cstring): bool =
-  toBool(gtk_file_chooser_set_current_folder_uri(cast[ptr FileChooser00](self.impl), uri))
-
-proc `currentFolderUri=`*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
     uri: cstring): bool =
   toBool(gtk_file_chooser_set_current_folder_uri(cast[ptr FileChooser00](self.impl), uri))
 
@@ -51271,24 +50390,10 @@ proc setFile*(self: FileChooser | FileChooserButton | FileChooserNative | FileCh
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc `file=`*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    file: gio.GFile): bool =
-  var gerror: ptr glib.Error
-  let resul0 = gtk_file_chooser_set_file(cast[ptr FileChooser00](self.impl), cast[ptr gio.GFile00](file.impl), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
 proc gtk_file_chooser_set_filename(self: ptr FileChooser00; filename: cstring): gboolean {.
     importc, libprag.}
 
 proc setFilename*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    filename: cstring): bool =
-  toBool(gtk_file_chooser_set_filename(cast[ptr FileChooser00](self.impl), filename))
-
-proc `filename=`*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
     filename: cstring): bool =
   toBool(gtk_file_chooser_set_filename(cast[ptr FileChooser00](self.impl), filename))
 
@@ -51366,10 +50471,6 @@ proc setUri*(self: FileChooser | FileChooserButton | FileChooserNative | FileCho
     uri: cstring): bool =
   toBool(gtk_file_chooser_set_uri(cast[ptr FileChooser00](self.impl), uri))
 
-proc `uri=`*(self: FileChooser | FileChooserButton | FileChooserNative | FileChooserWidget | FileChooserDialog;
-    uri: cstring): bool =
-  toBool(gtk_file_chooser_set_uri(cast[ptr FileChooser00](self.impl), uri))
-
 proc gtk_file_chooser_set_use_preview_label(self: ptr FileChooser00; useLabel: gboolean) {.
     importc, libprag.}
 
@@ -51416,7 +50517,7 @@ type
     incompleteHostname = 3
 
 type
-  FileFilterFunc* = proc (filterInfo: ptr FileFilterInfo00; data: pointer): gboolean {.cdecl.}
+  FileFilterFunc* = proc (filterInfo: FileFilterInfo; data: pointer): gboolean {.cdecl.}
 
 proc gtk_file_filter_add_custom(self: ptr FileFilter00; needed: FileFilterFlags;
     `func`: FileFilterFunc; data: pointer; notify: DestroyNotify) {.
@@ -51879,17 +50980,11 @@ proc gtk_gesture_get_bounding_box(self: ptr Gesture00; rect: var gdk.Rectangle):
 proc getBoundingBox*(self: Gesture; rect: var gdk.Rectangle): bool =
   toBool(gtk_gesture_get_bounding_box(cast[ptr Gesture00](self.impl), rect))
 
-proc boundingBox*(self: Gesture; rect: var gdk.Rectangle): bool =
-  toBool(gtk_gesture_get_bounding_box(cast[ptr Gesture00](self.impl), rect))
-
 proc gtk_gesture_get_bounding_box_center(self: ptr Gesture00; x: var cdouble;
     y: var cdouble): gboolean {.
     importc, libprag.}
 
 proc getBoundingBoxCenter*(self: Gesture; x: var cdouble; y: var cdouble): bool =
-  toBool(gtk_gesture_get_bounding_box_center(cast[ptr Gesture00](self.impl), x, y))
-
-proc boundingBoxCenter*(self: Gesture; x: var cdouble; y: var cdouble): bool =
   toBool(gtk_gesture_get_bounding_box_center(cast[ptr Gesture00](self.impl), x, y))
 
 proc gtk_gesture_get_device(self: ptr Gesture00): ptr gdk.Device00 {.
@@ -51931,27 +51026,23 @@ proc device*(self: Gesture): gdk.Device =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_gesture_get_group(self: ptr Gesture00): ptr pointer {.
+proc gtk_gesture_get_group(self: ptr Gesture00): ptr glib.List {.
     importc, libprag.}
 
-proc getGroup*(self: Gesture): ptr pointer =
-  gtk_gesture_get_group(cast[ptr Gesture00](self.impl))
+proc getGroup*(self: Gesture): seq[Gesture] =
+  let resul0 = gtk_gesture_get_group(cast[ptr Gesture00](self.impl))
+  result = glistObjects2seq(Gesture, resul0, false)
+  g_list_free(resul0)
 
-proc group*(self: Gesture): ptr pointer =
-  gtk_gesture_get_group(cast[ptr Gesture00](self.impl))
+proc group*(self: Gesture): seq[Gesture] =
+  let resul0 = gtk_gesture_get_group(cast[ptr Gesture00](self.impl))
+  result = glistObjects2seq(Gesture, resul0, false)
+  g_list_free(resul0)
 
 proc gtk_gesture_get_last_event(self: ptr Gesture00; sequence: ptr gdk.EventSequence00): ptr gdk.Event00 {.
     importc, libprag.}
 
 proc getLastEvent*(self: Gesture; sequence: gdk.EventSequence = nil): gdk.Event =
-  let impl0 = gtk_gesture_get_last_event(cast[ptr Gesture00](self.impl), if sequence.isNil: nil else: cast[ptr gdk.EventSequence00](sequence.impl))
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreeGdkEvent)
-  result.impl = impl0
-  result.ignoreFinalizer = true
-
-proc lastEvent*(self: Gesture; sequence: gdk.EventSequence = nil): gdk.Event =
   let impl0 = gtk_gesture_get_last_event(cast[ptr Gesture00](self.impl), if sequence.isNil: nil else: cast[ptr gdk.EventSequence00](sequence.impl))
   if impl0.isNil:
     return nil
@@ -51983,11 +51074,7 @@ proc gtk_gesture_get_point(self: ptr Gesture00; sequence: ptr gdk.EventSequence0
     importc, libprag.}
 
 proc getPoint*(self: Gesture; sequence: gdk.EventSequence = nil;
-    x: var cdouble; y: var cdouble): bool =
-  toBool(gtk_gesture_get_point(cast[ptr Gesture00](self.impl), if sequence.isNil: nil else: cast[ptr gdk.EventSequence00](sequence.impl), x, y))
-
-proc point*(self: Gesture; sequence: gdk.EventSequence = nil;
-    x: var cdouble; y: var cdouble): bool =
+    x: var cdouble = cast[var cdouble](nil); y: var cdouble = cast[var cdouble](nil)): bool =
   toBool(gtk_gesture_get_point(cast[ptr Gesture00](self.impl), if sequence.isNil: nil else: cast[ptr gdk.EventSequence00](sequence.impl), x, y))
 
 proc gtk_gesture_get_sequence_state(self: ptr Gesture00; sequence: ptr gdk.EventSequence00): EventSequenceState {.
@@ -51996,17 +51083,18 @@ proc gtk_gesture_get_sequence_state(self: ptr Gesture00; sequence: ptr gdk.Event
 proc getSequenceState*(self: Gesture; sequence: gdk.EventSequence): EventSequenceState =
   gtk_gesture_get_sequence_state(cast[ptr Gesture00](self.impl), cast[ptr gdk.EventSequence00](sequence.impl))
 
-proc sequenceState*(self: Gesture; sequence: gdk.EventSequence): EventSequenceState =
-  gtk_gesture_get_sequence_state(cast[ptr Gesture00](self.impl), cast[ptr gdk.EventSequence00](sequence.impl))
-
-proc gtk_gesture_get_sequences(self: ptr Gesture00): ptr pointer {.
+proc gtk_gesture_get_sequences(self: ptr Gesture00): ptr glib.List {.
     importc, libprag.}
 
-proc getSequences*(self: Gesture): ptr pointer =
-  gtk_gesture_get_sequences(cast[ptr Gesture00](self.impl))
+proc getSequences*(self: Gesture): seq[gdk.EventSequence] =
+  let resul0 = gtk_gesture_get_sequences(cast[ptr Gesture00](self.impl))
+  result = glistStructs2seq[gdk.EventSequence](resul0, true)
+  g_list_free(resul0)
 
-proc sequences*(self: Gesture): ptr pointer =
-  gtk_gesture_get_sequences(cast[ptr Gesture00](self.impl))
+proc sequences*(self: Gesture): seq[gdk.EventSequence] =
+  let resul0 = gtk_gesture_get_sequences(cast[ptr Gesture00](self.impl))
+  result = glistStructs2seq[gdk.EventSequence](resul0, true)
+  g_list_free(resul0)
 
 proc gtk_gesture_get_window(self: ptr Gesture00): ptr gdk.Window00 {.
     importc, libprag.}
@@ -52089,9 +51177,6 @@ proc gtk_gesture_set_state(self: ptr Gesture00; state: EventSequenceState): gboo
     importc, libprag.}
 
 proc setState*(self: Gesture; state: EventSequenceState): bool =
-  toBool(gtk_gesture_set_state(cast[ptr Gesture00](self.impl), state))
-
-proc `state=`*(self: Gesture; state: EventSequenceState): bool =
   toBool(gtk_gesture_set_state(cast[ptr Gesture00](self.impl), state))
 
 proc gtk_gesture_set_window(self: ptr Gesture00; window: ptr gdk.Window00) {.
@@ -52291,18 +51376,11 @@ proc gtk_gesture_drag_get_offset(self: ptr GestureDrag00; x: var cdouble;
 proc getOffset*(self: GestureDrag; x: var cdouble; y: var cdouble): bool =
   toBool(gtk_gesture_drag_get_offset(cast[ptr GestureDrag00](self.impl), x, y))
 
-proc offset*(self: GestureDrag; x: var cdouble; y: var cdouble): bool =
-  toBool(gtk_gesture_drag_get_offset(cast[ptr GestureDrag00](self.impl), x, y))
-
 proc gtk_gesture_drag_get_start_point(self: ptr GestureDrag00; x: var cdouble;
     y: var cdouble): gboolean {.
     importc, libprag.}
 
 proc getStartPoint*(self: GestureDrag; x: var cdouble;
-    y: var cdouble): bool =
-  toBool(gtk_gesture_drag_get_start_point(cast[ptr GestureDrag00](self.impl), x, y))
-
-proc startPoint*(self: GestureDrag; x: var cdouble;
     y: var cdouble): bool =
   toBool(gtk_gesture_drag_get_start_point(cast[ptr GestureDrag00](self.impl), x, y))
 
@@ -52469,16 +51547,13 @@ proc gtk_gesture_multi_press_get_area(self: ptr GestureMultiPress00; rect: var g
 proc getArea*(self: GestureMultiPress; rect: var gdk.Rectangle): bool =
   toBool(gtk_gesture_multi_press_get_area(cast[ptr GestureMultiPress00](self.impl), rect))
 
-proc area*(self: GestureMultiPress; rect: var gdk.Rectangle): bool =
-  toBool(gtk_gesture_multi_press_get_area(cast[ptr GestureMultiPress00](self.impl), rect))
-
 proc gtk_gesture_multi_press_set_area(self: ptr GestureMultiPress00; rect: gdk.Rectangle) {.
     importc, libprag.}
 
-proc setArea*(self: GestureMultiPress; rect: gdk.Rectangle = cast[ptr gdk.Rectangle](nil)[]) =
+proc setArea*(self: GestureMultiPress; rect: gdk.Rectangle = cast[var gdk.Rectangle](nil)) =
   gtk_gesture_multi_press_set_area(cast[ptr GestureMultiPress00](self.impl), rect)
 
-proc `area=`*(self: GestureMultiPress; rect: gdk.Rectangle = cast[ptr gdk.Rectangle](nil)[]) =
+proc `area=`*(self: GestureMultiPress; rect: gdk.Rectangle = cast[var gdk.Rectangle](nil)) =
   gtk_gesture_multi_press_set_area(cast[ptr GestureMultiPress00](self.impl), rect)
 
 type
@@ -52746,16 +51821,12 @@ proc initGestureStylus*[T](result: var T; widget: Widget) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_gesture_stylus_get_axes(self: ptr GestureStylus00; axes: gdk.AxisUseArray;
-    values: var cdoubleArray): gboolean {.
+proc gtk_gesture_stylus_get_axes(self: ptr GestureStylus00; axes: ptr gdk.AxisUse;
+    values: var ptr cdouble): gboolean {.
     importc, libprag.}
 
-proc getAxes*(self: GestureStylus; axes: gdk.AxisUseArray;
-    values: var cdoubleArray): bool =
-  toBool(gtk_gesture_stylus_get_axes(cast[ptr GestureStylus00](self.impl), axes, values))
-
-proc axes*(self: GestureStylus; axes: gdk.AxisUseArray;
-    values: var cdoubleArray): bool =
+proc getAxes*(self: GestureStylus; axes: ptr gdk.AxisUse;
+    values: var ptr cdouble): bool =
   toBool(gtk_gesture_stylus_get_axes(cast[ptr GestureStylus00](self.impl), axes, values))
 
 proc gtk_gesture_stylus_get_axis(self: ptr GestureStylus00; axis: gdk.AxisUse;
@@ -52763,10 +51834,6 @@ proc gtk_gesture_stylus_get_axis(self: ptr GestureStylus00; axis: gdk.AxisUse;
     importc, libprag.}
 
 proc getAxis*(self: GestureStylus; axis: gdk.AxisUse;
-    value: var cdouble): bool =
-  toBool(gtk_gesture_stylus_get_axis(cast[ptr GestureStylus00](self.impl), axis, value))
-
-proc axis*(self: GestureStylus; axis: gdk.AxisUse;
     value: var cdouble): bool =
   toBool(gtk_gesture_stylus_get_axis(cast[ptr GestureStylus00](self.impl), axis, value))
 
@@ -52891,10 +51958,6 @@ proc getVelocity*(self: GestureSwipe; velocityX: var cdouble;
     velocityY: var cdouble): bool =
   toBool(gtk_gesture_swipe_get_velocity(cast[ptr GestureSwipe00](self.impl), velocityX, velocityY))
 
-proc velocity*(self: GestureSwipe; velocityX: var cdouble;
-    velocityY: var cdouble): bool =
-  toBool(gtk_gesture_swipe_get_velocity(cast[ptr GestureSwipe00](self.impl), velocityX, velocityY))
-
 type
   GestureZoom* = ref object of Gesture
   GestureZoom00* = object of Gesture00
@@ -52996,6 +52059,12 @@ when defined(gcDestructors):
       boxedFree(gtk_gradient_get_type(), cast[ptr Gradient00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var Gradient) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkGradient)
+
 proc gtk_gradient_unref(self: ptr Gradient00) {.
     importc, libprag.}
 
@@ -53096,10 +52165,12 @@ when defined(gcDestructors):
       self.impl = nil
 
 type
-  IMContextInfo00* {.pure.} = object
-  IMContextInfo* = ref object
-    impl*: ptr IMContextInfo00
-    ignoreFinalizer*: bool
+  IMContextInfo* {.pure, byRef.} = object
+    contextId*: cstring
+    contextName*: cstring
+    domain*: cstring
+    domainDirname*: cstring
+    defaultLocales*: cstring
 
 type
   IMContextSimple* = ref object of IMContext
@@ -53288,7 +52359,7 @@ type
 
 const INPUT_ERROR* = -1'i32
 
-const INTERFACE_AGE* = 16'i32
+const INTERFACE_AGE* = 20'i32
 
 type
   IconInfo* = ref object of gobject.Object
@@ -53305,21 +52376,16 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_icon_info_get_attach_points(self: ptr IconInfo00; points: var gdk.Point00Array;
+proc gtk_icon_info_get_attach_points(self: ptr IconInfo00; points: var ptr gdk.Point;
     nPoints: var int32): gboolean {.
     importc, libprag.}
 
-proc getAttachPoints*(self: IconInfo; points: var gdk.Point00Array;
-    nPoints: var int): bool =
-  var nPoints_00 = int32(nPoints)
+proc getAttachPoints*(self: IconInfo; points: var ptr gdk.Point = cast[var ptr gdk.Point](nil);
+    nPoints: var int = cast[var int](nil)): bool =
+  var nPoints_00: int32
   result = toBool(gtk_icon_info_get_attach_points(cast[ptr IconInfo00](self.impl), points, nPoints_00))
-  nPoints = int(nPoints_00)
-
-proc attachPoints*(self: IconInfo; points: var gdk.Point00Array;
-    nPoints: var int): bool =
-  var nPoints_00 = int32(nPoints)
-  result = toBool(gtk_icon_info_get_attach_points(cast[ptr IconInfo00](self.impl), points, nPoints_00))
-  nPoints = int(nPoints_00)
+  if nPoints.addr != nil:
+    nPoints = int(nPoints_00)
 
 proc gtk_icon_info_get_base_scale(self: ptr IconInfo00): int32 {.
     importc, libprag.}
@@ -53391,9 +52457,6 @@ proc gtk_icon_info_get_embedded_rect(self: ptr IconInfo00; rectangle: var gdk.Re
     importc, libprag.}
 
 proc getEmbeddedRect*(self: IconInfo; rectangle: var gdk.Rectangle): bool =
-  toBool(gtk_icon_info_get_embedded_rect(cast[ptr IconInfo00](self.impl), rectangle))
-
-proc embeddedRect*(self: IconInfo; rectangle: var gdk.Rectangle): bool =
   toBool(gtk_icon_info_get_embedded_rect(cast[ptr IconInfo00](self.impl), rectangle))
 
 proc gtk_icon_info_get_filename(self: ptr IconInfo00): cstring {.
@@ -53495,9 +52558,9 @@ proc gtk_icon_info_load_symbolic(self: ptr IconInfo00; fg: gdk.RGBA; successColo
     error: ptr ptr glib.Error = nil): ptr gdkpixbuf.Pixbuf00 {.
     importc, libprag.}
 
-proc loadSymbolic*(self: IconInfo; fg: gdk.RGBA; successColor: gdk.RGBA = cast[ptr gdk.RGBA](nil)[];
-    warningColor: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]; errorColor: gdk.RGBA = cast[ptr gdk.RGBA](nil)[];
-    wasSymbolic: var bool): gdkpixbuf.Pixbuf =
+proc loadSymbolic*(self: IconInfo; fg: gdk.RGBA; successColor: gdk.RGBA = cast[var gdk.RGBA](nil);
+    warningColor: gdk.RGBA = cast[var gdk.RGBA](nil); errorColor: gdk.RGBA = cast[var gdk.RGBA](nil);
+    wasSymbolic: var bool = cast[var bool](nil)): gdkpixbuf.Pixbuf =
   var gerror: ptr glib.Error
   var wasSymbolic_00 = gboolean(wasSymbolic)
   let gobj = gtk_icon_info_load_symbolic(cast[ptr IconInfo00](self.impl), fg, successColor, warningColor, errorColor, wasSymbolic_00, addr gerror)
@@ -53526,8 +52589,8 @@ proc gtk_icon_info_load_symbolic_async(self: ptr IconInfo00; fg: gdk.RGBA;
     callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
-proc loadSymbolicAsync*(self: IconInfo; fg: gdk.RGBA; successColor: gdk.RGBA = cast[ptr gdk.RGBA](nil)[];
-    warningColor: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]; errorColor: gdk.RGBA = cast[ptr gdk.RGBA](nil)[];
+proc loadSymbolicAsync*(self: IconInfo; fg: gdk.RGBA; successColor: gdk.RGBA = cast[var gdk.RGBA](nil);
+    warningColor: gdk.RGBA = cast[var gdk.RGBA](nil); errorColor: gdk.RGBA = cast[var gdk.RGBA](nil);
     cancellable: gio.Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
   gtk_icon_info_load_symbolic_async(cast[ptr IconInfo00](self.impl), fg, successColor, warningColor, errorColor, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), callback, userData)
 
@@ -53536,7 +52599,7 @@ proc gtk_icon_info_load_symbolic_finish(self: ptr IconInfo00; res: ptr gio.Async
     importc, libprag.}
 
 proc loadSymbolicFinish*(self: IconInfo; res: gio.AsyncResult;
-    wasSymbolic: var bool): gdkpixbuf.Pixbuf =
+    wasSymbolic: var bool = cast[var bool](nil)): gdkpixbuf.Pixbuf =
   var gerror: ptr glib.Error
   var wasSymbolic_00 = gboolean(wasSymbolic)
   let gobj = gtk_icon_info_load_symbolic_finish(cast[ptr IconInfo00](self.impl), cast[ptr gio.AsyncResult00](res.impl), wasSymbolic_00, addr gerror)
@@ -53565,7 +52628,7 @@ proc gtk_icon_info_load_symbolic_for_context(self: ptr IconInfo00; context: ptr 
     importc, libprag.}
 
 proc loadSymbolicForContext*(self: IconInfo; context: StyleContext;
-    wasSymbolic: var bool): gdkpixbuf.Pixbuf =
+    wasSymbolic: var bool = cast[var bool](nil)): gdkpixbuf.Pixbuf =
   var gerror: ptr glib.Error
   var wasSymbolic_00 = gboolean(wasSymbolic)
   let gobj = gtk_icon_info_load_symbolic_for_context(cast[ptr IconInfo00](self.impl), cast[ptr StyleContext00](context.impl), wasSymbolic_00, addr gerror)
@@ -53603,7 +52666,7 @@ proc gtk_icon_info_load_symbolic_for_context_finish(self: ptr IconInfo00;
     importc, libprag.}
 
 proc loadSymbolicForContextFinish*(self: IconInfo; res: gio.AsyncResult;
-    wasSymbolic: var bool): gdkpixbuf.Pixbuf =
+    wasSymbolic: var bool = cast[var bool](nil)): gdkpixbuf.Pixbuf =
   var gerror: ptr glib.Error
   var wasSymbolic_00 = gboolean(wasSymbolic)
   let gobj = gtk_icon_info_load_symbolic_for_context_finish(cast[ptr IconInfo00](self.impl), cast[ptr gio.AsyncResult00](res.impl), wasSymbolic_00, addr gerror)
@@ -53632,7 +52695,7 @@ proc gtk_icon_info_load_symbolic_for_style(self: ptr IconInfo00; style: ptr Styl
     importc, libprag.}
 
 proc loadSymbolicForStyle*(self: IconInfo; style: Style;
-    state: StateType; wasSymbolic: var bool): gdkpixbuf.Pixbuf =
+    state: StateType; wasSymbolic: var bool = cast[var bool](nil)): gdkpixbuf.Pixbuf =
   var gerror: ptr glib.Error
   var wasSymbolic_00 = gboolean(wasSymbolic)
   let gobj = gtk_icon_info_load_symbolic_for_style(cast[ptr IconInfo00](self.impl), cast[ptr Style00](style.impl), state, wasSymbolic_00, addr gerror)
@@ -53764,22 +52827,6 @@ proc getDefaultIconTheme*(): IconTheme =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc defaultIconTheme*(): IconTheme =
-  let gobj = gtk_icon_theme_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gtk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gtk_icon_theme_get_for_screen(screen: ptr gdk.Screen00): ptr IconTheme00 {.
     importc, libprag.}
 
@@ -53828,7 +52875,7 @@ proc exampleIconName*(self: IconTheme): string =
   result = $resul0
   cogfree(resul0)
 
-proc gtk_icon_theme_get_icon_sizes(self: ptr IconTheme00; iconName: cstring): int32Array {.
+proc gtk_icon_theme_get_icon_sizes(self: ptr IconTheme00; iconName: cstring): ptr int32 {.
     importc, libprag.}
 
 proc getIconSizes*(self: IconTheme; iconName: cstring): seq[int32] =
@@ -53836,24 +52883,21 @@ proc getIconSizes*(self: IconTheme; iconName: cstring): seq[int32] =
   result = int32ArrayZT2seq(resul0)
   cogfree(resul0)
 
-proc iconSizes*(self: IconTheme; iconName: cstring): seq[int32] =
-  let resul0 = gtk_icon_theme_get_icon_sizes(cast[ptr IconTheme00](self.impl), iconName)
-  result = int32ArrayZT2seq(resul0)
-  cogfree(resul0)
-
-proc gtk_icon_theme_get_search_path(self: ptr IconTheme00; path: var cstringArray;
+proc gtk_icon_theme_get_search_path(self: ptr IconTheme00; path: var ptr cstring;
     nElements: var int32) {.
     importc, libprag.}
 
-proc getSearchPath*(self: IconTheme; path: var seq[string];
+proc getSearchPath*(self: IconTheme; path: var seq[string] = cast[var seq[string]](nil);
     nElements: var int) =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var path_00 = seq2CstringArray(path, fs469n23)
-  var nElements_00 = int32(nElements)
+  var nElements_00: int32
   gtk_icon_theme_get_search_path(cast[ptr IconTheme00](self.impl), path_00, nElements_00)
-  path = cstringArrayToSeq(path_00)
-  nElements = int(nElements_00)
+  if path.addr != nil:
+    path = cstringArrayToSeq(path_00)
+  if nElements.addr != nil:
+    nElements = int(nElements_00)
 
 proc gtk_icon_theme_has_icon(self: ptr IconTheme00; iconName: cstring): gboolean {.
     importc, libprag.}
@@ -53861,17 +52905,19 @@ proc gtk_icon_theme_has_icon(self: ptr IconTheme00; iconName: cstring): gboolean
 proc hasIcon*(self: IconTheme; iconName: cstring): bool =
   toBool(gtk_icon_theme_has_icon(cast[ptr IconTheme00](self.impl), iconName))
 
-proc gtk_icon_theme_list_contexts(self: ptr IconTheme00): ptr pointer {.
+proc gtk_icon_theme_list_contexts(self: ptr IconTheme00): ptr glib.List {.
     importc, libprag.}
 
-proc listContexts*(self: IconTheme): ptr pointer =
-  gtk_icon_theme_list_contexts(cast[ptr IconTheme00](self.impl))
+proc listContexts*(self: IconTheme): seq[cstring] =
+  let resul0 = gtk_icon_theme_list_contexts(cast[ptr IconTheme00](self.impl))
+  g_list_free(resul0)
 
-proc gtk_icon_theme_list_icons(self: ptr IconTheme00; context: cstring): ptr pointer {.
+proc gtk_icon_theme_list_icons(self: ptr IconTheme00; context: cstring): ptr glib.List {.
     importc, libprag.}
 
-proc listIcons*(self: IconTheme; context: cstring = ""): ptr pointer =
-  gtk_icon_theme_list_icons(cast[ptr IconTheme00](self.impl), safeStringToCString(context))
+proc listIcons*(self: IconTheme; context: cstring = ""): seq[cstring] =
+  let resul0 = gtk_icon_theme_list_icons(cast[ptr IconTheme00](self.impl), safeStringToCString(context))
+  g_list_free(resul0)
 
 proc gtk_icon_theme_prepend_search_path(self: ptr IconTheme00; path: cstring) {.
     importc, libprag.}
@@ -53903,7 +52949,7 @@ proc setScreen*(self: IconTheme; screen: gdk.Screen) =
 proc `screen=`*(self: IconTheme; screen: gdk.Screen) =
   gtk_icon_theme_set_screen(cast[ptr IconTheme00](self.impl), cast[ptr gdk.Screen00](screen.impl))
 
-proc gtk_icon_theme_set_search_path(self: ptr IconTheme00; path: cstringArray;
+proc gtk_icon_theme_set_search_path(self: ptr IconTheme00; path: ptr cstring;
     nElements: int32) {.
     importc, libprag.}
 
@@ -53983,7 +53029,7 @@ type
 
   IconLookupFlags* {.size: sizeof(cint).} = set[IconLookupFlag]
 
-proc gtk_icon_theme_choose_icon(self: ptr IconTheme00; iconNames: cstringArray;
+proc gtk_icon_theme_choose_icon(self: ptr IconTheme00; iconNames: ptr cstring;
     size: int32; flags: IconLookupFlags): ptr IconInfo00 {.
     importc, libprag.}
 
@@ -54009,7 +53055,7 @@ proc chooseIcon*(self: IconTheme; iconNames: openArray[string];
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_icon_theme_choose_icon_for_scale(self: ptr IconTheme00; iconNames: cstringArray;
+proc gtk_icon_theme_choose_icon_for_scale(self: ptr IconTheme00; iconNames: ptr cstring;
     size: int32; scale: int32; flags: IconLookupFlags): ptr IconInfo00 {.
     importc, libprag.}
 
@@ -54372,7 +53418,7 @@ const MAJOR_VERSION* = 3'i32
 
 const MAX_COMPOSE_LEN* = 7'i32
 
-const MICRO_VERSION* = 20'i32
+const MICRO_VERSION* = 24'i32
 
 const MINOR_VERSION* = 24'i32
 
@@ -54442,7 +53488,7 @@ type
   ModuleDisplayInitFunc* = proc (display: ptr gdk.Display00) {.cdecl.}
 
 type
-  ModuleInitFunc* = proc (argc: ptr int32; argv: cstringArray) {.cdecl.}
+  ModuleInitFunc* = proc (argc: ptr int32; argv: ptr cstring) {.cdecl.}
 
 type
   MountOperation* = ref object of gio.MountOperation
@@ -55039,16 +54085,18 @@ const PRINT_SETTINGS_WIN32_DRIVER_VERSION* = "win32-driver-version"
 const PRIORITY_RESIZE* = 110'i32
 
 type
-  PadActionEntry00* {.pure.} = object
-  PadActionEntry* = ref object
-    impl*: ptr PadActionEntry00
-    ignoreFinalizer*: bool
-
-type
   PadActionType* {.size: sizeof(cint), pure.} = enum
     button = 0
     ring = 1
     strip = 2
+
+type
+  PadActionEntry* {.pure, byRef.} = object
+    `type`*: PadActionType
+    index*: int32
+    mode*: int32
+    label*: cstring
+    actionName*: cstring
 
 type
   PadController* = ref object of EventController
@@ -55133,11 +54181,11 @@ proc setAction*(self: PadController; `type`: PadActionType;
     index: int; mode: int; label: cstring; actionName: cstring) =
   gtk_pad_controller_set_action(cast[ptr PadController00](self.impl), `type`, int32(index), int32(mode), label, actionName)
 
-proc gtk_pad_controller_set_action_entries(self: ptr PadController00; entries: PadActionEntry00Array;
+proc gtk_pad_controller_set_action_entries(self: ptr PadController00; entries: ptr PadActionEntry;
     nEntries: int32) {.
     importc, libprag.}
 
-proc setActionEntries*(self: PadController; entries: PadActionEntry00Array;
+proc setActionEntries*(self: PadController; entries: ptr PadActionEntry;
     nEntries: int) =
   gtk_pad_controller_set_action_entries(cast[ptr PadController00](self.impl), entries, int32(nEntries))
 
@@ -55153,14 +54201,14 @@ type
     start*: int32
     `end`*: int32
 
-proc seq2PageRangeArray(s: openarray[PageRange]; a: var cstringArray):  PageRangeArray =
+proc seq2PageRangeArray(s: openarray[PageRange]; a: var cstringArray):  ptr PageRange =
   assert s.high < 256
   let x = cast[ptr UncheckedArray[ptr PageRange]](a)
   for i in 0 .. s.high:
     x[i] = unsafeaddr(s[i])
-  return x
+  return cast[ptr PageRange](x)
 
-proc pageRangeArrayToSeq(s: PageRangeArray; n: int):  seq[PageRange] =
+proc pageRangeArrayToSeq(s: ptr PageRange; n: int):  seq[PageRange] =
   let a = cast[ptr UncheckedArray[ptr PageRange]](s)
   for i in 0 ..< n:
     result.add(a[i][])
@@ -55553,6 +54601,12 @@ when defined(gcDestructors):
       boxedFree(gtk_paper_size_get_type(), cast[ptr PaperSize00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var PaperSize) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkPaperSize)
+
 proc gtk_paper_size_free(self: ptr PaperSize00) {.
     importc, libprag.}
 
@@ -55744,17 +54798,18 @@ proc gtk_paper_size_get_default(): cstring {.
 proc getDefaultPaperSize*(): string =
   result = $gtk_paper_size_get_default()
 
-proc defaultPaperSize*(): string =
-  result = $gtk_paper_size_get_default()
-
-proc gtk_paper_size_get_paper_sizes(includeCustom: gboolean): ptr pointer {.
+proc gtk_paper_size_get_paper_sizes(includeCustom: gboolean): ptr glib.List {.
     importc, libprag.}
 
-proc getPaperSizes*(includeCustom: bool): ptr pointer =
-  gtk_paper_size_get_paper_sizes(gboolean(includeCustom))
+proc getPaperSizes*(includeCustom: bool): seq[PaperSize] =
+  let resul0 = gtk_paper_size_get_paper_sizes(gboolean(includeCustom))
+  result = glistStructs2seq[PaperSize](resul0, false)
+  g_list_free(resul0)
 
-proc paperSizes*(includeCustom: gboolean): ptr pointer {.
-    importc: "gtk_paper_size_get_paper_sizes", libprag.}
+proc paperSizes*(includeCustom: bool): seq[PaperSize] =
+  let resul0 = gtk_paper_size_get_paper_sizes(gboolean(includeCustom))
+  result = glistStructs2seq[PaperSize](resul0, false)
+  g_list_free(resul0)
 
 proc gtk_page_setup_get_paper_size(self: ptr PageSetup00): ptr PaperSize00 {.
     importc, libprag.}
@@ -55801,16 +54856,10 @@ proc gtk_page_setup_get_bottom_margin(self: ptr PageSetup00; unit: Unit): cdoubl
 proc getBottomMargin*(self: PageSetup; unit: Unit): cdouble =
   gtk_page_setup_get_bottom_margin(cast[ptr PageSetup00](self.impl), unit)
 
-proc bottomMargin*(self: PageSetup; unit: Unit): cdouble =
-  gtk_page_setup_get_bottom_margin(cast[ptr PageSetup00](self.impl), unit)
-
 proc gtk_page_setup_get_left_margin(self: ptr PageSetup00; unit: Unit): cdouble {.
     importc, libprag.}
 
 proc getLeftMargin*(self: PageSetup; unit: Unit): cdouble =
-  gtk_page_setup_get_left_margin(cast[ptr PageSetup00](self.impl), unit)
-
-proc leftMargin*(self: PageSetup; unit: Unit): cdouble =
   gtk_page_setup_get_left_margin(cast[ptr PageSetup00](self.impl), unit)
 
 proc gtk_page_setup_get_page_height(self: ptr PageSetup00; unit: Unit): cdouble {.
@@ -55819,16 +54868,10 @@ proc gtk_page_setup_get_page_height(self: ptr PageSetup00; unit: Unit): cdouble 
 proc getPageHeight*(self: PageSetup; unit: Unit): cdouble =
   gtk_page_setup_get_page_height(cast[ptr PageSetup00](self.impl), unit)
 
-proc pageHeight*(self: PageSetup; unit: Unit): cdouble =
-  gtk_page_setup_get_page_height(cast[ptr PageSetup00](self.impl), unit)
-
 proc gtk_page_setup_get_page_width(self: ptr PageSetup00; unit: Unit): cdouble {.
     importc, libprag.}
 
 proc getPageWidth*(self: PageSetup; unit: Unit): cdouble =
-  gtk_page_setup_get_page_width(cast[ptr PageSetup00](self.impl), unit)
-
-proc pageWidth*(self: PageSetup; unit: Unit): cdouble =
   gtk_page_setup_get_page_width(cast[ptr PageSetup00](self.impl), unit)
 
 proc gtk_page_setup_get_paper_height(self: ptr PageSetup00; unit: Unit): cdouble {.
@@ -55837,16 +54880,10 @@ proc gtk_page_setup_get_paper_height(self: ptr PageSetup00; unit: Unit): cdouble
 proc getPaperHeight*(self: PageSetup; unit: Unit): cdouble =
   gtk_page_setup_get_paper_height(cast[ptr PageSetup00](self.impl), unit)
 
-proc paperHeight*(self: PageSetup; unit: Unit): cdouble =
-  gtk_page_setup_get_paper_height(cast[ptr PageSetup00](self.impl), unit)
-
 proc gtk_page_setup_get_paper_width(self: ptr PageSetup00; unit: Unit): cdouble {.
     importc, libprag.}
 
 proc getPaperWidth*(self: PageSetup; unit: Unit): cdouble =
-  gtk_page_setup_get_paper_width(cast[ptr PageSetup00](self.impl), unit)
-
-proc paperWidth*(self: PageSetup; unit: Unit): cdouble =
   gtk_page_setup_get_paper_width(cast[ptr PageSetup00](self.impl), unit)
 
 proc gtk_page_setup_get_right_margin(self: ptr PageSetup00; unit: Unit): cdouble {.
@@ -55855,16 +54892,10 @@ proc gtk_page_setup_get_right_margin(self: ptr PageSetup00; unit: Unit): cdouble
 proc getRightMargin*(self: PageSetup; unit: Unit): cdouble =
   gtk_page_setup_get_right_margin(cast[ptr PageSetup00](self.impl), unit)
 
-proc rightMargin*(self: PageSetup; unit: Unit): cdouble =
-  gtk_page_setup_get_right_margin(cast[ptr PageSetup00](self.impl), unit)
-
 proc gtk_page_setup_get_top_margin(self: ptr PageSetup00; unit: Unit): cdouble {.
     importc, libprag.}
 
 proc getTopMargin*(self: PageSetup; unit: Unit): cdouble =
-  gtk_page_setup_get_top_margin(cast[ptr PageSetup00](self.impl), unit)
-
-proc topMargin*(self: PageSetup; unit: Unit): cdouble =
   gtk_page_setup_get_top_margin(cast[ptr PageSetup00](self.impl), unit)
 
 proc gtk_page_setup_set_bottom_margin(self: ptr PageSetup00; margin: cdouble;
@@ -55922,16 +54953,10 @@ proc gtk_paper_size_get_default_bottom_margin(self: ptr PaperSize00; unit: Unit)
 proc getDefaultBottomMargin*(self: PaperSize; unit: Unit): cdouble =
   gtk_paper_size_get_default_bottom_margin(cast[ptr PaperSize00](self.impl), unit)
 
-proc defaultBottomMargin*(self: PaperSize; unit: Unit): cdouble =
-  gtk_paper_size_get_default_bottom_margin(cast[ptr PaperSize00](self.impl), unit)
-
 proc gtk_paper_size_get_default_left_margin(self: ptr PaperSize00; unit: Unit): cdouble {.
     importc, libprag.}
 
 proc getDefaultLeftMargin*(self: PaperSize; unit: Unit): cdouble =
-  gtk_paper_size_get_default_left_margin(cast[ptr PaperSize00](self.impl), unit)
-
-proc defaultLeftMargin*(self: PaperSize; unit: Unit): cdouble =
   gtk_paper_size_get_default_left_margin(cast[ptr PaperSize00](self.impl), unit)
 
 proc gtk_paper_size_get_default_right_margin(self: ptr PaperSize00; unit: Unit): cdouble {.
@@ -55940,16 +54965,10 @@ proc gtk_paper_size_get_default_right_margin(self: ptr PaperSize00; unit: Unit):
 proc getDefaultRightMargin*(self: PaperSize; unit: Unit): cdouble =
   gtk_paper_size_get_default_right_margin(cast[ptr PaperSize00](self.impl), unit)
 
-proc defaultRightMargin*(self: PaperSize; unit: Unit): cdouble =
-  gtk_paper_size_get_default_right_margin(cast[ptr PaperSize00](self.impl), unit)
-
 proc gtk_paper_size_get_default_top_margin(self: ptr PaperSize00; unit: Unit): cdouble {.
     importc, libprag.}
 
 proc getDefaultTopMargin*(self: PaperSize; unit: Unit): cdouble =
-  gtk_paper_size_get_default_top_margin(cast[ptr PaperSize00](self.impl), unit)
-
-proc defaultTopMargin*(self: PaperSize; unit: Unit): cdouble =
   gtk_paper_size_get_default_top_margin(cast[ptr PaperSize00](self.impl), unit)
 
 proc gtk_paper_size_get_height(self: ptr PaperSize00; unit: Unit): cdouble {.
@@ -55958,16 +54977,10 @@ proc gtk_paper_size_get_height(self: ptr PaperSize00; unit: Unit): cdouble {.
 proc getHeight*(self: PaperSize; unit: Unit): cdouble =
   gtk_paper_size_get_height(cast[ptr PaperSize00](self.impl), unit)
 
-proc height*(self: PaperSize; unit: Unit): cdouble =
-  gtk_paper_size_get_height(cast[ptr PaperSize00](self.impl), unit)
-
 proc gtk_paper_size_get_width(self: ptr PaperSize00; unit: Unit): cdouble {.
     importc, libprag.}
 
 proc getWidth*(self: PaperSize; unit: Unit): cdouble =
-  gtk_paper_size_get_width(cast[ptr PaperSize00](self.impl), unit)
-
-proc width*(self: PaperSize; unit: Unit): cdouble =
   gtk_paper_size_get_width(cast[ptr PaperSize00](self.impl), unit)
 
 proc gtk_paper_size_set_size(self: ptr PaperSize00; width: cdouble; height: cdouble;
@@ -56102,10 +55115,6 @@ proc gtk_print_context_get_hard_margins(self: ptr PrintContext00; top: var cdoub
     importc, libprag.}
 
 proc getHardMargins*(self: PrintContext; top: var cdouble;
-    bottom: var cdouble; left: var cdouble; right: var cdouble): bool =
-  toBool(gtk_print_context_get_hard_margins(cast[ptr PrintContext00](self.impl), top, bottom, left, right))
-
-proc hardMargins*(self: PrintContext; top: var cdouble;
     bottom: var cdouble; left: var cdouble; right: var cdouble): bool =
   toBool(gtk_print_context_get_hard_margins(cast[ptr PrintContext00](self.impl), top, bottom, left, right))
 
@@ -56521,9 +55530,6 @@ proc gtk_print_settings_get(self: ptr PrintSettings00; key: cstring): cstring {.
 proc getPrintSettings*(self: PrintSettings; key: cstring): string =
   result = $gtk_print_settings_get(cast[ptr PrintSettings00](self.impl), key)
 
-proc printSettings*(self: PrintSettings; key: cstring): string =
-  result = $gtk_print_settings_get(cast[ptr PrintSettings00](self.impl), key)
-
 proc gtk_print_settings_get_bool(self: ptr PrintSettings00; key: cstring): gboolean {.
     importc, libprag.}
 
@@ -56563,18 +55569,11 @@ proc gtk_print_settings_get_double(self: ptr PrintSettings00; key: cstring): cdo
 proc getDouble*(self: PrintSettings; key: cstring): cdouble =
   gtk_print_settings_get_double(cast[ptr PrintSettings00](self.impl), key)
 
-proc double*(self: PrintSettings; key: cstring): cdouble =
-  gtk_print_settings_get_double(cast[ptr PrintSettings00](self.impl), key)
-
 proc gtk_print_settings_get_double_with_default(self: ptr PrintSettings00;
     key: cstring; def: cdouble): cdouble {.
     importc, libprag.}
 
 proc getDoubleWithDefault*(self: PrintSettings; key: cstring;
-    def: cdouble): cdouble =
-  gtk_print_settings_get_double_with_default(cast[ptr PrintSettings00](self.impl), key, def)
-
-proc doubleWithDefault*(self: PrintSettings; key: cstring;
     def: cdouble): cdouble =
   gtk_print_settings_get_double_with_default(cast[ptr PrintSettings00](self.impl), key, def)
 
@@ -56610,18 +55609,11 @@ proc getIntWithDefault*(self: PrintSettings; key: cstring;
     def: int): int =
   int(gtk_print_settings_get_int_with_default(cast[ptr PrintSettings00](self.impl), key, int32(def)))
 
-proc intWithDefault*(self: PrintSettings; key: cstring;
-    def: int): int =
-  int(gtk_print_settings_get_int_with_default(cast[ptr PrintSettings00](self.impl), key, int32(def)))
-
 proc gtk_print_settings_get_length(self: ptr PrintSettings00; key: cstring;
     unit: Unit): cdouble {.
     importc, libprag.}
 
 proc getLength*(self: PrintSettings; key: cstring; unit: Unit): cdouble =
-  gtk_print_settings_get_length(cast[ptr PrintSettings00](self.impl), key, unit)
-
-proc length*(self: PrintSettings; key: cstring; unit: Unit): cdouble =
   gtk_print_settings_get_length(cast[ptr PrintSettings00](self.impl), key, unit)
 
 proc gtk_print_settings_get_media_type(self: ptr PrintSettings00): cstring {.
@@ -56678,22 +55670,16 @@ proc getOutputBin*(self: PrintSettings): string =
 proc outputBin*(self: PrintSettings): string =
   result = $gtk_print_settings_get_output_bin(cast[ptr PrintSettings00](self.impl))
 
-proc gtk_print_settings_get_page_ranges(self: ptr PrintSettings00; numRanges: var int32): PageRangeArray {.
+proc gtk_print_settings_get_page_ranges(self: ptr PrintSettings00; numRanges: var int32): ptr PageRange {.
     importc, libprag.}
 
 proc getPageRanges*(self: PrintSettings; numRanges: var int): seq[PageRange] =
-  var numRanges_00 = int32(numRanges)
+  var numRanges_00: int32
   let resul0 = gtk_print_settings_get_page_ranges(cast[ptr PrintSettings00](self.impl), numRanges_00)
   result = pageRangeArrayToSeq(resul0, numRanges_00.int)
   cogfree(resul0)
-  numRanges = int(numRanges_00)
-
-proc pageRanges*(self: PrintSettings; numRanges: var int): seq[PageRange] =
-  var numRanges_00 = int32(numRanges)
-  let resul0 = gtk_print_settings_get_page_ranges(cast[ptr PrintSettings00](self.impl), numRanges_00)
-  result = pageRangeArrayToSeq(resul0, numRanges_00.int)
-  cogfree(resul0)
-  numRanges = int(numRanges_00)
+  if numRanges.addr != nil:
+    numRanges = int(numRanges_00)
 
 proc gtk_print_settings_get_page_set(self: ptr PrintSettings00): PageSet {.
     importc, libprag.}
@@ -56708,9 +55694,6 @@ proc gtk_print_settings_get_paper_height(self: ptr PrintSettings00; unit: Unit):
     importc, libprag.}
 
 proc getPaperHeight*(self: PrintSettings; unit: Unit): cdouble =
-  gtk_print_settings_get_paper_height(cast[ptr PrintSettings00](self.impl), unit)
-
-proc paperHeight*(self: PrintSettings; unit: Unit): cdouble =
   gtk_print_settings_get_paper_height(cast[ptr PrintSettings00](self.impl), unit)
 
 proc gtk_print_settings_get_paper_size(self: ptr PrintSettings00): ptr PaperSize00 {.
@@ -56728,9 +55711,6 @@ proc gtk_print_settings_get_paper_width(self: ptr PrintSettings00; unit: Unit): 
     importc, libprag.}
 
 proc getPaperWidth*(self: PrintSettings; unit: Unit): cdouble =
-  gtk_print_settings_get_paper_width(cast[ptr PrintSettings00](self.impl), unit)
-
-proc paperWidth*(self: PrintSettings; unit: Unit): cdouble =
   gtk_print_settings_get_paper_width(cast[ptr PrintSettings00](self.impl), unit)
 
 proc gtk_print_settings_get_printer(self: ptr PrintSettings00): cstring {.
@@ -56972,7 +55952,7 @@ proc setOutputBin*(self: PrintSettings; outputBin: cstring) =
 proc `outputBin=`*(self: PrintSettings; outputBin: cstring) =
   gtk_print_settings_set_output_bin(cast[ptr PrintSettings00](self.impl), outputBin)
 
-proc gtk_print_settings_set_page_ranges(self: ptr PrintSettings00; pageRanges: PageRangeArray;
+proc gtk_print_settings_set_page_ranges(self: ptr PrintSettings00; pageRanges: ptr PageRange;
     numRanges: int32) {.
     importc, libprag.}
 
@@ -57437,9 +56417,6 @@ proc gtk_print_operation_set_defer_drawing(self: ptr PrintOperation00) {.
 proc setDeferDrawing*(self: PrintOperation) =
   gtk_print_operation_set_defer_drawing(cast[ptr PrintOperation00](self.impl))
 
-proc `deferDrawing=`*(self: PrintOperation) =
-  gtk_print_operation_set_defer_drawing(cast[ptr PrintOperation00](self.impl))
-
 proc gtk_print_operation_set_embed_page_setup(self: ptr PrintOperation00;
     embed: gboolean) {.
     importc, libprag.}
@@ -57698,10 +56675,11 @@ type
   RcFlags* {.size: sizeof(cint).} = set[RcFlag]
 
 type
-  RcProperty00* {.pure.} = object
-  RcProperty* = ref object
-    impl*: ptr RcProperty00
-    ignoreFinalizer*: bool
+  RcProperty* {.pure, byRef.} = object
+    typeName*: uint32
+    propertyName*: uint32
+    origin*: cstring
+    value*: gobject.Value
 
 proc gtk_rc_property_parse_border(pspec: ptr gobject.ParamSpec00; gstring: glib.String;
     propertyValue: gobject.Value): gboolean {.
@@ -57872,14 +56850,18 @@ proc filter*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | R
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_recent_chooser_get_items(self: ptr RecentChooser00): ptr pointer {.
+proc gtk_recent_chooser_get_items(self: ptr RecentChooser00): ptr glib.List {.
     importc, libprag.}
 
-proc getItems*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | RecentAction | RecentChooserMenu): ptr pointer =
-  gtk_recent_chooser_get_items(cast[ptr RecentChooser00](self.impl))
+proc getItems*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | RecentAction | RecentChooserMenu): seq[RecentInfo] =
+  let resul0 = gtk_recent_chooser_get_items(cast[ptr RecentChooser00](self.impl))
+  result = glistStructs2seq[RecentInfo](resul0, false)
+  g_list_free(resul0)
 
-proc items*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | RecentAction | RecentChooserMenu): ptr pointer =
-  gtk_recent_chooser_get_items(cast[ptr RecentChooser00](self.impl))
+proc items*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | RecentAction | RecentChooserMenu): seq[RecentInfo] =
+  let resul0 = gtk_recent_chooser_get_items(cast[ptr RecentChooser00](self.impl))
+  result = glistStructs2seq[RecentInfo](resul0, false)
+  g_list_free(resul0)
 
 proc gtk_recent_chooser_get_limit(self: ptr RecentChooser00): int32 {.
     importc, libprag.}
@@ -57944,26 +56926,22 @@ proc getShowTips*(self: RecentChooser | RecentChooserWidget | RecentChooserDialo
 proc showTips*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | RecentAction | RecentChooserMenu): bool =
   toBool(gtk_recent_chooser_get_show_tips(cast[ptr RecentChooser00](self.impl)))
 
-proc gtk_recent_chooser_get_uris(self: ptr RecentChooser00; length: var uint64): cstringArray {.
+proc gtk_recent_chooser_get_uris(self: ptr RecentChooser00; length: var uint64): ptr cstring {.
     importc, libprag.}
 
 proc getUris*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | RecentAction | RecentChooserMenu;
-    length: var uint64): seq[string] =
+    length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = gtk_recent_chooser_get_uris(cast[ptr RecentChooser00](self.impl), length)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
-proc uris*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | RecentAction | RecentChooserMenu;
-    length: var uint64): seq[string] =
-  let resul0 = gtk_recent_chooser_get_uris(cast[ptr RecentChooser00](self.impl), length)
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc gtk_recent_chooser_list_filters(self: ptr RecentChooser00): ptr pointer {.
+proc gtk_recent_chooser_list_filters(self: ptr RecentChooser00): ptr glib.SList {.
     importc, libprag.}
 
-proc listFilters*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | RecentAction | RecentChooserMenu): ptr pointer =
-  gtk_recent_chooser_list_filters(cast[ptr RecentChooser00](self.impl))
+proc listFilters*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | RecentAction | RecentChooserMenu): seq[RecentFilter] =
+  let resul0 = gtk_recent_chooser_list_filters(cast[ptr RecentChooser00](self.impl))
+  result = gslistObjects2seq(RecentFilter, resul0, false)
+  g_slist_free(resul0)
 
 proc gtk_recent_chooser_remove_filter(self: ptr RecentChooser00; filter: ptr RecentFilter00) {.
     importc, libprag.}
@@ -57997,16 +56975,6 @@ proc gtk_recent_chooser_set_current_uri(self: ptr RecentChooser00; uri: cstring;
     importc, libprag.}
 
 proc setCurrentUri*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | RecentAction | RecentChooserMenu;
-    uri: cstring): bool =
-  var gerror: ptr glib.Error
-  let resul0 = gtk_recent_chooser_set_current_uri(cast[ptr RecentChooser00](self.impl), uri, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc `currentUri=`*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | RecentAction | RecentChooserMenu;
     uri: cstring): bool =
   var gerror: ptr glib.Error
   let resul0 = gtk_recent_chooser_set_current_uri(cast[ptr RecentChooser00](self.impl), uri, addr gerror)
@@ -58150,7 +57118,7 @@ type
     invalidUri = 1
 
 type
-  RecentFilterFunc* = proc (filterInfo: ptr RecentFilterInfo00; userData: pointer): gboolean {.cdecl.}
+  RecentFilterFunc* = proc (filterInfo: RecentFilterInfo; userData: pointer): gboolean {.cdecl.}
 
 proc gtk_recent_filter_add_custom(self: ptr RecentFilter00; needed: RecentFilterFlags;
     `func`: RecentFilterFunc; data: pointer; dataDestroy: DestroyNotify) {.
@@ -58182,10 +57150,10 @@ proc setSortFunc*(self: RecentChooser | RecentChooserWidget | RecentChooserDialo
   gtk_recent_chooser_set_sort_func(cast[ptr RecentChooser00](self.impl), sortFunc, sortData, dataDestroy)
 
 type
-  RequestedSize00* {.pure.} = object
-  RequestedSize* = ref object
-    impl*: ptr RequestedSize00
-    ignoreFinalizer*: bool
+  RequestedSize* {.pure, byRef.} = object
+    data*: pointer
+    minimumSize*: int32
+    naturalSize*: int32
 
 type
   ResponseType* {.size: sizeof(cint), pure.} = enum
@@ -58643,10 +57611,6 @@ proc getBorder*(self: Scrollable | IconView | Viewport | ToolPalette | TextView 
     border: var Border): bool =
   toBool(gtk_scrollable_get_border(cast[ptr Scrollable00](self.impl), border))
 
-proc border*(self: Scrollable | IconView | Viewport | ToolPalette | TextView | TreeView | Layout;
-    border: var Border): bool =
-  toBool(gtk_scrollable_get_border(cast[ptr Scrollable00](self.impl), border))
-
 proc gtk_scrollable_get_hadjustment(self: ptr Scrollable00): ptr Adjustment00 {.
     importc, libprag.}
 
@@ -58809,6 +57773,27 @@ type
     gestureTwoFingerSwipeLeft = 5
     gestureTwoFingerSwipeRight = 6
     gesture = 7
+
+type
+  SocketAccessible* = ref object of ContainerAccessible
+  SocketAccessible00* = object of ContainerAccessible00
+
+proc gtk_socket_accessible_get_type*(): GType {.importc, libprag.}
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(SocketAccessible()[])) =
+    when defined(gintroDebug):
+      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
+    g_object_set_qdata(self.impl, Quark, nil)
+    if not self.ignoreFinalizer and self.impl != nil:
+      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
+      self.impl = nil
+
+proc gtk_socket_accessible_embed(self: ptr SocketAccessible00; path: cstring) {.
+    importc, libprag.}
+
+proc embed*(self: SocketAccessible; path: cstring) =
+  gtk_socket_accessible_embed(cast[ptr SocketAccessible00](self.impl), path)
 
 type
   StackAccessible* = ref object of ContainerAccessible
@@ -59205,27 +58190,24 @@ proc positionMenu*(menu: Menu; x: var int; y: var int; pushIn: var bool;
     userData: StatusIcon) =
   var y_00 = int32(y)
   var x_00 = int32(x)
-  var pushIn_00 = gboolean(pushIn)
+  var pushIn_00: gboolean
   gtk_status_icon_position_menu(cast[ptr Menu00](menu.impl), x_00, y_00, pushIn_00, cast[ptr StatusIcon00](userData.impl))
   y = int(y_00)
   x = int(x_00)
-  pushIn = toBool(pushIn_00)
+  if pushIn.addr != nil:
+    pushIn = toBool(pushIn_00)
 
 proc gtk_status_icon_get_geometry(self: ptr StatusIcon00; screen: var ptr gdk.Screen00;
     area: var gdk.Rectangle; orientation: var Orientation): gboolean {.
     importc, libprag.}
 
-proc getGeometry*(self: StatusIcon; screen: var gdk.Screen;
-    area: var gdk.Rectangle; orientation: var Orientation): bool =
-  fnew(screen, gdk.finalizeGObject)
-  screen.ignoreFinalizer = true
-  toBool(gtk_status_icon_get_geometry(cast[ptr StatusIcon00](self.impl), cast[var ptr gdk.Screen00](addr screen.impl), area, orientation))
-
-proc geometry*(self: StatusIcon; screen: var gdk.Screen;
-    area: var gdk.Rectangle; orientation: var Orientation): bool =
-  fnew(screen, gdk.finalizeGObject)
-  screen.ignoreFinalizer = true
-  toBool(gtk_status_icon_get_geometry(cast[ptr StatusIcon00](self.impl), cast[var ptr gdk.Screen00](addr screen.impl), area, orientation))
+proc getGeometry*(self: StatusIcon; screen: var gdk.Screen = cast[var gdk.Screen](nil);
+    area: var gdk.Rectangle = cast[var gdk.Rectangle](nil); orientation: var Orientation = cast[var Orientation](nil)): bool =
+  if addr(screen) != nil:
+    fnew(screen, gdk.finalizeGObject)
+  if addr(screen) != nil:
+    screen.ignoreFinalizer = true
+  toBool(gtk_status_icon_get_geometry(cast[ptr StatusIcon00](self.impl), cast[var ptr gdk.Screen00](if addr(screen) == nil: nil else: addr screen.impl), area, orientation))
 
 proc gtk_status_icon_get_gicon(self: ptr StatusIcon00): ptr gio.Icon00 {.
     importc, libprag.}
@@ -59611,10 +58593,20 @@ const TREE_SORTABLE_DEFAULT_SORT_COLUMN_ID* = -1'i32
 const TREE_SORTABLE_UNSORTED_SORT_COLUMN_ID* = -2'i32
 
 type
-  TableChild00* {.pure.} = object
-  TableChild* = ref object
-    impl*: ptr TableChild00
-    ignoreFinalizer*: bool
+  TableChild* {.pure, byRef.} = object
+    widget*: ptr Widget00
+    leftAttach*: uint16
+    rightAttach*: uint16
+    topAttach*: uint16
+    bottomAttach*: uint16
+    xpadding*: uint16
+    ypadding*: uint16
+    xexpand*: uint32
+    yexpand*: uint32
+    xshrink*: uint32
+    yshrink*: uint32
+    xfill*: uint32
+    yfill*: uint32
 
 type
   TableRowCol00* {.pure.} = object
@@ -59632,10 +58624,10 @@ type
   TargetFlags* {.size: sizeof(cint).} = set[TargetFlag]
 
 type
-  TargetPair00* {.pure.} = object
-  TargetPair* = ref object
-    impl*: ptr TargetPair00
-    ignoreFinalizer*: bool
+  TargetPair* {.pure, byRef.} = object
+    target*: ptr gdk.Atom
+    flags*: uint32
+    info*: uint32
 
 type
   TextAppearance00* {.pure.} = object
@@ -59651,33 +58643,29 @@ type
 
 type
   TextBufferDeserializeFunc* = proc (registerBuffer: ptr TextBuffer00; contentBuffer: ptr TextBuffer00;
-    iter: TextIter; data: uint8Array; length: uint64; createTags: gboolean;
+    iter: TextIter; data: ptr uint8; length: uint64; createTags: gboolean;
     userData: pointer; error: ptr ptr glib.Error = nil): gboolean {.cdecl.}
 
 proc gtk_text_buffer_register_deserialize_format(self: ptr TextBuffer00;
     mimeType: cstring; function: TextBufferDeserializeFunc; userData: pointer;
-    userDataDestroy: DestroyNotify): ptr gdk.Atom00 {.
+    userDataDestroy: DestroyNotify): ptr gdk.Atom {.
     importc, libprag.}
 
 proc registerDeserializeFormat*(self: TextBuffer; mimeType: cstring;
-    function: TextBufferDeserializeFunc; userData: pointer; userDataDestroy: DestroyNotify): gdk.Atom =
-  new(result)
-  result.impl = gtk_text_buffer_register_deserialize_format(cast[ptr TextBuffer00](self.impl), mimeType, function, userData, userDataDestroy)
-  result.ignoreFinalizer = true
+    function: TextBufferDeserializeFunc; userData: pointer; userDataDestroy: DestroyNotify): ptr gdk.Atom =
+  gtk_text_buffer_register_deserialize_format(cast[ptr TextBuffer00](self.impl), mimeType, function, userData, userDataDestroy)
 
 type
   TextBufferSerializeFunc* = proc (registerBuffer: ptr TextBuffer00; contentBuffer: ptr TextBuffer00;
     start: TextIter; `end`: TextIter; length: ptr uint64; userData: pointer): ptr uint8 {.cdecl.}
 
 proc gtk_text_buffer_register_serialize_format(self: ptr TextBuffer00; mimeType: cstring;
-    function: TextBufferSerializeFunc; userData: pointer; userDataDestroy: DestroyNotify): ptr gdk.Atom00 {.
+    function: TextBufferSerializeFunc; userData: pointer; userDataDestroy: DestroyNotify): ptr gdk.Atom {.
     importc, libprag.}
 
 proc registerSerializeFormat*(self: TextBuffer; mimeType: cstring;
-    function: TextBufferSerializeFunc; userData: pointer; userDataDestroy: DestroyNotify): gdk.Atom =
-  new(result)
-  result.impl = gtk_text_buffer_register_serialize_format(cast[ptr TextBuffer00](self.impl), mimeType, function, userData, userDataDestroy)
-  result.ignoreFinalizer = true
+    function: TextBufferSerializeFunc; userData: pointer; userDataDestroy: DestroyNotify): ptr gdk.Atom =
+  gtk_text_buffer_register_serialize_format(cast[ptr TextBuffer00](self.impl), mimeType, function, userData, userDataDestroy)
 
 type
   TextBufferTargetInfo* {.size: sizeof(cint), pure.} = enum
@@ -59693,7 +58681,7 @@ proc gtk_text_iter_backward_find_char(self: TextIter; pred: TextCharPredicate;
     importc, libprag.}
 
 proc backwardFindChar*(self: TextIter; pred: TextCharPredicate;
-    userData: pointer; limit: TextIter = cast[ptr TextIter](nil)[]): bool =
+    userData: pointer; limit: TextIter = cast[var TextIter](nil)): bool =
   toBool(gtk_text_iter_backward_find_char(self, pred, userData, limit))
 
 proc gtk_text_iter_forward_find_char(self: TextIter; pred: TextCharPredicate;
@@ -59701,7 +58689,7 @@ proc gtk_text_iter_forward_find_char(self: TextIter; pred: TextCharPredicate;
     importc, libprag.}
 
 proc forwardFindChar*(self: TextIter; pred: TextCharPredicate;
-    userData: pointer; limit: TextIter = cast[ptr TextIter](nil)[]): bool =
+    userData: pointer; limit: TextIter = cast[var TextIter](nil)): bool =
   toBool(gtk_text_iter_forward_find_char(self, pred, userData, limit))
 
 type
@@ -59828,11 +58816,6 @@ proc getFont*(self: ThemingEngine; state: StateFlags): pango.FontDescription =
   result.impl = gtk_theming_engine_get_font(cast[ptr ThemingEngine00](self.impl), state)
   result.ignoreFinalizer = true
 
-proc font*(self: ThemingEngine; state: StateFlags): pango.FontDescription =
-  fnew(result, gBoxedFreePangoFontDescription)
-  result.impl = gtk_theming_engine_get_font(cast[ptr ThemingEngine00](self.impl), state)
-  result.ignoreFinalizer = true
-
 proc gtk_theming_engine_get_junction_sides(self: ptr ThemingEngine00): JunctionSides {.
     importc, libprag.}
 
@@ -59946,7 +58929,7 @@ proc gtk_theming_engine_has_region(self: ptr ThemingEngine00; styleRegion: cstri
     importc, libprag.}
 
 proc hasRegion*(self: ThemingEngine; styleRegion: cstring;
-    flags: var RegionFlags): bool =
+    flags: var RegionFlags = cast[var RegionFlags](nil)): bool =
   toBool(gtk_theming_engine_has_region(cast[ptr ThemingEngine00](self.impl), styleRegion, flags))
 
 proc gtk_theming_engine_lookup_color(self: ptr ThemingEngine00; colorName: cstring;
@@ -60110,14 +59093,14 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc gtk_toplevel_accessible_get_children(self: ptr ToplevelAccessible00): ptr pointer {.
+proc gtk_toplevel_accessible_get_children(self: ptr ToplevelAccessible00): ptr glib.List {.
     importc, libprag.}
 
-proc getChildren*(self: ToplevelAccessible): ptr pointer =
-  gtk_toplevel_accessible_get_children(cast[ptr ToplevelAccessible00](self.impl))
+proc getChildren*(self: ToplevelAccessible): seq[Window] =
+  result = glistObjects2seq(Window, gtk_toplevel_accessible_get_children(cast[ptr ToplevelAccessible00](self.impl)), false)
 
-proc children*(self: ToplevelAccessible): ptr pointer =
-  gtk_toplevel_accessible_get_children(cast[ptr ToplevelAccessible00](self.impl))
+proc children*(self: ToplevelAccessible): seq[Window] =
+  result = glistObjects2seq(Window, gtk_toplevel_accessible_get_children(cast[ptr ToplevelAccessible00](self.impl)), false)
 
 type
   TranslateFunc* = proc (path: cstring; funcData: pointer): cstring {.cdecl.}
@@ -60218,11 +59201,11 @@ type
     data: pointer) {.cdecl.}
 
 proc gtk_tree_model_filter_set_modify_func(self: ptr TreeModelFilter00; nColumns: int32;
-    types: GTypeArray; `func`: TreeModelFilterModifyFunc; data: pointer; destroy: DestroyNotify) {.
+    types: ptr GType; `func`: TreeModelFilterModifyFunc; data: pointer; destroy: DestroyNotify) {.
     importc, libprag.}
 
 proc setModifyFunc*(self: TreeModelFilter; nColumns: int;
-    types: GTypeArray; `func`: TreeModelFilterModifyFunc; data: pointer; destroy: DestroyNotify) =
+    types: ptr GType; `func`: TreeModelFilterModifyFunc; data: pointer; destroy: DestroyNotify) =
   gtk_tree_model_filter_set_modify_func(cast[ptr TreeModelFilter00](self.impl), int32(nColumns), types, `func`, data, destroy)
 
 type
@@ -60264,6 +59247,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(gtk_tree_row_reference_get_type(), cast[ptr TreeRowReference00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var TreeRowReference) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGtkTreeRowReference)
 
 proc gtk_tree_row_reference_free(self: ptr TreeRowReference00) {.
     importc, libprag.}
@@ -60429,15 +59418,10 @@ proc gtk_tree_sortable_get_sort_column_id(self: ptr TreeSortable00; sortColumnId
 
 proc getSortColumnId*(self: TreeSortable | TreeModelSort | ListStore | TreeStore;
     sortColumnId: var int; order: var SortType): bool =
-  var sortColumnId_00 = int32(sortColumnId)
+  var sortColumnId_00: int32
   result = toBool(gtk_tree_sortable_get_sort_column_id(cast[ptr TreeSortable00](self.impl), sortColumnId_00, order))
-  sortColumnId = int(sortColumnId_00)
-
-proc sortColumnId*(self: TreeSortable | TreeModelSort | ListStore | TreeStore;
-    sortColumnId: var int; order: var SortType): bool =
-  var sortColumnId_00 = int32(sortColumnId)
-  result = toBool(gtk_tree_sortable_get_sort_column_id(cast[ptr TreeSortable00](self.impl), sortColumnId_00, order))
-  sortColumnId = int(sortColumnId_00)
+  if sortColumnId.addr != nil:
+    sortColumnId = int(sortColumnId_00)
 
 proc gtk_tree_sortable_has_default_sort_func(self: ptr TreeSortable00): gboolean {.
     importc, libprag.}
@@ -60553,11 +59537,11 @@ proc gtk_accel_groups_activate(`object`: ptr gobject.Object00; accelKey: uint32;
 proc accelGroupsActivate*(`object`: gobject.Object; accelKey: int; accelMods: gdk.ModifierType): bool =
   toBool(gtk_accel_groups_activate(cast[ptr gobject.Object00](`object`.impl), uint32(accelKey), accelMods))
 
-proc gtk_accel_groups_from_object(`object`: ptr gobject.Object00): ptr pointer {.
+proc gtk_accel_groups_from_object(`object`: ptr gobject.Object00): ptr glib.SList {.
     importc, libprag.}
 
-proc accelGroupsFromObject*(`object`: gobject.Object): ptr pointer =
-  gtk_accel_groups_from_object(cast[ptr gobject.Object00](`object`.impl))
+proc accelGroupsFromObject*(`object`: gobject.Object): seq[AccelGroup] =
+  result = gslistObjects2seq(AccelGroup, gtk_accel_groups_from_object(cast[ptr gobject.Object00](`object`.impl)), false)
 
 proc acceleratorGetDefaultModMask*(): gdk.ModifierType {.
     importc: "gtk_accelerator_get_default_mod_mask", libprag.}
@@ -60602,11 +59586,12 @@ proc gtk_accelerator_parse(accelerator: cstring; acceleratorKey: var uint32;
     acceleratorMods: var gdk.ModifierType) {.
     importc, libprag.}
 
-proc acceleratorParse*(accelerator: cstring; acceleratorKey: var int;
-    acceleratorMods: var gdk.ModifierType) =
-  var acceleratorKey_00 = uint32(acceleratorKey)
+proc acceleratorParse*(accelerator: cstring; acceleratorKey: var int = cast[var int](nil);
+    acceleratorMods: var gdk.ModifierType = cast[var gdk.ModifierType](nil)) =
+  var acceleratorKey_00: uint32
   gtk_accelerator_parse(accelerator, acceleratorKey_00, acceleratorMods)
-  acceleratorKey = int(acceleratorKey_00)
+  if acceleratorKey.addr != nil:
+    acceleratorKey = int(acceleratorKey_00)
 
 proc acceleratorSetDefaultModMask*(defaultModMask: gdk.ModifierType) {.
     importc: "gtk_accelerator_set_default_mod_mask", libprag.}
@@ -60675,12 +59660,12 @@ proc disableSetlocale*() {.
     importc: "gtk_disable_setlocale", libprag.}
 
 proc gtk_distribute_natural_allocation(extraSpace: int32; nRequestedSizes: uint32;
-    sizes: ptr RequestedSize00): int32 {.
+    sizes: RequestedSize): int32 {.
     importc, libprag.}
 
 proc distributeNaturalAllocation*(extraSpace: int; nRequestedSizes: int;
     sizes: RequestedSize): int =
-  int(gtk_distribute_natural_allocation(int32(extraSpace), uint32(nRequestedSizes), cast[ptr RequestedSize00](sizes.impl)))
+  int(gtk_distribute_natural_allocation(int32(extraSpace), uint32(nRequestedSizes), sizes))
 
 proc gtk_drag_cancel(context: ptr gdk.DragContext00) {.
     importc, libprag.}
@@ -60796,9 +59781,6 @@ proc gtk_get_binary_age(): uint32 {.
 proc getBinaryAge*(): int =
   int(gtk_get_binary_age())
 
-proc binaryAge*(): int =
-  int(gtk_get_binary_age())
-
 proc gtk_get_current_event(): ptr gdk.Event00 {.
     importc, libprag.}
 
@@ -60809,35 +59791,10 @@ proc getCurrentEvent*(): gdk.Event =
   fnew(result, gBoxedFreeGdkEvent)
   result.impl = impl0
 
-proc currentEvent*(): gdk.Event =
-  let impl0 = gtk_get_current_event()
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreeGdkEvent)
-  result.impl = impl0
-
 proc gtk_get_current_event_device(): ptr gdk.Device00 {.
     importc, libprag.}
 
 proc getCurrentEventDevice*(): gdk.Device =
-  let gobj = gtk_get_current_event_device()
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc currentEventDevice*(): gdk.Device =
   let gobj = gtk_get_current_event_device()
   if gobj.isNil:
     return nil
@@ -60870,27 +59827,16 @@ proc gtk_get_current_event_time(): uint32 {.
 proc getCurrentEventTime*(): int =
   int(gtk_get_current_event_time())
 
-proc currentEventTime*(): int =
-  int(gtk_get_current_event_time())
-
 proc gtk_get_debug_flags(): uint32 {.
     importc, libprag.}
 
 proc getDebugFlags*(): int =
   int(gtk_get_debug_flags())
 
-proc debugFlags*(): int =
-  int(gtk_get_debug_flags())
-
 proc gtk_get_default_language(): ptr pango.Language00 {.
     importc, libprag.}
 
 proc getDefaultLanguage*(): pango.Language =
-  fnew(result, gBoxedFreePangoLanguage)
-  result.impl = gtk_get_default_language()
-  result.ignoreFinalizer = true
-
-proc defaultLanguage*(): pango.Language =
   fnew(result, gBoxedFreePangoLanguage)
   result.impl = gtk_get_default_language()
   result.ignoreFinalizer = true
@@ -60940,13 +59886,7 @@ proc gtk_get_interface_age(): uint32 {.
 proc getInterfaceAge*(): int =
   int(gtk_get_interface_age())
 
-proc interfaceAge*(): int =
-  int(gtk_get_interface_age())
-
 proc getLocaleDirection*(): TextDirection {.
-    importc: "gtk_get_locale_direction", libprag.}
-
-proc localeDirection*(): TextDirection {.
     importc: "gtk_get_locale_direction", libprag.}
 
 proc gtk_get_major_version(): uint32 {.
@@ -60955,25 +59895,16 @@ proc gtk_get_major_version(): uint32 {.
 proc getMajorVersion*(): int =
   int(gtk_get_major_version())
 
-proc majorVersion*(): int =
-  int(gtk_get_major_version())
-
 proc gtk_get_micro_version(): uint32 {.
     importc, libprag.}
 
 proc getMicroVersion*(): int =
   int(gtk_get_micro_version())
 
-proc microVersion*(): int =
-  int(gtk_get_micro_version())
-
 proc gtk_get_minor_version(): uint32 {.
     importc, libprag.}
 
 proc getMinorVersion*(): int =
-  int(gtk_get_minor_version())
-
-proc minorVersion*(): int =
   int(gtk_get_minor_version())
 
 proc gtk_get_option_group(openDefaultDisplay: gboolean): ptr glib.OptionGroup00 {.
@@ -61008,7 +59939,7 @@ proc grabGetCurrent*(): Widget =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_init(argc: var int32; argv: var cstringArray) {.
+proc gtk_init(argc: var int32; argv: var ptr cstring) {.
     importc, libprag.}
 
 proc init*(argc: var int; argv: var seq[string]) =
@@ -61020,7 +59951,7 @@ proc init*(argc: var int; argv: var seq[string]) =
   argc = int(argc_00)
   argv = cstringArrayToSeq(argv_00)
 
-proc gtk_init_check(argc: var int32; argv: var cstringArray): gboolean {.
+proc gtk_init_check(argc: var int32; argv: var ptr cstring): gboolean {.
     importc, libprag.}
 
 proc initCheck*(argc: var int; argv: var seq[string]): bool =
@@ -61032,12 +59963,12 @@ proc initCheck*(argc: var int; argv: var seq[string]): bool =
   argc = int(argc_00)
   argv = cstringArrayToSeq(argv_00)
 
-proc gtk_init_with_args(argc: var int32; argv: var cstringArray; parameterString: cstring;
-    entries: glib.OptionEntry00Array; translationDomain: cstring; error: ptr ptr glib.Error = nil): gboolean {.
+proc gtk_init_with_args(argc: var int32; argv: var ptr cstring; parameterString: cstring;
+    entries: ptr glib.OptionEntry; translationDomain: cstring; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc initWithArgs*(argc: var int; argv: var seq[string]; parameterString: cstring = "";
-    entries: glib.OptionEntry00Array; translationDomain: cstring = ""): bool =
+    entries: ptr glib.OptionEntry; translationDomain: cstring = ""): bool =
   var gerror: ptr glib.Error
   var argc_00 = int32(argc)
   var fs469n23x: array[256, pointer]
@@ -61284,7 +60215,7 @@ proc paintVline*(style: Style; cr: cairo.Context; stateType: StateType;
     widget: Widget = nil; detail: cstring = ""; y1: int; y2: int; x: int) =
   gtk_paint_vline(cast[ptr Style00](style.impl), cast[ptr cairo.Context00](cr.impl), stateType, if widget.isNil: nil else: cast[ptr Widget00](widget.impl), safeStringToCString(detail), int32(y1), int32(y2), int32(x))
 
-proc gtk_parse_args(argc: var int32; argv: var cstringArray): gboolean {.
+proc gtk_parse_args(argc: var int32; argv: var ptr cstring): gboolean {.
     importc, libprag.}
 
 proc parseArgs*(argc: var int; argv: var seq[string]): bool =
@@ -61353,7 +60284,7 @@ proc rcFindPixmapInPath*(settings: Settings; scanner: glib.Scanner;
   result = $resul0
   cogfree(resul0)
 
-proc gtk_rc_get_default_files(): cstringArray {.
+proc gtk_rc_get_default_files(): ptr cstring {.
     importc, libprag.}
 
 proc rcGetDefaultFiles*(): seq[string] =
@@ -61483,7 +60414,7 @@ proc gtk_rc_reset_styles(settings: ptr Settings00) {.
 proc rcResetStyles*(settings: Settings) =
   gtk_rc_reset_styles(cast[ptr Settings00](settings.impl))
 
-proc gtk_rc_set_default_files(filenames: cstringArray) {.
+proc gtk_rc_set_default_files(filenames: ptr cstring) {.
     importc, libprag.}
 
 proc rcSetDefaultFiles*(filenames: varargs[string, `$`]) =
@@ -61662,52 +60593,51 @@ proc rgbToHsv*(r: cdouble; g: cdouble; b: cdouble; h: var cdouble; s: var cdoubl
     v: var cdouble) {.
     importc: "gtk_rgb_to_hsv", libprag.}
 
-proc gtk_selection_add_target(widget: ptr Widget00; selection: ptr gdk.Atom00;
-    target: ptr gdk.Atom00; info: uint32) {.
+proc gtk_selection_add_target(widget: ptr Widget00; selection: gdk.Atom;
+    target: gdk.Atom; info: uint32) {.
     importc, libprag.}
 
 proc selectionAddTarget*(widget: Widget; selection: gdk.Atom; target: gdk.Atom;
     info: int) =
-  gtk_selection_add_target(cast[ptr Widget00](widget.impl), cast[ptr gdk.Atom00](selection.impl), cast[ptr gdk.Atom00](target.impl), uint32(info))
+  gtk_selection_add_target(cast[ptr Widget00](widget.impl), selection, target, uint32(info))
 
-proc gtk_selection_add_targets(widget: ptr Widget00; selection: ptr gdk.Atom00;
-    targets: TargetEntry00Array; ntargets: uint32) {.
+proc gtk_selection_add_targets(widget: ptr Widget00; selection: gdk.Atom;
+    targets: ptr TargetEntry00; ntargets: uint32) {.
     importc, libprag.}
 
 proc selectionAddTargets*(widget: Widget; selection: gdk.Atom; targets: seq[TargetEntry]) =
   let ntargets = int(targets.len)
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
-  gtk_selection_add_targets(cast[ptr Widget00](widget.impl), cast[ptr gdk.Atom00](selection.impl), seq2TargetEntryArray(targets, fs469n23), uint32(ntargets))
+  gtk_selection_add_targets(cast[ptr Widget00](widget.impl), selection, seq2TargetEntryArray(targets, fs469n23), uint32(ntargets))
 
-proc gtk_selection_clear_targets(widget: ptr Widget00; selection: ptr gdk.Atom00) {.
+proc gtk_selection_clear_targets(widget: ptr Widget00; selection: gdk.Atom) {.
     importc, libprag.}
 
 proc selectionClearTargets*(widget: Widget; selection: gdk.Atom) =
-  gtk_selection_clear_targets(cast[ptr Widget00](widget.impl), cast[ptr gdk.Atom00](selection.impl))
+  gtk_selection_clear_targets(cast[ptr Widget00](widget.impl), selection)
 
-proc gtk_selection_convert(widget: ptr Widget00; selection: ptr gdk.Atom00;
-    target: ptr gdk.Atom00; time: uint32): gboolean {.
+proc gtk_selection_convert(widget: ptr Widget00; selection: gdk.Atom; target: gdk.Atom;
+    time: uint32): gboolean {.
     importc, libprag.}
 
 proc selectionConvert*(widget: Widget; selection: gdk.Atom; target: gdk.Atom;
     time: int): bool =
-  toBool(gtk_selection_convert(cast[ptr Widget00](widget.impl), cast[ptr gdk.Atom00](selection.impl), cast[ptr gdk.Atom00](target.impl), uint32(time)))
+  toBool(gtk_selection_convert(cast[ptr Widget00](widget.impl), selection, target, uint32(time)))
 
-proc gtk_selection_owner_set(widget: ptr Widget00; selection: ptr gdk.Atom00;
-    time: uint32): gboolean {.
+proc gtk_selection_owner_set(widget: ptr Widget00; selection: gdk.Atom; time: uint32): gboolean {.
     importc, libprag.}
 
 proc selectionOwnerSet*(widget: Widget = nil; selection: gdk.Atom; time: int): bool =
-  toBool(gtk_selection_owner_set(if widget.isNil: nil else: cast[ptr Widget00](widget.impl), cast[ptr gdk.Atom00](selection.impl), uint32(time)))
+  toBool(gtk_selection_owner_set(if widget.isNil: nil else: cast[ptr Widget00](widget.impl), selection, uint32(time)))
 
 proc gtk_selection_owner_set_for_display(display: ptr gdk.Display00; widget: ptr Widget00;
-    selection: ptr gdk.Atom00; time: uint32): gboolean {.
+    selection: gdk.Atom; time: uint32): gboolean {.
     importc, libprag.}
 
 proc selectionOwnerSetForDisplay*(display: gdk.Display; widget: Widget = nil;
     selection: gdk.Atom; time: int): bool =
-  toBool(gtk_selection_owner_set_for_display(cast[ptr gdk.Display00](display.impl), if widget.isNil: nil else: cast[ptr Widget00](widget.impl), cast[ptr gdk.Atom00](selection.impl), uint32(time)))
+  toBool(gtk_selection_owner_set_for_display(cast[ptr gdk.Display00](display.impl), if widget.isNil: nil else: cast[ptr Widget00](widget.impl), selection, uint32(time)))
 
 proc gtk_selection_remove_all(widget: ptr Widget00) {.
     importc, libprag.}
@@ -61720,9 +60650,6 @@ proc gtk_set_debug_flags(flags: uint32) {.
 
 proc setDebugFlags*(flags: int) =
   gtk_set_debug_flags(uint32(flags))
-
-proc `debugFlags=`*(flags: uint32) {.
-    importc: "gtk_set_debug_flags", libprag.}
 
 proc gtk_show_uri(screen: ptr gdk.Screen00; uri: cstring; timestamp: uint32;
     error: ptr ptr glib.Error = nil): gboolean {.
@@ -61750,19 +60677,19 @@ proc showUriOnWindow*(parent: Window = nil; uri: cstring; timestamp: int): bool 
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc gtk_stock_add(items: StockItemArray; nItems: uint32) {.
+proc gtk_stock_add(items: ptr StockItem; nItems: uint32) {.
     importc, libprag.}
 
-proc stockAdd*(items: StockItemArray; nItems: int) =
+proc stockAdd*(items: ptr StockItem; nItems: int) =
   gtk_stock_add(items, uint32(nItems))
 
-proc gtk_stock_add_static(items: StockItemArray; nItems: uint32) {.
+proc gtk_stock_add_static(items: ptr StockItem; nItems: uint32) {.
     importc, libprag.}
 
-proc stockAddStatic*(items: StockItemArray; nItems: int) =
+proc stockAddStatic*(items: ptr StockItem; nItems: int) =
   gtk_stock_add_static(items, uint32(nItems))
 
-proc stockListIds*(): ptr pointer {.
+proc stockListIds*(): ptr glib.SList {.
     importc: "gtk_stock_list_ids", libprag.}
 
 proc gtk_stock_lookup(stockId: cstring; item: var StockItem): gboolean {.
@@ -61775,7 +60702,7 @@ proc stockSetTranslateFunc*(domain: cstring; `func`: TranslateFunc;
     data: pointer; notify: DestroyNotify) {.
     importc: "gtk_stock_set_translate_func", libprag.}
 
-proc gtk_target_table_free(targets: TargetEntry00Array; nTargets: int32) {.
+proc gtk_target_table_free(targets: ptr TargetEntry00; nTargets: int32) {.
     importc, libprag.}
 
 proc targetTableFree*(targets: seq[TargetEntry]) =
@@ -61784,42 +60711,43 @@ proc targetTableFree*(targets: seq[TargetEntry]) =
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   gtk_target_table_free(seq2TargetEntryArray(targets, fs469n23), int32(nTargets))
 
-proc gtk_target_table_new_from_list(list: ptr TargetList00; nTargets: var int32): TargetEntry00Array {.
+proc gtk_target_table_new_from_list(list: ptr TargetList00; nTargets: var int32): ptr TargetEntry00 {.
     importc, libprag.}
 
 proc targetTableNewFromList*(list: TargetList; nTargets: var int): seq[TargetEntry] =
-  var nTargets_00 = int32(nTargets)
+  var nTargets_00: int32
   let resul0 = gtk_target_table_new_from_list(cast[ptr TargetList00](list.impl), nTargets_00)
   result = targetEntryArrayToSeq(resul0, nTargets_00.int)
   cogfree(resul0)
-  nTargets = int(nTargets_00)
+  if nTargets.addr != nil:
+    nTargets = int(nTargets_00)
 
-proc gtk_targets_include_image(targets: ptr gdk.Atom00Array; nTargets: int32;
+proc gtk_targets_include_image(targets: ptr ptr gdk.Atom; nTargets: int32;
     writable: gboolean): gboolean {.
     importc, libprag.}
 
-proc targetsIncludeImage*(targets: ptr gdk.Atom00Array; nTargets: int;
+proc targetsIncludeImage*(targets: ptr ptr gdk.Atom; nTargets: int;
     writable: bool): bool =
   toBool(gtk_targets_include_image(targets, int32(nTargets), gboolean(writable)))
 
-proc gtk_targets_include_rich_text(targets: ptr gdk.Atom00Array; nTargets: int32;
+proc gtk_targets_include_rich_text(targets: ptr ptr gdk.Atom; nTargets: int32;
     buffer: ptr TextBuffer00): gboolean {.
     importc, libprag.}
 
-proc targetsIncludeRichText*(targets: ptr gdk.Atom00Array; nTargets: int;
+proc targetsIncludeRichText*(targets: ptr ptr gdk.Atom; nTargets: int;
     buffer: TextBuffer): bool =
   toBool(gtk_targets_include_rich_text(targets, int32(nTargets), cast[ptr TextBuffer00](buffer.impl)))
 
-proc gtk_targets_include_text(targets: ptr gdk.Atom00Array; nTargets: int32): gboolean {.
+proc gtk_targets_include_text(targets: ptr ptr gdk.Atom; nTargets: int32): gboolean {.
     importc, libprag.}
 
-proc targetsIncludeText*(targets: ptr gdk.Atom00Array; nTargets: int): bool =
+proc targetsIncludeText*(targets: ptr ptr gdk.Atom; nTargets: int): bool =
   toBool(gtk_targets_include_text(targets, int32(nTargets)))
 
-proc gtk_targets_include_uri(targets: ptr gdk.Atom00Array; nTargets: int32): gboolean {.
+proc gtk_targets_include_uri(targets: ptr ptr gdk.Atom; nTargets: int32): gboolean {.
     importc, libprag.}
 
-proc targetsIncludeUri*(targets: ptr gdk.Atom00Array; nTargets: int): bool =
+proc targetsIncludeUri*(targets: ptr ptr gdk.Atom; nTargets: int): bool =
   toBool(gtk_targets_include_uri(targets, int32(nTargets)))
 
 proc gtk_test_create_simple_window(windowTitle: cstring; dialogText: cstring): ptr Widget00 {.
@@ -61900,13 +60828,14 @@ proc testFindWidget*(widget: Widget; labelPattern: cstring; widgetType: GType): 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_test_list_all_types(nTypes: var uint32): GTypeArray {.
+proc gtk_test_list_all_types(nTypes: var uint32): ptr GType {.
     importc, libprag.}
 
-proc testListAllTypes*(nTypes: var int): GTypeArray =
-  var nTypes_00 = uint32(nTypes)
+proc testListAllTypes*(nTypes: var int): ptr GType =
+  var nTypes_00: uint32
   result = gtk_test_list_all_types(nTypes_00)
-  nTypes = int(nTypes_00)
+  if nTypes.addr != nil:
+    nTypes = int(nTypes_00)
 
 proc testRegisterAllTypes*() {.
     importc: "gtk_test_register_all_types", libprag.}
@@ -61966,12 +60895,15 @@ proc gtk_tree_get_row_drag_data(selectionData: ptr SelectionData00; treeModel: v
     path: var ptr TreePath00): gboolean {.
     importc, libprag.}
 
-proc treeGetRowDragData*(selectionData: SelectionData; treeModel: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore);
-    path: var TreePath): bool =
-  new(treeModel)
-  treeModel.ignoreFinalizer = true
-  fnew(path, gBoxedFreeGtkTreePath)
-  toBool(gtk_tree_get_row_drag_data(cast[ptr SelectionData00](selectionData.impl), cast[var ptr TreeModel00](addr treeModel.impl), cast[var ptr TreePath00](addr path.impl)))
+proc treeGetRowDragData*(selectionData: SelectionData; treeModel: var (TreeModel | TreeModelSort | ListStore | TreeModelFilter | TreeStore) = cast[var TreeModel](nil);
+    path: var TreePath = cast[var TreePath](nil)): bool =
+  if addr(treeModel) != nil:
+    new(treeModel)
+  if addr(treeModel) != nil:
+    treeModel.ignoreFinalizer = true
+  if addr(path) != nil:
+    fnew(path, gBoxedFreeGtkTreePath)
+  toBool(gtk_tree_get_row_drag_data(cast[ptr SelectionData00](selectionData.impl), cast[var ptr TreeModel00](if addr(treeModel) == nil: nil else: addr treeModel.impl), cast[var ptr TreePath00](if addr(path) == nil: nil else: addr path.impl)))
 
 proc gtk_tree_set_row_drag_data(selectionData: ptr SelectionData00; treeModel: ptr TreeModel00;
     path: ptr TreePath00): gboolean {.
@@ -62308,6 +61240,10 @@ proc implementorIface*(x: gtk.PlacesSidebar): atk.ImplementorIface = cast[atk.Im
 
 proc implementorIface*(x: gtk.Plug): atk.ImplementorIface = cast[atk.ImplementorIface](x)
 
+proc component*(x: gtk.PlugAccessible): atk.Component = cast[atk.Component](x)
+
+proc window*(x: gtk.PlugAccessible): atk.Window = cast[atk.Window](x)
+
 proc implementorIface*(x: gtk.Popover): atk.ImplementorIface = cast[atk.ImplementorIface](x)
 
 proc component*(x: gtk.PopoverAccessible): atk.Component = cast[atk.Component](x)
@@ -62401,6 +61337,8 @@ proc implementorIface*(x: gtk.ShortcutsShortcut): atk.ImplementorIface = cast[at
 proc implementorIface*(x: gtk.ShortcutsWindow): atk.ImplementorIface = cast[atk.ImplementorIface](x)
 
 proc implementorIface*(x: gtk.Socket): atk.ImplementorIface = cast[atk.ImplementorIface](x)
+
+proc component*(x: gtk.SocketAccessible): atk.Component = cast[atk.Component](x)
 
 proc implementorIface*(x: gtk.SpinButton): atk.ImplementorIface = cast[atk.ImplementorIface](x)
 
@@ -62518,11 +61456,15 @@ proc mainQuit*(w: Window) = mainQuit()
 
 proc init* =
   var argc: int32 = 0
-  var argv: cstringArray = nil
+  #var argv: cstringArray = nil
+  var argv: ptr cstring = nil
   gtk_init(argc,  argv)
 
 #proc loadFromData*(self: CssProvider; data: cstring): bool =
 #  loadFromData(self, uint8Array(data), -1)
+
+proc addAction*(self: ApplicationWindow; action: Action | PropertyAction | SimpleAction) =
+  g_action_map_add_action(cast[ptr ActionMap00](self.impl), cast[ptr Action00](action.impl))
 
 proc gtk_file_chooser_dialog_new*(title: cstring; parent: ptr Window00; action: FileChooserAction; 
     firstButtonText: cstring = nil): ptr FileChooserDialog00 {.varargs,
@@ -62565,7 +61507,8 @@ import macros, strutils
 #include gimpl
 
 include gisup3
-include gimpl
+include gimplgobj
+include gimplgtk
 proc getAboutDialog*(builder: Builder; name: string): AboutDialog =
   let gt = gtk_about_dialog_get_type()
   assert(gt != g_type_invalid_get_type())
@@ -62578,7 +61521,9 @@ proc getAboutDialog*(builder: Builder; name: string): AboutDialog =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62595,7 +61540,9 @@ proc getAccelLabel*(builder: Builder; name: string): AccelLabel =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62612,7 +61559,9 @@ proc getAction*(builder: Builder; name: string): Action =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62629,7 +61578,9 @@ proc getActionBar*(builder: Builder; name: string): ActionBar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62646,7 +61597,9 @@ proc getActionGroup*(builder: Builder; name: string): ActionGroup =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62663,7 +61616,9 @@ proc getAlignment*(builder: Builder; name: string): Alignment =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62680,7 +61635,9 @@ proc getAppChooserButton*(builder: Builder; name: string): AppChooserButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62697,7 +61654,9 @@ proc getAppChooserDialog*(builder: Builder; name: string): AppChooserDialog =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62714,7 +61673,9 @@ proc getAppChooserWidget*(builder: Builder; name: string): AppChooserWidget =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62731,7 +61692,9 @@ proc getApplicationWindow*(builder: Builder; name: string): ApplicationWindow =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62748,7 +61711,9 @@ proc getArrow*(builder: Builder; name: string): Arrow =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62765,7 +61730,9 @@ proc getAspectFrame*(builder: Builder; name: string): AspectFrame =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62782,7 +61749,9 @@ proc getAssistant*(builder: Builder; name: string): Assistant =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62799,7 +61768,9 @@ proc getBin*(builder: Builder; name: string): Bin =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62816,7 +61787,9 @@ proc getBox*(builder: Builder; name: string): Box =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62833,7 +61806,9 @@ proc getButton*(builder: Builder; name: string): Button =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62850,7 +61825,9 @@ proc getButtonBox*(builder: Builder; name: string): ButtonBox =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62867,7 +61844,9 @@ proc getCalendar*(builder: Builder; name: string): Calendar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62884,7 +61863,9 @@ proc getCellArea*(builder: Builder; name: string): CellArea =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62901,7 +61882,9 @@ proc getCellAreaBox*(builder: Builder; name: string): CellAreaBox =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62918,7 +61901,9 @@ proc getCellView*(builder: Builder; name: string): CellView =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62935,7 +61920,9 @@ proc getCheckButton*(builder: Builder; name: string): CheckButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62952,7 +61939,9 @@ proc getCheckMenuItem*(builder: Builder; name: string): CheckMenuItem =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62969,7 +61958,9 @@ proc getColorButton*(builder: Builder; name: string): ColorButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -62986,7 +61977,9 @@ proc getColorChooserDialog*(builder: Builder; name: string): ColorChooserDialog 
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63003,7 +61996,9 @@ proc getColorChooserWidget*(builder: Builder; name: string): ColorChooserWidget 
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63020,7 +62015,9 @@ proc getColorSelection*(builder: Builder; name: string): ColorSelection =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63037,7 +62034,9 @@ proc getColorSelectionDialog*(builder: Builder; name: string): ColorSelectionDia
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63054,7 +62053,9 @@ proc getComboBox*(builder: Builder; name: string): ComboBox =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63071,7 +62072,9 @@ proc getComboBoxText*(builder: Builder; name: string): ComboBoxText =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63088,7 +62091,9 @@ proc getContainer*(builder: Builder; name: string): Container =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63105,7 +62110,9 @@ proc getDialog*(builder: Builder; name: string): Dialog =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63122,7 +62129,9 @@ proc getDrawingArea*(builder: Builder; name: string): DrawingArea =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63139,7 +62148,9 @@ proc getEntry*(builder: Builder; name: string): Entry =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63156,7 +62167,9 @@ proc getEntryCompletion*(builder: Builder; name: string): EntryCompletion =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63173,7 +62186,9 @@ proc getEventBox*(builder: Builder; name: string): EventBox =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63190,7 +62205,9 @@ proc getExpander*(builder: Builder; name: string): Expander =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63207,7 +62224,9 @@ proc getFileChooserButton*(builder: Builder; name: string): FileChooserButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63224,7 +62243,9 @@ proc getFileChooserDialog*(builder: Builder; name: string): FileChooserDialog =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63241,7 +62262,9 @@ proc getFileChooserWidget*(builder: Builder; name: string): FileChooserWidget =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63258,7 +62281,9 @@ proc getFileFilter*(builder: Builder; name: string): FileFilter =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63275,7 +62300,9 @@ proc getFixed*(builder: Builder; name: string): Fixed =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63292,7 +62319,9 @@ proc getFlowBox*(builder: Builder; name: string): FlowBox =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63309,7 +62338,9 @@ proc getFlowBoxChild*(builder: Builder; name: string): FlowBoxChild =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63326,7 +62357,9 @@ proc getFontButton*(builder: Builder; name: string): FontButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63343,7 +62376,9 @@ proc getFontChooserDialog*(builder: Builder; name: string): FontChooserDialog =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63360,7 +62395,9 @@ proc getFontChooserWidget*(builder: Builder; name: string): FontChooserWidget =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63377,7 +62414,9 @@ proc getFontSelection*(builder: Builder; name: string): FontSelection =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63394,7 +62433,9 @@ proc getFontSelectionDialog*(builder: Builder; name: string): FontSelectionDialo
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63411,7 +62452,9 @@ proc getFrame*(builder: Builder; name: string): Frame =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63428,7 +62471,9 @@ proc getGLArea*(builder: Builder; name: string): GLArea =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63445,7 +62490,9 @@ proc getGrid*(builder: Builder; name: string): Grid =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63462,7 +62509,9 @@ proc getHBox*(builder: Builder; name: string): HBox =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63479,7 +62528,9 @@ proc getHButtonBox*(builder: Builder; name: string): HButtonBox =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63496,7 +62547,9 @@ proc getHPaned*(builder: Builder; name: string): HPaned =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63513,7 +62566,9 @@ proc getHSV*(builder: Builder; name: string): HSV =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63530,7 +62585,9 @@ proc getHScale*(builder: Builder; name: string): HScale =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63547,7 +62604,9 @@ proc getHScrollbar*(builder: Builder; name: string): HScrollbar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63564,7 +62623,9 @@ proc getHSeparator*(builder: Builder; name: string): HSeparator =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63581,7 +62642,9 @@ proc getHandleBox*(builder: Builder; name: string): HandleBox =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63598,7 +62661,9 @@ proc getHeaderBar*(builder: Builder; name: string): HeaderBar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63615,7 +62680,9 @@ proc getIconFactory*(builder: Builder; name: string): IconFactory =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63632,7 +62699,9 @@ proc getIconView*(builder: Builder; name: string): IconView =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63649,7 +62718,9 @@ proc getImage*(builder: Builder; name: string): Image =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63666,7 +62737,9 @@ proc getImageMenuItem*(builder: Builder; name: string): ImageMenuItem =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63683,7 +62756,9 @@ proc getInfoBar*(builder: Builder; name: string): InfoBar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63700,7 +62775,9 @@ proc getInvisible*(builder: Builder; name: string): Invisible =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63717,7 +62794,9 @@ proc getLabel*(builder: Builder; name: string): Label =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63734,7 +62813,9 @@ proc getLayout*(builder: Builder; name: string): Layout =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63751,7 +62832,9 @@ proc getLevelBar*(builder: Builder; name: string): LevelBar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63768,7 +62851,9 @@ proc getLinkButton*(builder: Builder; name: string): LinkButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63785,7 +62870,9 @@ proc getListBox*(builder: Builder; name: string): ListBox =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63802,7 +62889,9 @@ proc getListBoxRow*(builder: Builder; name: string): ListBoxRow =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63819,7 +62908,9 @@ proc getListStore*(builder: Builder; name: string): ListStore =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63836,7 +62927,9 @@ proc getLockButton*(builder: Builder; name: string): LockButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63853,7 +62946,9 @@ proc getMenu*(builder: Builder; name: string): Menu =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63870,7 +62965,9 @@ proc getMenuBar*(builder: Builder; name: string): MenuBar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63887,7 +62984,9 @@ proc getMenuButton*(builder: Builder; name: string): MenuButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63904,7 +63003,9 @@ proc getMenuItem*(builder: Builder; name: string): MenuItem =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63921,7 +63022,9 @@ proc getMenuShell*(builder: Builder; name: string): MenuShell =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63938,7 +63041,9 @@ proc getMenuToolButton*(builder: Builder; name: string): MenuToolButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63955,7 +63060,9 @@ proc getMessageDialog*(builder: Builder; name: string): MessageDialog =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63972,7 +63079,9 @@ proc getMisc*(builder: Builder; name: string): Misc =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -63989,7 +63098,9 @@ proc getModelButton*(builder: Builder; name: string): ModelButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64006,7 +63117,9 @@ proc getNotebook*(builder: Builder; name: string): Notebook =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64023,7 +63136,9 @@ proc getOffscreenWindow*(builder: Builder; name: string): OffscreenWindow =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64040,7 +63155,9 @@ proc getOverlay*(builder: Builder; name: string): Overlay =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64057,7 +63174,9 @@ proc getPaned*(builder: Builder; name: string): Paned =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64074,7 +63193,9 @@ proc getPlacesSidebar*(builder: Builder; name: string): PlacesSidebar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64091,7 +63212,9 @@ proc getPlug*(builder: Builder; name: string): Plug =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64108,7 +63231,9 @@ proc getPopover*(builder: Builder; name: string): Popover =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64125,7 +63250,9 @@ proc getPopoverMenu*(builder: Builder; name: string): PopoverMenu =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64142,7 +63269,9 @@ proc getProgressBar*(builder: Builder; name: string): ProgressBar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64159,7 +63288,9 @@ proc getRadioAction*(builder: Builder; name: string): RadioAction =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64176,7 +63307,9 @@ proc getRadioButton*(builder: Builder; name: string): RadioButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64193,7 +63326,9 @@ proc getRadioMenuItem*(builder: Builder; name: string): RadioMenuItem =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64210,7 +63345,9 @@ proc getRadioToolButton*(builder: Builder; name: string): RadioToolButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64227,7 +63364,9 @@ proc getRange*(builder: Builder; name: string): Range =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64244,7 +63383,9 @@ proc getRecentAction*(builder: Builder; name: string): RecentAction =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64261,7 +63402,9 @@ proc getRecentChooserDialog*(builder: Builder; name: string): RecentChooserDialo
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64278,7 +63421,9 @@ proc getRecentChooserMenu*(builder: Builder; name: string): RecentChooserMenu =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64295,7 +63440,9 @@ proc getRecentChooserWidget*(builder: Builder; name: string): RecentChooserWidge
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64312,7 +63459,9 @@ proc getRecentFilter*(builder: Builder; name: string): RecentFilter =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64329,7 +63478,9 @@ proc getRevealer*(builder: Builder; name: string): Revealer =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64346,7 +63497,9 @@ proc getScale*(builder: Builder; name: string): Scale =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64363,7 +63516,9 @@ proc getScaleButton*(builder: Builder; name: string): ScaleButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64380,7 +63535,9 @@ proc getScrollbar*(builder: Builder; name: string): Scrollbar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64397,7 +63554,9 @@ proc getScrolledWindow*(builder: Builder; name: string): ScrolledWindow =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64414,7 +63573,9 @@ proc getSearchBar*(builder: Builder; name: string): SearchBar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64431,7 +63592,9 @@ proc getSearchEntry*(builder: Builder; name: string): SearchEntry =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64448,7 +63611,9 @@ proc getSeparator*(builder: Builder; name: string): Separator =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64465,7 +63630,9 @@ proc getSeparatorMenuItem*(builder: Builder; name: string): SeparatorMenuItem =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64482,7 +63649,9 @@ proc getSeparatorToolItem*(builder: Builder; name: string): SeparatorToolItem =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64499,7 +63668,9 @@ proc getShortcutLabel*(builder: Builder; name: string): ShortcutLabel =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64516,7 +63687,9 @@ proc getShortcutsGroup*(builder: Builder; name: string): ShortcutsGroup =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64533,7 +63706,9 @@ proc getShortcutsSection*(builder: Builder; name: string): ShortcutsSection =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64550,7 +63725,9 @@ proc getShortcutsShortcut*(builder: Builder; name: string): ShortcutsShortcut =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64567,7 +63744,9 @@ proc getShortcutsWindow*(builder: Builder; name: string): ShortcutsWindow =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64584,7 +63763,9 @@ proc getSizeGroup*(builder: Builder; name: string): SizeGroup =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64601,7 +63782,9 @@ proc getSocket*(builder: Builder; name: string): Socket =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64618,7 +63801,9 @@ proc getSpinButton*(builder: Builder; name: string): SpinButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64635,7 +63820,9 @@ proc getSpinner*(builder: Builder; name: string): Spinner =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64652,7 +63839,9 @@ proc getStack*(builder: Builder; name: string): Stack =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64669,7 +63858,9 @@ proc getStackSidebar*(builder: Builder; name: string): StackSidebar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64686,7 +63877,9 @@ proc getStackSwitcher*(builder: Builder; name: string): StackSwitcher =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64703,7 +63896,9 @@ proc getStatusbar*(builder: Builder; name: string): Statusbar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64720,7 +63915,9 @@ proc getSwitch*(builder: Builder; name: string): Switch =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64737,7 +63934,9 @@ proc getTable*(builder: Builder; name: string): Table =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64754,7 +63953,9 @@ proc getTearoffMenuItem*(builder: Builder; name: string): TearoffMenuItem =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64771,7 +63972,9 @@ proc getTextTagTable*(builder: Builder; name: string): TextTagTable =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64788,7 +63991,9 @@ proc getTextView*(builder: Builder; name: string): TextView =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64805,7 +64010,9 @@ proc getToggleAction*(builder: Builder; name: string): ToggleAction =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64822,7 +64029,9 @@ proc getToggleButton*(builder: Builder; name: string): ToggleButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64839,7 +64048,9 @@ proc getToggleToolButton*(builder: Builder; name: string): ToggleToolButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64856,7 +64067,9 @@ proc getToolButton*(builder: Builder; name: string): ToolButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64873,7 +64086,9 @@ proc getToolItem*(builder: Builder; name: string): ToolItem =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64890,7 +64105,9 @@ proc getToolItemGroup*(builder: Builder; name: string): ToolItemGroup =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64907,7 +64124,9 @@ proc getToolPalette*(builder: Builder; name: string): ToolPalette =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64924,7 +64143,9 @@ proc getToolbar*(builder: Builder; name: string): Toolbar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64941,7 +64162,9 @@ proc getTreeStore*(builder: Builder; name: string): TreeStore =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64958,7 +64181,9 @@ proc getTreeView*(builder: Builder; name: string): TreeView =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64975,7 +64200,9 @@ proc getTreeViewColumn*(builder: Builder; name: string): TreeViewColumn =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -64992,7 +64219,9 @@ proc getUIManager*(builder: Builder; name: string): UIManager =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -65009,7 +64238,9 @@ proc getVBox*(builder: Builder; name: string): VBox =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -65026,7 +64257,9 @@ proc getVButtonBox*(builder: Builder; name: string): VButtonBox =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -65043,7 +64276,9 @@ proc getVPaned*(builder: Builder; name: string): VPaned =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -65060,7 +64295,9 @@ proc getVScale*(builder: Builder; name: string): VScale =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -65077,7 +64314,9 @@ proc getVScrollbar*(builder: Builder; name: string): VScrollbar =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -65094,7 +64333,9 @@ proc getVSeparator*(builder: Builder; name: string): VSeparator =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -65111,7 +64352,9 @@ proc getViewport*(builder: Builder; name: string): Viewport =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -65128,7 +64371,9 @@ proc getVolumeButton*(builder: Builder; name: string): VolumeButton =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -65145,7 +64390,9 @@ proc getWidget*(builder: Builder; name: string): Widget =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -65162,7 +64409,9 @@ proc getWindow*(builder: Builder; name: string): Window =
     fnew(result, gtk.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
@@ -65179,7 +64428,9 @@ proc getMenuModel*(builder: Builder; name: string): MenuModel =
     fnew(result, gio.finalizeGObject)
     result.impl = gobj
     result.ignoreFinalizer = true
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    GC_ref(result) # as following g_object_unref() call will also  execute a GC_unref(result) call
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[])) # do toggle_refs make sense at all for builder objects?
+    g_object_unref(result.impl) # new for v0.8.4 and GTK4, make close main windows working
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
   assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))

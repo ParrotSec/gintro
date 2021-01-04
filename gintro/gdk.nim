@@ -1,10 +1,11 @@
 # dependencies:
-# GObject-2.0
 # GdkPixbuf-2.0
-# Pango-1.0
-# cairo-1.0
 # GLib-2.0
+# HarfBuzz-0.0
 # GModule-2.0
+# cairo-1.0
+# GObject-2.0
+# Pango-1.0
 # Gio-2.0
 # immediate dependencies:
 # cairo-1.0
@@ -14,24 +15,9 @@
 # libraries:
 # libgdk-3.so.0
 {.warning[UnusedImport]: off.}
-import gobject, gdkpixbuf, pango, cairo, glib, gmodule, gio
+import gdkpixbuf, glib, harfbuzz, gmodule, cairo, gobject, pango, gio
 const Lib = "libgdk-3.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
-
-type
-  Atom00Array* = pointer
-  uint8Array* = pointer
-  KeymapKeyArray* = pointer
-  VisualTypeArray* = pointer
-
-type
-  RGBAArray* = pointer
-type
-  AxisUseArray* = pointer
-type
-  ColorArray* = pointer
-type
-  Point00Array* = pointer
 
 proc finalizeGObject*[T](o: ref T) =
   if not o.ignoreFinalizer:
@@ -405,17 +391,15 @@ proc vendorId*(self: Device): string =
     return
   result = $resul0
 
-proc gdk_device_list_axes(self: ptr Device00): ptr pointer {.
+proc gdk_device_list_slave_devices(self: ptr Device00): ptr glib.List {.
     importc, libprag.}
 
-proc listAxes*(self: Device): ptr pointer =
-  gdk_device_list_axes(cast[ptr Device00](self.impl))
-
-proc gdk_device_list_slave_devices(self: ptr Device00): ptr pointer {.
-    importc, libprag.}
-
-proc listSlaveDevices*(self: Device): ptr pointer =
-  gdk_device_list_slave_devices(cast[ptr Device00](self.impl))
+proc listSlaveDevices*(self: Device): seq[Device] =
+  let resul0 = gdk_device_list_slave_devices(cast[ptr Device00](self.impl))
+  if resul0.isNil:
+    return
+  result = glistObjects2seq(Device, resul0, false)
+  g_list_free(resul0)
 
 proc gdk_device_ungrab(self: ptr Device00; time: uint32) {.
     importc, libprag.}
@@ -553,24 +537,6 @@ proc gdk_display_get_default(): ptr Display00 {.
     importc, libprag.}
 
 proc getDefaultDisplay*(): Display =
-  let gobj = gdk_display_get_default()
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultDisplay*(): Display =
   let gobj = gdk_display_get_default()
   if gobj.isNil:
     return nil
@@ -740,11 +706,13 @@ proc gdk_display_get_maximal_cursor_size(self: ptr Display00; width: var uint32;
     importc, libprag.}
 
 proc getMaximalCursorSize*(self: Display; width: var int; height: var int) =
-  var width_00 = uint32(width)
-  var height_00 = uint32(height)
+  var width_00: uint32
+  var height_00: uint32
   gdk_display_get_maximal_cursor_size(cast[ptr Display00](self.impl), width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gdk_display_get_monitor(self: ptr Display00; monitorNum: int32): ptr Monitor00 {.
     importc, libprag.}
@@ -767,44 +735,10 @@ proc getMonitor*(self: Display; monitorNum: int): Monitor =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc monitor*(self: Display; monitorNum: int): Monitor =
-  let gobj = gdk_display_get_monitor(cast[ptr Display00](self.impl), int32(monitorNum))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gdk_display_get_monitor_at_point(self: ptr Display00; x: int32; y: int32): ptr Monitor00 {.
     importc, libprag.}
 
 proc getMonitorAtPoint*(self: Display; x: int; y: int): Monitor =
-  let gobj = gdk_display_get_monitor_at_point(cast[ptr Display00](self.impl), int32(x), int32(y))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc monitorAtPoint*(self: Display; x: int; y: int): Monitor =
   let gobj = gdk_display_get_monitor_at_point(cast[ptr Display00](self.impl), int32(x), int32(y))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -904,17 +838,19 @@ proc gdk_display_keyboard_ungrab(self: ptr Display00; time: uint32) {.
 proc keyboardUngrab*(self: Display; time: int) =
   gdk_display_keyboard_ungrab(cast[ptr Display00](self.impl), uint32(time))
 
-proc gdk_display_list_devices(self: ptr Display00): ptr pointer {.
+proc gdk_display_list_devices(self: ptr Display00): ptr glib.List {.
     importc, libprag.}
 
-proc listDevices*(self: Display): ptr pointer =
-  gdk_display_list_devices(cast[ptr Display00](self.impl))
+proc listDevices*(self: Display): seq[Device] =
+  result = glistObjects2seq(Device, gdk_display_list_devices(cast[ptr Display00](self.impl)), false)
 
-proc gdk_display_list_seats(self: ptr Display00): ptr pointer {.
+proc gdk_display_list_seats(self: ptr Display00): ptr glib.List {.
     importc, libprag.}
 
-proc listSeats*(self: Display): ptr pointer =
-  gdk_display_list_seats(cast[ptr Display00](self.impl))
+proc listSeats*(self: Display): seq[Seat] =
+  let resul0 = gdk_display_list_seats(cast[ptr Display00](self.impl))
+  result = glistObjects2seq(Seat, resul0, false)
+  g_list_free(resul0)
 
 proc gdk_display_notify_startup_complete(self: ptr Display00; startupId: cstring) {.
     importc, libprag.}
@@ -1249,9 +1185,6 @@ proc gdk_device_get_axis_use(self: ptr Device00; index: uint32): AxisUse {.
 proc getAxisUse*(self: Device; index: int): AxisUse =
   gdk_device_get_axis_use(cast[ptr Device00](self.impl), uint32(index))
 
-proc axisUse*(self: Device; index: int): AxisUse =
-  gdk_device_get_axis_use(cast[ptr Device00](self.impl), uint32(index))
-
 proc gdk_device_set_axis_use(self: ptr Device00; index: uint32; use: AxisUse) {.
     importc, libprag.}
 
@@ -1301,14 +1234,10 @@ proc gdk_device_get_key(self: ptr Device00; index: uint32; keyval: var uint32;
     importc, libprag.}
 
 proc getKey*(self: Device; index: int; keyval: var int; modifiers: var ModifierType): bool =
-  var keyval_00 = uint32(keyval)
+  var keyval_00: uint32
   result = toBool(gdk_device_get_key(cast[ptr Device00](self.impl), uint32(index), keyval_00, modifiers))
-  keyval = int(keyval_00)
-
-proc key*(self: Device; index: int; keyval: var int; modifiers: var ModifierType): bool =
-  var keyval_00 = uint32(keyval)
-  result = toBool(gdk_device_get_key(cast[ptr Device00](self.impl), uint32(index), keyval_00, modifiers))
-  keyval = int(keyval_00)
+  if keyval.addr != nil:
+    keyval = int(keyval_00)
 
 proc gdk_device_set_key(self: ptr Device00; index: uint32; keyval: uint32;
     modifiers: ModifierType) {.
@@ -1338,9 +1267,6 @@ proc gdk_device_set_mode(self: ptr Device00; mode: InputMode): gboolean {.
 proc setMode*(self: Device; mode: InputMode): bool =
   toBool(gdk_device_set_mode(cast[ptr Device00](self.impl), mode))
 
-proc `mode=`*(self: Device; mode: InputMode): bool =
-  toBool(gdk_device_set_mode(cast[ptr Device00](self.impl), mode))
-
 type
   SeatCapabilities* {.size: sizeof(cint), pure.} = enum
     none = 0
@@ -1360,14 +1286,13 @@ proc getCapabilities*(self: Seat): SeatCapabilities =
 proc capabilities*(self: Seat): SeatCapabilities =
   gdk_seat_get_capabilities(cast[ptr Seat00](self.impl))
 
-proc gdk_seat_get_slaves(self: ptr Seat00; capabilities: SeatCapabilities): ptr pointer {.
+proc gdk_seat_get_slaves(self: ptr Seat00; capabilities: SeatCapabilities): ptr glib.List {.
     importc, libprag.}
 
-proc getSlaves*(self: Seat; capabilities: SeatCapabilities): ptr pointer =
-  gdk_seat_get_slaves(cast[ptr Seat00](self.impl), capabilities)
-
-proc slaves*(self: Seat; capabilities: SeatCapabilities): ptr pointer =
-  gdk_seat_get_slaves(cast[ptr Seat00](self.impl), capabilities)
+proc getSlaves*(self: Seat; capabilities: SeatCapabilities): seq[Device] =
+  let resul0 = gdk_seat_get_slaves(cast[ptr Seat00](self.impl), capabilities)
+  result = glistObjects2seq(Device, resul0, false)
+  g_list_free(resul0)
 
 type
   DeviceManager* = ref object of gobject.Object
@@ -1467,11 +1392,13 @@ proc display*(self: DeviceManager): Display =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gdk_device_manager_list_devices(self: ptr DeviceManager00; `type`: DeviceType): ptr pointer {.
+proc gdk_device_manager_list_devices(self: ptr DeviceManager00; `type`: DeviceType): ptr glib.List {.
     importc, libprag.}
 
-proc listDevices*(self: DeviceManager; `type`: DeviceType): ptr pointer =
-  gdk_device_manager_list_devices(cast[ptr DeviceManager00](self.impl), `type`)
+proc listDevices*(self: DeviceManager; `type`: DeviceType): seq[Device] =
+  let resul0 = gdk_device_manager_list_devices(cast[ptr DeviceManager00](self.impl), `type`)
+  result = glistObjects2seq(Device, resul0, false)
+  g_list_free(resul0)
 
 proc gdk_display_get_device_manager(self: ptr Display00): ptr DeviceManager00 {.
     importc, libprag.}
@@ -1513,40 +1440,37 @@ proc deviceManager*(self: Display): DeviceManager =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 type
-  Atom00* {.pure.} = object
-  Atom* = ref object
-    impl*: ptr Atom00
-    ignoreFinalizer*: bool
+  Atom* {.pure, byRef.} = object
 
-proc gdk_atom_name(self: ptr Atom00): cstring {.
+proc gdk_atom_name(self: Atom): cstring {.
     importc, libprag.}
 
 proc name*(self: Atom): string =
-  let resul0 = gdk_atom_name(cast[ptr Atom00](self.impl))
+  let resul0 = gdk_atom_name(self)
   result = $resul0
   cogfree(resul0)
 
-proc gdk_atom_intern(atomName: cstring; onlyIfExists: gboolean): ptr Atom00 {.
+proc gdk_atom_intern(atomName: cstring; onlyIfExists: gboolean): ptr Atom {.
     importc, libprag.}
 
-proc intern*(atomName: cstring; onlyIfExists: bool): Atom =
-  new(result)
-  result.impl = gdk_atom_intern(atomName, gboolean(onlyIfExists))
-  result.ignoreFinalizer = true
+proc intern*(atomName: cstring; onlyIfExists: bool): ptr Atom =
+  gdk_atom_intern(atomName, gboolean(onlyIfExists))
 
-proc gdk_atom_intern_static_string(atomName: cstring): ptr Atom00 {.
+proc internStaticString*(atomName: cstring): ptr Atom {.
+    importc: "gdk_atom_intern_static_string", libprag.}
+
+proc gdk_device_list_axes(self: ptr Device00): ptr glib.List {.
     importc, libprag.}
 
-proc internStaticString*(atomName: cstring): Atom =
-  new(result)
-  result.impl = gdk_atom_intern_static_string(atomName)
-  result.ignoreFinalizer = true
+proc listAxes*(self: Device): seq[Atom] =
+  let resul0 = gdk_device_list_axes(cast[ptr Device00](self.impl))
+  g_list_free(resul0)
 
-proc gdk_display_request_selection_notification(self: ptr Display00; selection: ptr Atom00): gboolean {.
+proc gdk_display_request_selection_notification(self: ptr Display00; selection: Atom): gboolean {.
     importc, libprag.}
 
 proc requestSelectionNotification*(self: Display; selection: Atom): bool =
-  toBool(gdk_display_request_selection_notification(cast[ptr Display00](self.impl), cast[ptr Atom00](selection.impl)))
+  toBool(gdk_display_request_selection_notification(cast[ptr Display00](self.impl), selection))
 
 type
   Window* = ref object of gobject.Object
@@ -1581,7 +1505,7 @@ proc scToEmbedder*(self: Window;  p: proc (self: ptr Window00; offscreenX: cdoub
 proc gdk_window_at_pointer(winX: var int32; winY: var int32): ptr Window00 {.
     importc, libprag.}
 
-proc atPointer*(winX: var int; winY: var int): Window =
+proc atPointer*(winX: var int = cast[var int](nil); winY: var int = cast[var int](nil)): Window =
   var winY_00 = int32(winY)
   var winX_00 = int32(winX)
   let gobj = gdk_window_at_pointer(winX_00, winY_00)
@@ -1609,9 +1533,6 @@ proc gdk_window_set_debug_updates(setting: gboolean) {.
 
 proc setDebugUpdates*(setting: bool = true) =
   gdk_window_set_debug_updates(gboolean(setting))
-
-proc `debugUpdates=`*(setting: gboolean) {.
-    importc: "gdk_window_set_debug_updates", libprag.}
 
 proc gdk_window_beep(self: ptr Window00) {.
     importc, libprag.}
@@ -1652,15 +1573,15 @@ proc gdk_window_coords_from_parent(self: ptr Window00; parentX: cdouble;
     importc, libprag.}
 
 proc coordsFromParent*(self: Window; parentX: cdouble; parentY: cdouble;
-    x: var cdouble; y: var cdouble) =
+    x: var cdouble = cast[var cdouble](nil); y: var cdouble = cast[var cdouble](nil)) =
   gdk_window_coords_from_parent(cast[ptr Window00](self.impl), parentX, parentY, x, y)
 
 proc gdk_window_coords_to_parent(self: ptr Window00; x: cdouble; y: cdouble;
     parentX: var cdouble; parentY: var cdouble) {.
     importc, libprag.}
 
-proc coordsToParent*(self: Window; x: cdouble; y: cdouble; parentX: var cdouble;
-    parentY: var cdouble) =
+proc coordsToParent*(self: Window; x: cdouble; y: cdouble; parentX: var cdouble = cast[var cdouble](nil);
+    parentY: var cdouble = cast[var cdouble](nil)) =
   gdk_window_coords_to_parent(cast[ptr Window00](self.impl), x, y, parentX, parentY)
 
 proc gdk_window_create_similar_image_surface(self: ptr Window00; format: int32;
@@ -1787,23 +1708,26 @@ proc backgroundPattern*(self: Window): cairo.Pattern =
   result.impl = impl0
   result.ignoreFinalizer = true
 
-proc gdk_window_get_children(self: ptr Window00): ptr pointer {.
+proc gdk_window_get_children(self: ptr Window00): ptr glib.List {.
     importc, libprag.}
 
-proc getChildren*(self: Window): ptr pointer =
-  gdk_window_get_children(cast[ptr Window00](self.impl))
+proc getChildren*(self: Window): seq[Window] =
+  let resul0 = gdk_window_get_children(cast[ptr Window00](self.impl))
+  result = glistObjects2seq(Window, resul0, false)
+  g_list_free(resul0)
 
-proc children*(self: Window): ptr pointer =
-  gdk_window_get_children(cast[ptr Window00](self.impl))
+proc children*(self: Window): seq[Window] =
+  let resul0 = gdk_window_get_children(cast[ptr Window00](self.impl))
+  result = glistObjects2seq(Window, resul0, false)
+  g_list_free(resul0)
 
-proc gdk_window_get_children_with_user_data(self: ptr Window00; userData: pointer): ptr pointer {.
+proc gdk_window_get_children_with_user_data(self: ptr Window00; userData: pointer): ptr glib.List {.
     importc, libprag.}
 
-proc getChildrenWithUserData*(self: Window; userData: pointer): ptr pointer =
-  gdk_window_get_children_with_user_data(cast[ptr Window00](self.impl), userData)
-
-proc childrenWithUserData*(self: Window; userData: pointer): ptr pointer =
-  gdk_window_get_children_with_user_data(cast[ptr Window00](self.impl), userData)
+proc getChildrenWithUserData*(self: Window; userData: pointer): seq[Window] =
+  let resul0 = gdk_window_get_children_with_user_data(cast[ptr Window00](self.impl), userData)
+  result = glistObjects2seq(Window, resul0, false)
+  g_list_free(resul0)
 
 proc gdk_window_get_clip_region(self: ptr Window00): ptr cairo.Region00 {.
     importc, libprag.}
@@ -1829,31 +1753,8 @@ proc gdk_window_get_device_position(self: ptr Window00; device: ptr Device00;
     x: var int32; y: var int32; mask: var ModifierType): ptr Window00 {.
     importc, libprag.}
 
-proc getDevicePosition*(self: Window; device: Device; x: var int;
-    y: var int; mask: var ModifierType): Window =
-  var y_00 = int32(y)
-  var x_00 = int32(x)
-  let gobj = gdk_window_get_device_position(cast[ptr Window00](self.impl), cast[ptr Device00](device.impl), x_00, y_00, mask)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-  y = int(y_00)
-  x = int(x_00)
-
-proc devicePosition*(self: Window; device: Device; x: var int;
-    y: var int; mask: var ModifierType): Window =
+proc getDevicePosition*(self: Window; device: Device; x: var int = cast[var int](nil);
+    y: var int = cast[var int](nil); mask: var ModifierType = cast[var ModifierType](nil)): Window =
   var y_00 = int32(y)
   var x_00 = int32(x)
   let gobj = gdk_window_get_device_position(cast[ptr Window00](self.impl), cast[ptr Device00](device.impl), x_00, y_00, mask)
@@ -1880,26 +1781,8 @@ proc gdk_window_get_device_position_double(self: ptr Window00; device: ptr Devic
     importc, libprag.}
 
 proc getDevicePositionDouble*(self: Window; device: Device;
-    x: var cdouble; y: var cdouble; mask: var ModifierType): Window =
-  let gobj = gdk_window_get_device_position_double(cast[ptr Window00](self.impl), cast[ptr Device00](device.impl), x, y, mask)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc devicePositionDouble*(self: Window; device: Device;
-    x: var cdouble; y: var cdouble; mask: var ModifierType): Window =
+    x: var cdouble = cast[var cdouble](nil); y: var cdouble = cast[var cdouble](nil);
+    mask: var ModifierType = cast[var ModifierType](nil)): Window =
   let gobj = gdk_window_get_device_position_double(cast[ptr Window00](self.impl), cast[ptr Device00](device.impl), x, y, mask)
   if gobj.isNil:
     return nil
@@ -2044,17 +1927,21 @@ proc gdk_window_get_geometry(self: ptr Window00; x: var int32; y: var int32;
     width: var int32; height: var int32) {.
     importc, libprag.}
 
-proc getGeometry*(self: Window; x: var int; y: var int; width: var int;
-    height: var int) =
-  var width_00 = int32(width)
-  var y_00 = int32(y)
-  var x_00 = int32(x)
-  var height_00 = int32(height)
+proc getGeometry*(self: Window; x: var int = cast[var int](nil);
+    y: var int = cast[var int](nil); width: var int = cast[var int](nil); height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var y_00: int32
+  var x_00: int32
+  var height_00: int32
   gdk_window_get_geometry(cast[ptr Window00](self.impl), x_00, y_00, width_00, height_00)
-  width = int(width_00)
-  y = int(y_00)
-  x = int(x_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc gdk_window_get_group(self: ptr Window00): ptr Window00 {.
     importc, libprag.}
@@ -2112,19 +1999,15 @@ proc modalHint*(self: Window): bool =
 proc gdk_window_get_origin(self: ptr Window00; x: var int32; y: var int32): int32 {.
     importc, libprag.}
 
-proc getOrigin*(self: Window; x: var int; y: var int): int =
-  var y_00 = int32(y)
-  var x_00 = int32(x)
+proc getOrigin*(self: Window; x: var int = cast[var int](nil);
+    y: var int = cast[var int](nil)): int =
+  var y_00: int32
+  var x_00: int32
   result = int(gdk_window_get_origin(cast[ptr Window00](self.impl), x_00, y_00))
-  y = int(y_00)
-  x = int(x_00)
-
-proc origin*(self: Window; x: var int; y: var int): int =
-  var y_00 = int32(y)
-  var x_00 = int32(x)
-  result = int(gdk_window_get_origin(cast[ptr Window00](self.impl), x_00, y_00))
-  y = int(y_00)
-  x = int(x_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
 
 proc gdk_window_get_parent(self: ptr Window00): ptr Window00 {.
     importc, libprag.}
@@ -2174,7 +2057,8 @@ proc gdk_window_get_pointer(self: ptr Window00; x: var int32; y: var int32;
     mask: var ModifierType): ptr Window00 {.
     importc, libprag.}
 
-proc getPointer*(self: Window; x: var int; y: var int; mask: var ModifierType): Window =
+proc getPointer*(self: Window; x: var int = cast[var int](nil);
+    y: var int = cast[var int](nil); mask: var ModifierType = cast[var ModifierType](nil)): Window =
   var y_00 = int32(y)
   var x_00 = int32(x)
   let gobj = gdk_window_get_pointer(cast[ptr Window00](self.impl), x_00, y_00, mask)
@@ -2199,12 +2083,15 @@ proc getPointer*(self: Window; x: var int; y: var int; mask: var ModifierType): 
 proc gdk_window_get_position(self: ptr Window00; x: var int32; y: var int32) {.
     importc, libprag.}
 
-proc getPosition*(self: Window; x: var int; y: var int) =
-  var y_00 = int32(y)
-  var x_00 = int32(x)
+proc getPosition*(self: Window; x: var int = cast[var int](nil);
+    y: var int = cast[var int](nil)) =
+  var y_00: int32
+  var x_00: int32
   gdk_window_get_position(cast[ptr Window00](self.impl), x_00, y_00)
-  y = int(y_00)
-  x = int(x_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
 
 proc gdk_window_get_root_coords(self: ptr Window00; x: int32; y: int32; rootX: var int32;
     rootY: var int32) {.
@@ -2212,21 +2099,25 @@ proc gdk_window_get_root_coords(self: ptr Window00; x: int32; y: int32; rootX: v
 
 proc getRootCoords*(self: Window; x: int; y: int; rootX: var int;
     rootY: var int) =
-  var rootY_00 = int32(rootY)
-  var rootX_00 = int32(rootX)
+  var rootY_00: int32
+  var rootX_00: int32
   gdk_window_get_root_coords(cast[ptr Window00](self.impl), int32(x), int32(y), rootX_00, rootY_00)
-  rootY = int(rootY_00)
-  rootX = int(rootX_00)
+  if rootY.addr != nil:
+    rootY = int(rootY_00)
+  if rootX.addr != nil:
+    rootX = int(rootX_00)
 
 proc gdk_window_get_root_origin(self: ptr Window00; x: var int32; y: var int32) {.
     importc, libprag.}
 
 proc getRootOrigin*(self: Window; x: var int; y: var int) =
-  var y_00 = int32(y)
-  var x_00 = int32(x)
+  var y_00: int32
+  var x_00: int32
   gdk_window_get_root_origin(cast[ptr Window00](self.impl), x_00, y_00)
-  y = int(y_00)
-  x = int(x_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
 
 proc gdk_window_get_scale_factor(self: ptr Window00): int32 {.
     importc, libprag.}
@@ -2432,11 +2323,11 @@ proc gdk_window_move_resize(self: ptr Window00; x: int32; y: int32; width: int32
 proc moveResize*(self: Window; x: int; y: int; width: int; height: int) =
   gdk_window_move_resize(cast[ptr Window00](self.impl), int32(x), int32(y), int32(width), int32(height))
 
-proc gdk_window_peek_children(self: ptr Window00): ptr pointer {.
+proc gdk_window_peek_children(self: ptr Window00): ptr glib.List {.
     importc, libprag.}
 
-proc peekChildren*(self: Window): ptr pointer =
-  gdk_window_peek_children(cast[ptr Window00](self.impl))
+proc peekChildren*(self: Window): seq[Window] =
+  result = glistObjects2seq(Window, gdk_window_peek_children(cast[ptr Window00](self.impl)), false)
 
 proc gdk_window_process_updates(self: ptr Window00; updateChildren: gboolean) {.
     importc, libprag.}
@@ -2505,16 +2396,10 @@ proc gdk_window_set_child_input_shapes(self: ptr Window00) {.
 proc setChildInputShapes*(self: Window) =
   gdk_window_set_child_input_shapes(cast[ptr Window00](self.impl))
 
-proc `childInputShapes=`*(self: Window) =
-  gdk_window_set_child_input_shapes(cast[ptr Window00](self.impl))
-
 proc gdk_window_set_child_shapes(self: ptr Window00) {.
     importc, libprag.}
 
 proc setChildShapes*(self: Window) =
-  gdk_window_set_child_shapes(cast[ptr Window00](self.impl))
-
-proc `childShapes=`*(self: Window) =
   gdk_window_set_child_shapes(cast[ptr Window00](self.impl))
 
 proc gdk_window_set_composited(self: ptr Window00; composited: gboolean) {.
@@ -2553,14 +2438,18 @@ proc setGroup*(self: Window; leader: Window = nil) =
 proc `group=`*(self: Window; leader: Window = nil) =
   gdk_window_set_group(cast[ptr Window00](self.impl), if leader.isNil: nil else: cast[ptr Window00](leader.impl))
 
-proc gdk_window_set_icon_list(self: ptr Window00; pixbufs: ptr pointer) {.
+proc gdk_window_set_icon_list(self: ptr Window00; pixbufs: ptr glib.List) {.
     importc, libprag.}
 
-proc setIconList*(self: Window; pixbufs: ptr pointer) =
-  gdk_window_set_icon_list(cast[ptr Window00](self.impl), pixbufs)
+proc setIconList*(self: Window; pixbufs: seq[gdkpixbuf.Pixbuf]) =
+  var tempResGL = seq2GList(pixbufs)
+  gdk_window_set_icon_list(cast[ptr Window00](self.impl), tempResGL)
+  g_list_free(tempResGL)
 
-proc `iconList=`*(self: Window; pixbufs: ptr pointer) =
-  gdk_window_set_icon_list(cast[ptr Window00](self.impl), pixbufs)
+proc `iconList=`*(self: Window; pixbufs: seq[gdkpixbuf.Pixbuf]) =
+  var tempResGL = seq2GList(pixbufs)
+  gdk_window_set_icon_list(cast[ptr Window00](self.impl), tempResGL)
+  g_list_free(tempResGL)
 
 proc gdk_window_set_icon_name(self: ptr Window00; name: cstring) {.
     importc, libprag.}
@@ -2684,9 +2573,6 @@ proc gdk_window_set_static_gravities(self: ptr Window00; useStatic: gboolean): g
 proc setStaticGravities*(self: Window; useStatic: bool = true): bool =
   toBool(gdk_window_set_static_gravities(cast[ptr Window00](self.impl), gboolean(useStatic)))
 
-proc `staticGravities=`*(self: Window; useStatic: bool): bool =
-  toBool(gdk_window_set_static_gravities(cast[ptr Window00](self.impl), gboolean(useStatic)))
-
 proc gdk_window_set_support_multidevice(self: ptr Window00; supportMultidevice: gboolean) {.
     importc, libprag.}
 
@@ -2802,9 +2688,10 @@ proc grabInfoLibgtkOnly*(display: Display; device: Device; grabWindow: var Windo
     ownerEvents: var bool): bool =
   fnew(grabWindow, gdk.finalizeGObject)
   grabWindow.ignoreFinalizer = true
-  var ownerEvents_00 = gboolean(ownerEvents)
+  var ownerEvents_00: gboolean
   result = toBool(gdk_device_grab_info_libgtk_only(cast[ptr Display00](display.impl), cast[ptr Device00](device.impl), cast[var ptr Window00](addr grabWindow.impl), ownerEvents_00))
-  ownerEvents = toBool(ownerEvents_00)
+  if ownerEvents.addr != nil:
+    ownerEvents = toBool(ownerEvents_00)
 
 proc gdk_device_get_last_event_window(self: ptr Device00): ptr Window00 {.
     importc, libprag.}
@@ -2849,29 +2736,8 @@ proc gdk_device_get_window_at_position(self: ptr Device00; winX: var int32;
     winY: var int32): ptr Window00 {.
     importc, libprag.}
 
-proc getWindowAtPosition*(self: Device; winX: var int; winY: var int): Window =
-  var winY_00 = int32(winY)
-  var winX_00 = int32(winX)
-  let gobj = gdk_device_get_window_at_position(cast[ptr Device00](self.impl), winX_00, winY_00)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-  winY = int(winY_00)
-  winX = int(winX_00)
-
-proc windowAtPosition*(self: Device; winX: var int; winY: var int): Window =
+proc getWindowAtPosition*(self: Device; winX: var int = cast[var int](nil);
+    winY: var int = cast[var int](nil)): Window =
   var winY_00 = int32(winY)
   var winX_00 = int32(winX)
   let gobj = gdk_device_get_window_at_position(cast[ptr Device00](self.impl), winX_00, winY_00)
@@ -2897,27 +2763,8 @@ proc gdk_device_get_window_at_position_double(self: ptr Device00; winX: var cdou
     winY: var cdouble): ptr Window00 {.
     importc, libprag.}
 
-proc getWindowAtPositionDouble*(self: Device; winX: var cdouble;
-    winY: var cdouble): Window =
-  let gobj = gdk_device_get_window_at_position_double(cast[ptr Device00](self.impl), winX, winY)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc windowAtPositionDouble*(self: Device; winX: var cdouble;
-    winY: var cdouble): Window =
+proc getWindowAtPositionDouble*(self: Device; winX: var cdouble = cast[var cdouble](nil);
+    winY: var cdouble = cast[var cdouble](nil)): Window =
   let gobj = gdk_device_get_window_at_position_double(cast[ptr Device00](self.impl), winX, winY)
   if gobj.isNil:
     return nil
@@ -2989,49 +2836,12 @@ proc getMonitorAtWindow*(self: Display; window: Window): Monitor =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc monitorAtWindow*(self: Display; window: Window): Monitor =
-  let gobj = gdk_display_get_monitor_at_window(cast[ptr Display00](self.impl), cast[ptr Window00](window.impl))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gdk_display_get_window_at_pointer(self: ptr Display00; winX: var int32;
     winY: var int32): ptr Window00 {.
     importc, libprag.}
 
-proc getWindowAtPointer*(self: Display; winX: var int; winY: var int): Window =
-  var winY_00 = int32(winY)
-  var winX_00 = int32(winX)
-  let gobj = gdk_display_get_window_at_pointer(cast[ptr Display00](self.impl), winX_00, winY_00)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-  winY = int(winY_00)
-  winX = int(winX_00)
-
-proc windowAtPointer*(self: Display; winX: var int; winY: var int): Window =
+proc getWindowAtPointer*(self: Display; winX: var int = cast[var int](nil);
+    winY: var int = cast[var int](nil)): Window =
   var winY_00 = int32(winY)
   var winX_00 = int32(winX)
   let gobj = gdk_display_get_window_at_pointer(cast[ptr Display00](self.impl), winX_00, winY_00)
@@ -3054,11 +2864,11 @@ proc windowAtPointer*(self: Display; winX: var int; winY: var int): Window =
   winX = int(winX_00)
 
 proc gdk_display_store_clipboard(self: ptr Display00; clipboardWindow: ptr Window00;
-    time: uint32; targets: ptr Atom00Array; nTargets: int32) {.
+    time: uint32; targets: ptr ptr Atom; nTargets: int32) {.
     importc, libprag.}
 
 proc storeClipboard*(self: Display; clipboardWindow: Window;
-    time: int; targets: ptr Atom00Array; nTargets: int) =
+    time: int; targets: ptr ptr Atom; nTargets: int) =
   gdk_display_store_clipboard(cast[ptr Display00](self.impl), cast[ptr Window00](clipboardWindow.impl), uint32(time), targets, int32(nTargets))
 
 type
@@ -3188,25 +2998,7 @@ proc clearCurrent*() {.
 proc gdk_gl_context_get_current(): ptr GLContext00 {.
     importc, libprag.}
 
-proc getCurrent*(): GLContext =
-  let gobj = gdk_gl_context_get_current()
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc current*(): GLContext =
+proc getCurrentGLContext*(): GLContext =
   let gobj = gdk_gl_context_get_current()
   if gobj.isNil:
     return nil
@@ -3287,11 +3079,13 @@ proc gdk_gl_context_get_required_version(self: ptr GLContext00; major: var int32
 
 proc getRequiredVersion*(self: GLContext; major: var int;
     minor: var int) =
-  var major_00 = int32(major)
-  var minor_00 = int32(minor)
+  var major_00: int32
+  var minor_00: int32
   gdk_gl_context_get_required_version(cast[ptr GLContext00](self.impl), major_00, minor_00)
-  major = int(major_00)
-  minor = int(minor_00)
+  if major.addr != nil:
+    major = int(major_00)
+  if minor.addr != nil:
+    minor = int(minor_00)
 
 proc gdk_gl_context_get_shared_context(self: ptr GLContext00): ptr GLContext00 {.
     importc, libprag.}
@@ -3346,11 +3140,13 @@ proc gdk_gl_context_get_version(self: ptr GLContext00; major: var int32;
     importc, libprag.}
 
 proc getVersion*(self: GLContext; major: var int; minor: var int) =
-  var major_00 = int32(major)
-  var minor_00 = int32(minor)
+  var major_00: int32
+  var minor_00: int32
   gdk_gl_context_get_version(cast[ptr GLContext00](self.impl), major_00, minor_00)
-  major = int(major_00)
-  minor = int(minor_00)
+  if major.addr != nil:
+    major = int(major_00)
+  if minor.addr != nil:
+    minor = int(minor_00)
 
 proc gdk_gl_context_get_window(self: ptr GLContext00): ptr Window00 {.
     importc, libprag.}
@@ -3599,13 +3395,10 @@ type
 proc gdk_window_get_drag_protocol(self: ptr Window00; target: var ptr Window00): DragProtocol {.
     importc, libprag.}
 
-proc getDragProtocol*(self: Window; target: var Window): DragProtocol =
-  fnew(target, gdk.finalizeGObject)
-  gdk_window_get_drag_protocol(cast[ptr Window00](self.impl), cast[var ptr Window00](addr target.impl))
-
-proc dragProtocol*(self: Window; target: var Window): DragProtocol =
-  fnew(target, gdk.finalizeGObject)
-  gdk_window_get_drag_protocol(cast[ptr Window00](self.impl), cast[var ptr Window00](addr target.impl))
+proc getDragProtocol*(self: Window; target: var Window = cast[var Window](nil)): DragProtocol =
+  if addr(target) != nil:
+    fnew(target, gdk.finalizeGObject)
+  gdk_window_get_drag_protocol(cast[ptr Window00](self.impl), cast[var ptr Window00](if addr(target) == nil: nil else: addr target.impl))
 
 type
   FrameClock* = ref object of gobject.Object
@@ -3687,7 +3480,7 @@ proc gdk_frame_clock_get_refresh_info(self: ptr FrameClock00; baseTime: int64;
     importc, libprag.}
 
 proc getRefreshInfo*(self: FrameClock; baseTime: int64;
-    refreshIntervalReturn: var int64; presentationTimeReturn: var int64) =
+    refreshIntervalReturn: var int64 = cast[var int64](nil); presentationTimeReturn: var int64) =
   gdk_frame_clock_get_refresh_info(cast[ptr FrameClock00](self.impl), baseTime, refreshIntervalReturn, presentationTimeReturn)
 
 proc gdk_window_get_frame_clock(self: ptr Window00): ptr FrameClock00 {.
@@ -3742,6 +3535,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(gdk_frame_timings_get_type(), cast[ptr FrameTimings00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var FrameTimings) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGdkFrameTimings)
 
 proc gdk_frame_timings_unref(self: ptr FrameTimings00) {.
     importc, libprag.}
@@ -3844,14 +3643,6 @@ proc getTimings*(self: FrameClock; frameCounter: int64): FrameTimings =
   result.impl = impl0
   result.ignoreFinalizer = true
 
-proc timings*(self: FrameClock; frameCounter: int64): FrameTimings =
-  let impl0 = gdk_frame_clock_get_timings(cast[ptr FrameClock00](self.impl), frameCounter)
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreeGdkFrameTimings)
-  result.impl = impl0
-  result.ignoreFinalizer = true
-
 type
   FrameClockPhase* {.size: sizeof(cint), pure.} = enum
     none = 0
@@ -3916,23 +3707,7 @@ when defined(gcDestructors):
 proc gdk_visual_get_best(): ptr Visual00 {.
     importc, libprag.}
 
-proc getBest*(): Visual =
-  let gobj = gdk_visual_get_best()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc best*(): Visual =
+proc getBestVisual*(): Visual =
   let gobj = gdk_visual_get_best()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -3952,9 +3727,6 @@ proc gdk_visual_get_best_depth(): int32 {.
     importc, libprag.}
 
 proc getBestDepth*(): int =
-  int(gdk_visual_get_best_depth())
-
-proc bestDepth*(): int =
   int(gdk_visual_get_best_depth())
 
 proc gdk_visual_get_best_with_depth(depth: int32): ptr Visual00 {.
@@ -3995,23 +3767,7 @@ proc bestWithDepth*(depth: int): Visual =
 proc gdk_visual_get_system(): ptr Visual00 {.
     importc, libprag.}
 
-proc getSystem*(): Visual =
-  let gobj = gdk_visual_get_system()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc system*(): Visual =
+proc getSystemVisual*(): Visual =
   let gobj = gdk_visual_get_system()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -4040,15 +3796,18 @@ proc gdk_visual_get_blue_pixel_details(self: ptr Visual00; mask: var uint32;
     shift: var int32; precision: var int32) {.
     importc, libprag.}
 
-proc getBluePixelDetails*(self: Visual; mask: var int; shift: var int;
-    precision: var int) =
-  var shift_00 = int32(shift)
-  var precision_00 = int32(precision)
-  var mask_00 = uint32(mask)
+proc getBluePixelDetails*(self: Visual; mask: var int = cast[var int](nil);
+    shift: var int = cast[var int](nil); precision: var int = cast[var int](nil)) =
+  var shift_00: int32
+  var precision_00: int32
+  var mask_00: uint32
   gdk_visual_get_blue_pixel_details(cast[ptr Visual00](self.impl), mask_00, shift_00, precision_00)
-  shift = int(shift_00)
-  precision = int(precision_00)
-  mask = int(mask_00)
+  if shift.addr != nil:
+    shift = int(shift_00)
+  if precision.addr != nil:
+    precision = int(precision_00)
+  if mask.addr != nil:
+    mask = int(mask_00)
 
 proc gdk_visual_get_colormap_size(self: ptr Visual00): int32 {.
     importc, libprag.}
@@ -4072,29 +3831,35 @@ proc gdk_visual_get_green_pixel_details(self: ptr Visual00; mask: var uint32;
     shift: var int32; precision: var int32) {.
     importc, libprag.}
 
-proc getGreenPixelDetails*(self: Visual; mask: var int; shift: var int;
-    precision: var int) =
-  var shift_00 = int32(shift)
-  var precision_00 = int32(precision)
-  var mask_00 = uint32(mask)
+proc getGreenPixelDetails*(self: Visual; mask: var int = cast[var int](nil);
+    shift: var int = cast[var int](nil); precision: var int = cast[var int](nil)) =
+  var shift_00: int32
+  var precision_00: int32
+  var mask_00: uint32
   gdk_visual_get_green_pixel_details(cast[ptr Visual00](self.impl), mask_00, shift_00, precision_00)
-  shift = int(shift_00)
-  precision = int(precision_00)
-  mask = int(mask_00)
+  if shift.addr != nil:
+    shift = int(shift_00)
+  if precision.addr != nil:
+    precision = int(precision_00)
+  if mask.addr != nil:
+    mask = int(mask_00)
 
 proc gdk_visual_get_red_pixel_details(self: ptr Visual00; mask: var uint32;
     shift: var int32; precision: var int32) {.
     importc, libprag.}
 
-proc getRedPixelDetails*(self: Visual; mask: var int; shift: var int;
-    precision: var int) =
-  var shift_00 = int32(shift)
-  var precision_00 = int32(precision)
-  var mask_00 = uint32(mask)
+proc getRedPixelDetails*(self: Visual; mask: var int = cast[var int](nil);
+    shift: var int = cast[var int](nil); precision: var int = cast[var int](nil)) =
+  var shift_00: int32
+  var precision_00: int32
+  var mask_00: uint32
   gdk_visual_get_red_pixel_details(cast[ptr Visual00](self.impl), mask_00, shift_00, precision_00)
-  shift = int(shift_00)
-  precision = int(precision_00)
-  mask = int(mask_00)
+  if shift.addr != nil:
+    shift = int(shift_00)
+  if precision.addr != nil:
+    precision = int(precision_00)
+  if mask.addr != nil:
+    mask = int(mask_00)
 
 proc gdk_window_get_visual(self: ptr Window00): ptr Visual00 {.
     importc, libprag.}
@@ -4157,31 +3922,10 @@ type
 proc getBestType*(): VisualType {.
     importc: "gdk_visual_get_best_type", libprag.}
 
-proc bestType*(): VisualType {.
-    importc: "gdk_visual_get_best_type", libprag.}
-
 proc gdk_visual_get_best_with_both(depth: int32; visualType: VisualType): ptr Visual00 {.
     importc, libprag.}
 
 proc getBestWithBoth*(depth: int; visualType: VisualType): Visual =
-  let gobj = gdk_visual_get_best_with_both(int32(depth), visualType)
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc bestWithBoth*(depth: int; visualType: VisualType): Visual =
   let gobj = gdk_visual_get_best_with_both(int32(depth), visualType)
   if gobj.isNil:
     return nil
@@ -4388,9 +4132,6 @@ proc gdk_window_get_decorations(self: ptr Window00; decorations: var WMDecoratio
     importc, libprag.}
 
 proc getDecorations*(self: Window; decorations: var WMDecoration): bool =
-  toBool(gdk_window_get_decorations(cast[ptr Window00](self.impl), decorations))
-
-proc decorations*(self: Window; decorations: var WMDecoration): bool =
   toBool(gdk_window_get_decorations(cast[ptr Window00](self.impl), decorations))
 
 proc gdk_window_set_decorations(self: ptr Window00; decorations: WMDecoration) {.
@@ -4678,14 +4419,8 @@ proc image*(self: Cursor): gdkpixbuf.Pixbuf =
 proc gdk_cursor_get_surface(self: ptr Cursor00; xHot: var cdouble; yHot: var cdouble): ptr cairo.Surface00 {.
     importc, libprag.}
 
-proc getSurface*(self: Cursor; xHot: var cdouble; yHot: var cdouble): cairo.Surface =
-  let impl0 = gdk_cursor_get_surface(cast[ptr Cursor00](self.impl), xHot, yHot)
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreeCairoSurface)
-  result.impl = impl0
-
-proc surface*(self: Cursor; xHot: var cdouble; yHot: var cdouble): cairo.Surface =
+proc getSurface*(self: Cursor; xHot: var cdouble = cast[var cdouble](nil);
+    yHot: var cdouble = cast[var cdouble](nil)): cairo.Surface =
   let impl0 = gdk_cursor_get_surface(cast[ptr Cursor00](self.impl), xHot, yHot)
   if impl0.isNil:
     return nil
@@ -4761,24 +4496,6 @@ proc gdk_window_get_device_cursor(self: ptr Window00; device: ptr Device00): ptr
     importc, libprag.}
 
 proc getDeviceCursor*(self: Window; device: Device): Cursor =
-  let gobj = gdk_window_get_device_cursor(cast[ptr Window00](self.impl), cast[ptr Device00](device.impl))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc deviceCursor*(self: Window; device: Device): Cursor =
   let gobj = gdk_window_get_device_cursor(cast[ptr Window00](self.impl), cast[ptr Device00](device.impl))
   if gobj.isNil:
     return nil
@@ -4956,6 +4673,8 @@ proc gdk_cursor_new_for_display(display: ptr Display00; cursorType: CursorType):
 
 proc newCursorForDisplay*(display: Display; cursorType: CursorType): Cursor =
   let gobj = gdk_cursor_new_for_display(cast[ptr Display00](display.impl), cursorType)
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -4974,6 +4693,8 @@ proc newCursorForDisplay*(display: Display; cursorType: CursorType): Cursor =
 proc newCursorForDisplay*(tdesc: typedesc; display: Display; cursorType: CursorType): tdesc =
   assert(result is Cursor)
   let gobj = gdk_cursor_new_for_display(cast[ptr Display00](display.impl), cursorType)
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -4992,6 +4713,8 @@ proc newCursorForDisplay*(tdesc: typedesc; display: Display; cursorType: CursorT
 proc initCursorForDisplay*[T](result: var T; display: Display; cursorType: CursorType) {.deprecated.} =
   assert(result is Cursor)
   let gobj = gdk_cursor_new_for_display(cast[ptr Display00](display.impl), cursorType)
+  if gobj.isNil:
+    return nil
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -5104,11 +4827,13 @@ proc gdk_window_constrain_size(geometry: Geometry; flags: WindowHints; width: in
 
 proc constrainSize*(geometry: Geometry; flags: WindowHints; width: int;
     height: int; newWidth: var int; newHeight: var int) =
-  var newHeight_00 = int32(newHeight)
-  var newWidth_00 = int32(newWidth)
+  var newHeight_00: int32
+  var newWidth_00: int32
   gdk_window_constrain_size(geometry, flags, int32(width), int32(height), newWidth_00, newHeight_00)
-  newHeight = int(newHeight_00)
-  newWidth = int(newWidth_00)
+  if newHeight.addr != nil:
+    newHeight = int(newHeight_00)
+  if newWidth.addr != nil:
+    newWidth = int(newWidth_00)
 
 proc gdk_window_set_geometry_hints(self: ptr Window00; geometry: Geometry;
     geomMask: WindowHints) {.
@@ -5156,9 +4881,6 @@ proc gdk_window_get_device_events(self: ptr Window00; device: ptr Device00): Eve
 proc getDeviceEvents*(self: Window; device: Device): EventMask =
   gdk_window_get_device_events(cast[ptr Window00](self.impl), cast[ptr Device00](device.impl))
 
-proc deviceEvents*(self: Window; device: Device): EventMask =
-  gdk_window_get_device_events(cast[ptr Window00](self.impl), cast[ptr Device00](device.impl))
-
 proc gdk_window_get_events(self: ptr Window00): EventMask {.
     importc, libprag.}
 
@@ -5172,9 +4894,6 @@ proc gdk_window_get_source_events(self: ptr Window00; source: InputSource): Even
     importc, libprag.}
 
 proc getSourceEvents*(self: Window; source: InputSource): EventMask =
-  gdk_window_get_source_events(cast[ptr Window00](self.impl), source)
-
-proc sourceEvents*(self: Window; source: InputSource): EventMask =
   gdk_window_get_source_events(cast[ptr Window00](self.impl), source)
 
 proc gdk_window_set_device_events(self: ptr Window00; device: ptr Device00;
@@ -5288,7 +5007,7 @@ proc equal*(self: Rectangle; rect2: Rectangle): bool =
 proc gdk_rectangle_intersect(self: Rectangle; src2: Rectangle; dest: var Rectangle): gboolean {.
     importc, libprag.}
 
-proc intersect*(self: Rectangle; src2: Rectangle; dest: var Rectangle): bool =
+proc intersect*(self: Rectangle; src2: Rectangle; dest: var Rectangle = cast[var Rectangle](nil)): bool =
   toBool(gdk_rectangle_intersect(self, src2, dest))
 
 proc gdk_rectangle_union(self: Rectangle; src2: Rectangle; dest: var Rectangle) {.
@@ -5324,7 +5043,7 @@ proc getFrameExtents*(self: Window; rect: var Rectangle) =
 proc gdk_window_invalidate_rect(self: ptr Window00; rect: Rectangle; invalidateChildren: gboolean) {.
     importc, libprag.}
 
-proc invalidateRect*(self: Window; rect: Rectangle = cast[ptr Rectangle](nil)[];
+proc invalidateRect*(self: Window; rect: Rectangle = cast[var Rectangle](nil);
     invalidateChildren: bool) =
   gdk_window_invalidate_rect(cast[ptr Window00](self.impl), rect, gboolean(invalidateChildren))
 
@@ -5364,24 +5083,6 @@ proc gdk_screen_get_default(): ptr Screen00 {.
     importc, libprag.}
 
 proc getDefaultScreen*(): Screen =
-  let gobj = gdk_screen_get_default()
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc defaultScreen*(): Screen =
   let gobj = gdk_screen_get_default()
   if gobj.isNil:
     return nil
@@ -5542,32 +5243,23 @@ proc gdk_screen_get_monitor_at_point(self: ptr Screen00; x: int32; y: int32): in
 proc getMonitorAtPoint*(self: Screen; x: int; y: int): int =
   int(gdk_screen_get_monitor_at_point(cast[ptr Screen00](self.impl), int32(x), int32(y)))
 
-proc monitorAtPoint*(self: Screen; x: int; y: int): int =
-  int(gdk_screen_get_monitor_at_point(cast[ptr Screen00](self.impl), int32(x), int32(y)))
-
 proc gdk_screen_get_monitor_at_window(self: ptr Screen00; window: ptr Window00): int32 {.
     importc, libprag.}
 
 proc getMonitorAtWindow*(self: Screen; window: Window): int =
   int(gdk_screen_get_monitor_at_window(cast[ptr Screen00](self.impl), cast[ptr Window00](window.impl)))
 
-proc monitorAtWindow*(self: Screen; window: Window): int =
-  int(gdk_screen_get_monitor_at_window(cast[ptr Screen00](self.impl), cast[ptr Window00](window.impl)))
-
 proc gdk_screen_get_monitor_geometry(self: ptr Screen00; monitorNum: int32;
     dest: var Rectangle) {.
     importc, libprag.}
 
-proc getMonitorGeometry*(self: Screen; monitorNum: int; dest: var Rectangle) =
+proc getMonitorGeometry*(self: Screen; monitorNum: int; dest: var Rectangle = cast[var Rectangle](nil)) =
   gdk_screen_get_monitor_geometry(cast[ptr Screen00](self.impl), int32(monitorNum), dest)
 
 proc gdk_screen_get_monitor_height_mm(self: ptr Screen00; monitorNum: int32): int32 {.
     importc, libprag.}
 
 proc getMonitorHeightMm*(self: Screen; monitorNum: int): int =
-  int(gdk_screen_get_monitor_height_mm(cast[ptr Screen00](self.impl), int32(monitorNum)))
-
-proc monitorHeightMm*(self: Screen; monitorNum: int): int =
   int(gdk_screen_get_monitor_height_mm(cast[ptr Screen00](self.impl), int32(monitorNum)))
 
 proc gdk_screen_get_monitor_plug_name(self: ptr Screen00; monitorNum: int32): cstring {.
@@ -5580,20 +5272,10 @@ proc getMonitorPlugName*(self: Screen; monitorNum: int): string =
   result = $resul0
   cogfree(resul0)
 
-proc monitorPlugName*(self: Screen; monitorNum: int): string =
-  let resul0 = gdk_screen_get_monitor_plug_name(cast[ptr Screen00](self.impl), int32(monitorNum))
-  if resul0.isNil:
-    return
-  result = $resul0
-  cogfree(resul0)
-
 proc gdk_screen_get_monitor_scale_factor(self: ptr Screen00; monitorNum: int32): int32 {.
     importc, libprag.}
 
 proc getMonitorScaleFactor*(self: Screen; monitorNum: int): int =
-  int(gdk_screen_get_monitor_scale_factor(cast[ptr Screen00](self.impl), int32(monitorNum)))
-
-proc monitorScaleFactor*(self: Screen; monitorNum: int): int =
   int(gdk_screen_get_monitor_scale_factor(cast[ptr Screen00](self.impl), int32(monitorNum)))
 
 proc gdk_screen_get_monitor_width_mm(self: ptr Screen00; monitorNum: int32): int32 {.
@@ -5602,14 +5284,11 @@ proc gdk_screen_get_monitor_width_mm(self: ptr Screen00; monitorNum: int32): int
 proc getMonitorWidthMm*(self: Screen; monitorNum: int): int =
   int(gdk_screen_get_monitor_width_mm(cast[ptr Screen00](self.impl), int32(monitorNum)))
 
-proc monitorWidthMm*(self: Screen; monitorNum: int): int =
-  int(gdk_screen_get_monitor_width_mm(cast[ptr Screen00](self.impl), int32(monitorNum)))
-
 proc gdk_screen_get_monitor_workarea(self: ptr Screen00; monitorNum: int32;
     dest: var Rectangle) {.
     importc, libprag.}
 
-proc getMonitorWorkarea*(self: Screen; monitorNum: int; dest: var Rectangle) =
+proc getMonitorWorkarea*(self: Screen; monitorNum: int; dest: var Rectangle = cast[var Rectangle](nil)) =
   gdk_screen_get_monitor_workarea(cast[ptr Screen00](self.impl), int32(monitorNum), dest)
 
 proc gdk_screen_get_n_monitors(self: ptr Screen00): int32 {.
@@ -5728,9 +5407,6 @@ proc gdk_screen_get_setting(self: ptr Screen00; name: cstring; value: gobject.Va
 proc getSetting*(self: Screen; name: cstring; value: gobject.Value): bool =
   toBool(gdk_screen_get_setting(cast[ptr Screen00](self.impl), name, value))
 
-proc `ting=`*(self: Screen; name: cstring; value: gobject.Value): bool =
-  toBool(gdk_screen_get_setting(cast[ptr Screen00](self.impl), name, value))
-
 proc gdk_screen_get_system_visual(self: ptr Screen00): ptr Visual00 {.
     importc, libprag.}
 
@@ -5766,14 +5442,18 @@ proc systemVisual*(self: Screen): Visual =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gdk_screen_get_toplevel_windows(self: ptr Screen00): ptr pointer {.
+proc gdk_screen_get_toplevel_windows(self: ptr Screen00): ptr glib.List {.
     importc, libprag.}
 
-proc getToplevelWindows*(self: Screen): ptr pointer =
-  gdk_screen_get_toplevel_windows(cast[ptr Screen00](self.impl))
+proc getToplevelWindows*(self: Screen): seq[Window] =
+  let resul0 = gdk_screen_get_toplevel_windows(cast[ptr Screen00](self.impl))
+  result = glistObjects2seq(Window, resul0, false)
+  g_list_free(resul0)
 
-proc toplevelWindows*(self: Screen): ptr pointer =
-  gdk_screen_get_toplevel_windows(cast[ptr Screen00](self.impl))
+proc toplevelWindows*(self: Screen): seq[Window] =
+  let resul0 = gdk_screen_get_toplevel_windows(cast[ptr Screen00](self.impl))
+  result = glistObjects2seq(Window, resul0, false)
+  g_list_free(resul0)
 
 proc gdk_screen_get_width(self: ptr Screen00): int32 {.
     importc, libprag.}
@@ -5793,14 +5473,22 @@ proc getWidthMm*(self: Screen): int =
 proc widthMm*(self: Screen): int =
   int(gdk_screen_get_width_mm(cast[ptr Screen00](self.impl)))
 
-proc gdk_screen_get_window_stack(self: ptr Screen00): ptr pointer {.
+proc gdk_screen_get_window_stack(self: ptr Screen00): ptr glib.List {.
     importc, libprag.}
 
-proc getWindowStack*(self: Screen): ptr pointer =
-  gdk_screen_get_window_stack(cast[ptr Screen00](self.impl))
+proc getWindowStack*(self: Screen): seq[Window] =
+  let resul0 = gdk_screen_get_window_stack(cast[ptr Screen00](self.impl))
+  if resul0.isNil:
+    return
+  result = glistObjects2seq(Window, resul0, true)
+  g_list_free(resul0)
 
-proc windowStack*(self: Screen): ptr pointer =
-  gdk_screen_get_window_stack(cast[ptr Screen00](self.impl))
+proc windowStack*(self: Screen): seq[Window] =
+  let resul0 = gdk_screen_get_window_stack(cast[ptr Screen00](self.impl))
+  if resul0.isNil:
+    return
+  result = glistObjects2seq(Window, resul0, true)
+  g_list_free(resul0)
 
 proc gdk_screen_is_composited(self: ptr Screen00): gboolean {.
     importc, libprag.}
@@ -5808,11 +5496,13 @@ proc gdk_screen_is_composited(self: ptr Screen00): gboolean {.
 proc isComposited*(self: Screen): bool =
   toBool(gdk_screen_is_composited(cast[ptr Screen00](self.impl)))
 
-proc gdk_screen_list_visuals(self: ptr Screen00): ptr pointer {.
+proc gdk_screen_list_visuals(self: ptr Screen00): ptr glib.List {.
     importc, libprag.}
 
-proc listVisuals*(self: Screen): ptr pointer =
-  gdk_screen_list_visuals(cast[ptr Screen00](self.impl))
+proc listVisuals*(self: Screen): seq[Visual] =
+  let resul0 = gdk_screen_list_visuals(cast[ptr Screen00](self.impl))
+  result = glistObjects2seq(Visual, resul0, false)
+  g_list_free(resul0)
 
 proc gdk_screen_make_display_name(self: ptr Screen00): cstring {.
     importc, libprag.}
@@ -5853,25 +5543,31 @@ proc gdk_device_get_position(self: ptr Device00; screen: var ptr Screen00;
     x: var int32; y: var int32) {.
     importc, libprag.}
 
-proc getPosition*(self: Device; screen: var Screen; x: var int;
-    y: var int) =
-  fnew(screen, gdk.finalizeGObject)
-  screen.ignoreFinalizer = true
-  var y_00 = int32(y)
-  var x_00 = int32(x)
-  gdk_device_get_position(cast[ptr Device00](self.impl), cast[var ptr Screen00](addr screen.impl), x_00, y_00)
-  y = int(y_00)
-  x = int(x_00)
+proc getPosition*(self: Device; screen: var Screen = cast[var Screen](nil);
+    x: var int = cast[var int](nil); y: var int = cast[var int](nil)) =
+  if addr(screen) != nil:
+    fnew(screen, gdk.finalizeGObject)
+  if addr(screen) != nil:
+    screen.ignoreFinalizer = true
+  var y_00: int32
+  var x_00: int32
+  gdk_device_get_position(cast[ptr Device00](self.impl), cast[var ptr Screen00](if addr(screen) == nil: nil else: addr screen.impl), x_00, y_00)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
 
 proc gdk_device_get_position_double(self: ptr Device00; screen: var ptr Screen00;
     x: var cdouble; y: var cdouble) {.
     importc, libprag.}
 
-proc getPositionDouble*(self: Device; screen: var Screen; x: var cdouble;
-    y: var cdouble) =
-  fnew(screen, gdk.finalizeGObject)
-  screen.ignoreFinalizer = true
-  gdk_device_get_position_double(cast[ptr Device00](self.impl), cast[var ptr Screen00](addr screen.impl), x, y)
+proc getPositionDouble*(self: Device; screen: var Screen = cast[var Screen](nil);
+    x: var cdouble = cast[var cdouble](nil); y: var cdouble = cast[var cdouble](nil)) =
+  if addr(screen) != nil:
+    fnew(screen, gdk.finalizeGObject)
+  if addr(screen) != nil:
+    screen.ignoreFinalizer = true
+  gdk_device_get_position_double(cast[ptr Device00](self.impl), cast[var ptr Screen00](if addr(screen) == nil: nil else: addr screen.impl), x, y)
 
 proc gdk_device_warp(self: ptr Device00; screen: ptr Screen00; x: int32;
     y: int32) {.
@@ -5919,36 +5615,24 @@ proc gdk_display_get_pointer(self: ptr Display00; screen: var ptr Screen00;
     x: var int32; y: var int32; mask: var ModifierType) {.
     importc, libprag.}
 
-proc getPointer*(self: Display; screen: var Screen; x: var int;
-    y: var int; mask: var ModifierType) =
-  fnew(screen, gdk.finalizeGObject)
-  screen.ignoreFinalizer = true
-  var y_00 = int32(y)
-  var x_00 = int32(x)
-  gdk_display_get_pointer(cast[ptr Display00](self.impl), cast[var ptr Screen00](addr screen.impl), x_00, y_00, mask)
-  y = int(y_00)
-  x = int(x_00)
+proc getPointer*(self: Display; screen: var Screen = cast[var Screen](nil);
+    x: var int = cast[var int](nil); y: var int = cast[var int](nil); mask: var ModifierType = cast[var ModifierType](nil)) =
+  if addr(screen) != nil:
+    fnew(screen, gdk.finalizeGObject)
+  if addr(screen) != nil:
+    screen.ignoreFinalizer = true
+  var y_00: int32
+  var x_00: int32
+  gdk_display_get_pointer(cast[ptr Display00](self.impl), cast[var ptr Screen00](if addr(screen) == nil: nil else: addr screen.impl), x_00, y_00, mask)
+  if y.addr != nil:
+    y = int(y_00)
+  if x.addr != nil:
+    x = int(x_00)
 
 proc gdk_display_get_screen(self: ptr Display00; screenNum: int32): ptr Screen00 {.
     importc, libprag.}
 
 proc getScreen*(self: Display; screenNum: int): Screen =
-  let gobj = gdk_display_get_screen(cast[ptr Display00](self.impl), int32(screenNum))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc screen*(self: Display; screenNum: int): Screen =
   let gobj = gdk_display_get_screen(cast[ptr Display00](self.impl), int32(screenNum))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -6071,9 +5755,6 @@ proc gdk_device_pad_get_group_n_modes(self: ptr DevicePad00; groupIdx: int32): i
 proc getGroupNModes*(self: DevicePad; groupIdx: int): int =
   int(gdk_device_pad_get_group_n_modes(cast[ptr DevicePad00](self.impl), int32(groupIdx)))
 
-proc groupNModes*(self: DevicePad; groupIdx: int): int =
-  int(gdk_device_pad_get_group_n_modes(cast[ptr DevicePad00](self.impl), int32(groupIdx)))
-
 proc gdk_device_pad_get_n_groups(self: ptr DevicePad00): int32 {.
     importc, libprag.}
 
@@ -6097,17 +5778,10 @@ proc getFeatureGroup*(self: DevicePad; feature: DevicePadFeature;
     featureIdx: int): int =
   int(gdk_device_pad_get_feature_group(cast[ptr DevicePad00](self.impl), feature, int32(featureIdx)))
 
-proc featureGroup*(self: DevicePad; feature: DevicePadFeature;
-    featureIdx: int): int =
-  int(gdk_device_pad_get_feature_group(cast[ptr DevicePad00](self.impl), feature, int32(featureIdx)))
-
 proc gdk_device_pad_get_n_features(self: ptr DevicePad00; feature: DevicePadFeature): int32 {.
     importc, libprag.}
 
 proc getNFeatures*(self: DevicePad; feature: DevicePadFeature): int =
-  int(gdk_device_pad_get_n_features(cast[ptr DevicePad00](self.impl), feature))
-
-proc nFeatures*(self: DevicePad; feature: DevicePadFeature): int =
   int(gdk_device_pad_get_n_features(cast[ptr DevicePad00](self.impl), feature))
 
 type
@@ -6132,22 +5806,6 @@ proc gdk_display_manager_get(): ptr DisplayManager00 {.
     importc, libprag.}
 
 proc getDisplayManager*(): DisplayManager =
-  let gobj = gdk_display_manager_get()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc displayManager*(): DisplayManager =
   let gobj = gdk_display_manager_get()
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -6202,11 +5860,13 @@ proc defaultDisplay*(self: DisplayManager): Display =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gdk_display_manager_list_displays(self: ptr DisplayManager00): ptr pointer {.
+proc gdk_display_manager_list_displays(self: ptr DisplayManager00): ptr glib.SList {.
     importc, libprag.}
 
-proc listDisplays*(self: DisplayManager): ptr pointer =
-  gdk_display_manager_list_displays(cast[ptr DisplayManager00](self.impl))
+proc listDisplays*(self: DisplayManager): seq[Display] =
+  let resul0 = gdk_display_manager_list_displays(cast[ptr DisplayManager00](self.impl))
+  result = gslistObjects2seq(Display, resul0, false)
+  g_slist_free(resul0)
 
 proc gdk_display_manager_open_display(self: ptr DisplayManager00; name: cstring): ptr Display00 {.
     importc, libprag.}
@@ -6461,11 +6121,11 @@ proc getSuggestedAction*(self: DragContext): DragAction =
 proc suggestedAction*(self: DragContext): DragAction =
   gdk_drag_context_get_suggested_action(cast[ptr DragContext00](self.impl))
 
-proc gdk_drag_context_list_targets(self: ptr DragContext00): ptr pointer {.
+proc gdk_drag_context_list_targets(self: ptr DragContext00): ptr glib.List {.
     importc, libprag.}
 
-proc listTargets*(self: DragContext): ptr pointer =
-  gdk_drag_context_list_targets(cast[ptr DragContext00](self.impl))
+proc listTargets*(self: DragContext): seq[Atom] =
+  discard
 
 proc gdk_drag_context_manage_dnd(self: ptr DragContext00; ipcWindow: ptr Window00;
     actions: DragAction): gboolean {.
@@ -6511,6 +6171,12 @@ when defined(gcDestructors):
       boxedFree(gdk_event_get_type(), cast[ptr Event00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var Event) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGdkEvent)
+
 proc gdk_event_free(self: ptr Event00) {.
     importc, libprag.}
 
@@ -6527,9 +6193,6 @@ proc gdk_events_get_angle(self: ptr Event00; event2: ptr Event00; angle: var cdo
 proc getAngle*(self: Event; event2: Event; angle: var cdouble): bool =
   toBool(gdk_events_get_angle(cast[ptr Event00](self.impl), cast[ptr Event00](event2.impl), angle))
 
-proc angle*(self: Event; event2: Event; angle: var cdouble): bool =
-  toBool(gdk_events_get_angle(cast[ptr Event00](self.impl), cast[ptr Event00](event2.impl), angle))
-
 proc gdk_events_get_center(self: ptr Event00; event2: ptr Event00; x: var cdouble;
     y: var cdouble): gboolean {.
     importc, libprag.}
@@ -6537,16 +6200,10 @@ proc gdk_events_get_center(self: ptr Event00; event2: ptr Event00; x: var cdoubl
 proc getCenter*(self: Event; event2: Event; x: var cdouble; y: var cdouble): bool =
   toBool(gdk_events_get_center(cast[ptr Event00](self.impl), cast[ptr Event00](event2.impl), x, y))
 
-proc center*(self: Event; event2: Event; x: var cdouble; y: var cdouble): bool =
-  toBool(gdk_events_get_center(cast[ptr Event00](self.impl), cast[ptr Event00](event2.impl), x, y))
-
 proc gdk_events_get_distance(self: ptr Event00; event2: ptr Event00; distance: var cdouble): gboolean {.
     importc, libprag.}
 
 proc getDistance*(self: Event; event2: Event; distance: var cdouble): bool =
-  toBool(gdk_events_get_distance(cast[ptr Event00](self.impl), cast[ptr Event00](event2.impl), distance))
-
-proc distance*(self: Event; event2: Event; distance: var cdouble): bool =
   toBool(gdk_events_get_distance(cast[ptr Event00](self.impl), cast[ptr Event00](event2.impl), distance))
 
 proc gdk_event_copy(self: ptr Event00): ptr Event00 {.
@@ -6562,42 +6219,28 @@ proc gdk_event_get_axis(self: ptr Event00; axisUse: AxisUse; value: var cdouble)
 proc getAxis*(self: Event; axisUse: AxisUse; value: var cdouble): bool =
   toBool(gdk_event_get_axis(cast[ptr Event00](self.impl), axisUse, value))
 
-proc axis*(self: Event; axisUse: AxisUse; value: var cdouble): bool =
-  toBool(gdk_event_get_axis(cast[ptr Event00](self.impl), axisUse, value))
-
 proc gdk_event_get_button(self: ptr Event00; button: var uint32): gboolean {.
     importc, libprag.}
 
 proc getButton*(self: Event; button: var int): bool =
-  var button_00 = uint32(button)
+  var button_00: uint32
   result = toBool(gdk_event_get_button(cast[ptr Event00](self.impl), button_00))
-  button = int(button_00)
-
-proc button*(self: Event; button: var int): bool =
-  var button_00 = uint32(button)
-  result = toBool(gdk_event_get_button(cast[ptr Event00](self.impl), button_00))
-  button = int(button_00)
+  if button.addr != nil:
+    button = int(button_00)
 
 proc gdk_event_get_click_count(self: ptr Event00; clickCount: var uint32): gboolean {.
     importc, libprag.}
 
 proc getClickCount*(self: Event; clickCount: var int): bool =
-  var clickCount_00 = uint32(clickCount)
+  var clickCount_00: uint32
   result = toBool(gdk_event_get_click_count(cast[ptr Event00](self.impl), clickCount_00))
-  clickCount = int(clickCount_00)
-
-proc clickCount*(self: Event; clickCount: var int): bool =
-  var clickCount_00 = uint32(clickCount)
-  result = toBool(gdk_event_get_click_count(cast[ptr Event00](self.impl), clickCount_00))
-  clickCount = int(clickCount_00)
+  if clickCount.addr != nil:
+    clickCount = int(clickCount_00)
 
 proc gdk_event_get_coords(self: ptr Event00; xWin: var cdouble; yWin: var cdouble): gboolean {.
     importc, libprag.}
 
 proc getCoords*(self: Event; xWin: var cdouble; yWin: var cdouble): bool =
-  toBool(gdk_event_get_coords(cast[ptr Event00](self.impl), xWin, yWin))
-
-proc coords*(self: Event; xWin: var cdouble; yWin: var cdouble): bool =
   toBool(gdk_event_get_coords(cast[ptr Event00](self.impl), xWin, yWin))
 
 proc gdk_event_get_device(self: ptr Event00): ptr Device00 {.
@@ -6680,21 +6323,14 @@ proc gdk_event_get_keycode(self: ptr Event00; keycode: var uint16): gboolean {.
 proc getKeycode*(self: Event; keycode: var uint16): bool =
   toBool(gdk_event_get_keycode(cast[ptr Event00](self.impl), keycode))
 
-proc keycode*(self: Event; keycode: var uint16): bool =
-  toBool(gdk_event_get_keycode(cast[ptr Event00](self.impl), keycode))
-
 proc gdk_event_get_keyval(self: ptr Event00; keyval: var uint32): gboolean {.
     importc, libprag.}
 
 proc getKeyval*(self: Event; keyval: var int): bool =
-  var keyval_00 = uint32(keyval)
+  var keyval_00: uint32
   result = toBool(gdk_event_get_keyval(cast[ptr Event00](self.impl), keyval_00))
-  keyval = int(keyval_00)
-
-proc keyval*(self: Event; keyval: var int): bool =
-  var keyval_00 = uint32(keyval)
-  result = toBool(gdk_event_get_keyval(cast[ptr Event00](self.impl), keyval_00))
-  keyval = int(keyval_00)
+  if keyval.addr != nil:
+    keyval = int(keyval_00)
 
 proc gdk_event_get_pointer_emulated(self: ptr Event00): gboolean {.
     importc, libprag.}
@@ -6709,9 +6345,6 @@ proc gdk_event_get_root_coords(self: ptr Event00; xRoot: var cdouble; yRoot: var
     importc, libprag.}
 
 proc getRootCoords*(self: Event; xRoot: var cdouble; yRoot: var cdouble): bool =
-  toBool(gdk_event_get_root_coords(cast[ptr Event00](self.impl), xRoot, yRoot))
-
-proc rootCoords*(self: Event; xRoot: var cdouble; yRoot: var cdouble): bool =
   toBool(gdk_event_get_root_coords(cast[ptr Event00](self.impl), xRoot, yRoot))
 
 proc gdk_event_get_scancode(self: ptr Event00): int32 {.
@@ -6763,9 +6396,6 @@ proc gdk_event_get_scroll_deltas(self: ptr Event00; deltaX: var cdouble;
     importc, libprag.}
 
 proc getScrollDeltas*(self: Event; deltaX: var cdouble; deltaY: var cdouble): bool =
-  toBool(gdk_event_get_scroll_deltas(cast[ptr Event00](self.impl), deltaX, deltaY))
-
-proc scrollDeltas*(self: Event; deltaX: var cdouble; deltaY: var cdouble): bool =
   toBool(gdk_event_get_scroll_deltas(cast[ptr Event00](self.impl), deltaX, deltaY))
 
 proc gdk_event_get_seat(self: ptr Event00): ptr Seat00 {.
@@ -6846,9 +6476,6 @@ proc gdk_event_get_state(self: ptr Event00; state: var ModifierType): gboolean {
     importc, libprag.}
 
 proc getState*(self: Event; state: var ModifierType): bool =
-  toBool(gdk_event_get_state(cast[ptr Event00](self.impl), state))
-
-proc state*(self: Event; state: var ModifierType): bool =
   toBool(gdk_event_get_state(cast[ptr Event00](self.impl), state))
 
 proc gdk_event_get_time(self: ptr Event00): uint32 {.
@@ -6959,13 +6586,6 @@ proc getEvent*(): Event =
   fnew(result, gBoxedFreeGdkEvent)
   result.impl = impl0
 
-proc event*(): Event =
-  let impl0 = gdk_event_get()
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreeGdkEvent)
-  result.impl = impl0
-
 proc gdk_event_peek(): ptr Event00 {.
     importc, libprag.}
 
@@ -7032,6 +6652,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(gdk_event_sequence_get_type(), cast[ptr EventSequence00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var EventSequence) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGdkEventSequence)
 
 proc gdk_event_get_event_sequence(self: ptr Event00): ptr EventSequence00 {.
     importc, libprag.}
@@ -7140,9 +6766,6 @@ proc gdk_event_get_scroll_direction(self: ptr Event00; direction: var ScrollDire
     importc, libprag.}
 
 proc getScrollDirection*(self: Event; direction: var ScrollDirection): bool =
-  toBool(gdk_event_get_scroll_direction(cast[ptr Event00](self.impl), direction))
-
-proc scrollDirection*(self: Event; direction: var ScrollDirection): bool =
   toBool(gdk_event_get_scroll_direction(cast[ptr Event00](self.impl), direction))
 
 type
@@ -7767,6 +7390,8 @@ const KEY_AudioNext* = 269025047'i32
 const KEY_AudioPause* = 269025073'i32
 
 const KEY_AudioPlay* = 269025044'i32
+
+const KEY_AudioPreset* = 269025206'i32
 
 const KEY_AudioPrev* = 269025046'i32
 
@@ -8968,6 +8593,8 @@ const KEY_KbdLightOnOff* = 269025028'i32
 
 const UKEY_Kcedilla* = 979'i32
 
+const KEY_Keyboard* = 269025203'i32
+
 const KEY_Korean_Won* = 3839'i32
 
 const UKEY_L* = 76'i32
@@ -9333,6 +8960,8 @@ const KEY_R7* = 65496'i32
 const KEY_R8* = 65497'i32
 
 const KEY_R9* = 65498'i32
+
+const KEY_RFKill* = 269025205'i32
 
 const UKEY_Racute* = 448'i32
 
@@ -9953,6 +9582,8 @@ const KEY_VoidSymbol* = 16777215'i32
 const UKEY_W* = 87'i32
 
 const KEY_WLAN* = 269025173'i32
+
+const KEY_WWAN* = 269025204'i32
 
 const KEY_WWW* = 269025070'i32
 
@@ -10742,6 +10373,8 @@ const KEY_dead_abovereversedcomma* = 65125'i32
 
 const KEY_dead_abovering* = 65112'i32
 
+const KEY_dead_aboveverticalline* = 65169'i32
+
 const KEY_dead_acute* = 65105'i32
 
 const KEY_dead_belowbreve* = 65131'i32
@@ -10759,6 +10392,8 @@ const KEY_dead_belowmacron* = 65128'i32
 const KEY_dead_belowring* = 65127'i32
 
 const KEY_dead_belowtilde* = 65130'i32
+
+const KEY_dead_belowverticalline* = 65170'i32
 
 const KEY_dead_breve* = 65109'i32
 
@@ -10795,6 +10430,10 @@ const KEY_dead_i* = 65156'i32
 const KEY_dead_invertedbreve* = 65133'i32
 
 const KEY_dead_iota* = 65117'i32
+
+const KEY_dead_longsolidusoverlay* = 65171'i32
+
+const KEY_dead_lowline* = 65168'i32
 
 const KEY_dead_macron* = 65108'i32
 
@@ -11851,22 +11490,6 @@ proc getDefaultKeymap*(): Keymap =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc defaultKeymap*(): Keymap =
-  let gobj = gdk_keymap_get_default()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gdk_keymap_get_for_display(display: ptr Display00): ptr Keymap00 {.
     importc, libprag.}
 
@@ -11971,15 +11594,19 @@ proc gdk_keymap_translate_keyboard_state(self: ptr Keymap00; hardwareKeycode: ui
     importc, libprag.}
 
 proc translateKeyboardState*(self: Keymap; hardwareKeycode: int;
-    state: ModifierType; group: int; keyval: var int; effectiveGroup: var int;
-    level: var int; consumedModifiers: var ModifierType): bool =
-  var effectiveGroup_00 = int32(effectiveGroup)
-  var level_00 = int32(level)
-  var keyval_00 = uint32(keyval)
+    state: ModifierType; group: int; keyval: var int = cast[var int](nil);
+    effectiveGroup: var int = cast[var int](nil); level: var int = cast[var int](nil);
+    consumedModifiers: var ModifierType = cast[var ModifierType](nil)): bool =
+  var effectiveGroup_00: int32
+  var level_00: int32
+  var keyval_00: uint32
   result = toBool(gdk_keymap_translate_keyboard_state(cast[ptr Keymap00](self.impl), uint32(hardwareKeycode), state, int32(group), keyval_00, effectiveGroup_00, level_00, consumedModifiers))
-  effectiveGroup = int(effectiveGroup_00)
-  level = int(level_00)
-  keyval = int(keyval_00)
+  if effectiveGroup.addr != nil:
+    effectiveGroup = int(effectiveGroup_00)
+  if level.addr != nil:
+    level = int(level_00)
+  if keyval.addr != nil:
+    keyval = int(keyval_00)
 
 type
   ModifierIntent* {.size: sizeof(cint), pure.} = enum
@@ -11997,23 +11624,20 @@ proc gdk_keymap_get_modifier_mask(self: ptr Keymap00; intent: ModifierIntent): M
 proc getModifierMask*(self: Keymap; intent: ModifierIntent): ModifierType =
   gdk_keymap_get_modifier_mask(cast[ptr Keymap00](self.impl), intent)
 
-proc modifierMask*(self: Keymap; intent: ModifierIntent): ModifierType =
-  gdk_keymap_get_modifier_mask(cast[ptr Keymap00](self.impl), intent)
-
 type
   KeymapKey* {.pure, byRef.} = object
     keycode*: uint32
     group*: int32
     level*: int32
 
-proc seq2KeymapKeyArray(s: openarray[KeymapKey]; a: var cstringArray):  KeymapKeyArray =
+proc seq2KeymapKeyArray(s: openarray[KeymapKey]; a: var cstringArray):  ptr KeymapKey =
   assert s.high < 256
   let x = cast[ptr UncheckedArray[ptr KeymapKey]](a)
   for i in 0 .. s.high:
     x[i] = unsafeaddr(s[i])
-  return x
+  return cast[ptr KeymapKey](x)
 
-proc keymapKeyArrayToSeq(s: KeymapKeyArray; n: int):  seq[KeymapKey] =
+proc keymapKeyArrayToSeq(s: ptr KeymapKey; n: int):  seq[KeymapKey] =
   let a = cast[ptr UncheckedArray[ptr KeymapKey]](s)
   for i in 0 ..< n:
     result.add(a[i][])
@@ -12022,27 +11646,18 @@ proc keymapKeyArrayToSeq(s: KeymapKeyArray; n: int):  seq[KeymapKey] =
 
 
 proc gdk_keymap_get_entries_for_keyval(self: ptr Keymap00; keyval: uint32;
-    keys: var KeymapKeyArray; nKeys: var int32): gboolean {.
+    keys: var ptr KeymapKey; nKeys: var int32): gboolean {.
     importc, libprag.}
 
 proc getEntriesForKeyval*(self: Keymap; keyval: int; keys: var seq[KeymapKey];
     nKeys: var int): bool =
-  var nKeys_00 = int32(nKeys)
+  var nKeys_00: int32
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var keys_00 = seq2KeymapKeyArray(keys, fs469n23)
   result = toBool(gdk_keymap_get_entries_for_keyval(cast[ptr Keymap00](self.impl), uint32(keyval), keys_00, nKeys_00))
-  nKeys = int(nKeys_00)
-  keys = keymapKeyArrayToSeq(keys_00, nKeys)
-
-proc entriesForKeyval*(self: Keymap; keyval: int; keys: var seq[KeymapKey];
-    nKeys: var int): bool =
-  var nKeys_00 = int32(nKeys)
-  var fs469n23x: array[256, pointer]
-  var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
-  var keys_00 = seq2KeymapKeyArray(keys, fs469n23)
-  result = toBool(gdk_keymap_get_entries_for_keyval(cast[ptr Keymap00](self.impl), uint32(keyval), keys_00, nKeys_00))
-  nKeys = int(nKeys_00)
+  if nKeys.addr != nil:
+    nKeys = int(nKeys_00)
   keys = keymapKeyArrayToSeq(keys_00, nKeys)
 
 proc gdk_keymap_lookup_key(self: ptr Keymap00; key: KeymapKey): uint32 {.
@@ -12055,7 +11670,7 @@ const MAJOR_VERSION* = 3'i32
 
 const MAX_TIMECOORD_AXES* = 128'i32
 
-const MICRO_VERSION* = 20'i32
+const MICRO_VERSION* = 24'i32
 
 const MINOR_VERSION* = 24'i32
 
@@ -12079,10 +11694,9 @@ const PARENT_RELATIVE* = 1'i32
 const PRIORITY_REDRAW* = 120'i32
 
 type
-  Point00* {.pure.} = object
-  Point* = ref object
-    impl*: ptr Point00
-    ignoreFinalizer*: bool
+  Point* {.pure, byRef.} = object
+    x*: int32
+    y*: int32
 
 type
   PropMode* {.size: sizeof(cint), pure.} = enum
@@ -12123,10 +11737,9 @@ type
     ok = 0
 
 type
-  TimeCoord00* {.pure.} = object
-  TimeCoord* = ref object
-    impl*: ptr TimeCoord00
-    ignoreFinalizer*: bool
+  TimeCoord* {.pure, byRef.} = object
+    time*: uint32
+    axes*: array[128, cdouble]
 
 type
   TouchpadGesturePhase* {.size: sizeof(cint), pure.} = enum
@@ -12194,7 +11807,7 @@ proc cairoDrawFromGl*(cr: cairo.Context; window: Window; source: int;
 proc gdk_cairo_get_clip_rectangle(cr: ptr cairo.Context00; rect: var Rectangle): gboolean {.
     importc, libprag.}
 
-proc cairoGetClipRectangle*(cr: cairo.Context; rect: var Rectangle): bool =
+proc cairoGetClipRectangle*(cr: cairo.Context; rect: var Rectangle = cast[var Rectangle](nil)): bool =
   toBool(gdk_cairo_get_clip_rectangle(cast[ptr cairo.Context00](cr.impl), rect))
 
 proc gdk_cairo_get_drawing_context(cr: ptr cairo.Context00): ptr DrawingContext00 {.
@@ -12283,11 +11896,13 @@ proc gdk_drag_abort(context: ptr DragContext00; time: uint32) {.
 proc dragAbort*(context: DragContext; time: int) =
   gdk_drag_abort(cast[ptr DragContext00](context.impl), uint32(time))
 
-proc gdk_drag_begin(window: ptr Window00; targets: ptr pointer): ptr DragContext00 {.
+proc gdk_drag_begin(window: ptr Window00; targets: ptr glib.List): ptr DragContext00 {.
     importc, libprag.}
 
-proc dragBegin*(window: Window; targets: ptr pointer): DragContext =
-  let gobj = gdk_drag_begin(cast[ptr Window00](window.impl), targets)
+proc dragBegin*(window: Window; targets: seq[Atom]): DragContext =
+  var tempResGL = seq2GList(targets)
+  let gobj = gdk_drag_begin(cast[ptr Window00](window.impl), tempResGL)
+  g_list_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -12304,11 +11919,13 @@ proc dragBegin*(window: Window; targets: ptr pointer): DragContext =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gdk_drag_begin_for_device(window: ptr Window00; device: ptr Device00;
-    targets: ptr pointer): ptr DragContext00 {.
+    targets: ptr glib.List): ptr DragContext00 {.
     importc, libprag.}
 
-proc dragBeginForDevice*(window: Window; device: Device; targets: ptr pointer): DragContext =
-  let gobj = gdk_drag_begin_for_device(cast[ptr Window00](window.impl), cast[ptr Device00](device.impl), targets)
+proc dragBeginForDevice*(window: Window; device: Device; targets: seq[Atom]): DragContext =
+  var tempResGL = seq2GList(targets)
+  let gobj = gdk_drag_begin_for_device(cast[ptr Window00](window.impl), cast[ptr Device00](device.impl), tempResGL)
+  g_list_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -12325,12 +11942,14 @@ proc dragBeginForDevice*(window: Window; device: Device; targets: ptr pointer): 
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gdk_drag_begin_from_point(window: ptr Window00; device: ptr Device00;
-    targets: ptr pointer; xRoot: int32; yRoot: int32): ptr DragContext00 {.
+    targets: ptr glib.List; xRoot: int32; yRoot: int32): ptr DragContext00 {.
     importc, libprag.}
 
-proc dragBeginFromPoint*(window: Window; device: Device; targets: ptr pointer;
+proc dragBeginFromPoint*(window: Window; device: Device; targets: seq[Atom];
     xRoot: int; yRoot: int): DragContext =
-  let gobj = gdk_drag_begin_from_point(cast[ptr Window00](window.impl), cast[ptr Device00](device.impl), targets, int32(xRoot), int32(yRoot))
+  var tempResGL = seq2GList(targets)
+  let gobj = gdk_drag_begin_from_point(cast[ptr Window00](window.impl), cast[ptr Device00](device.impl), tempResGL, int32(xRoot), int32(yRoot))
+  g_list_free(tempResGL)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -12374,13 +11993,11 @@ proc dragFindWindowForScreen*(context: DragContext; dragWindow: Window;
   fnew(destWindow, gdk.finalizeGObject)
   gdk_drag_find_window_for_screen(cast[ptr DragContext00](context.impl), cast[ptr Window00](dragWindow.impl), cast[ptr Screen00](screen.impl), int32(xRoot), int32(yRoot), cast[var ptr Window00](addr destWindow.impl), protocol)
 
-proc gdk_drag_get_selection(context: ptr DragContext00): ptr Atom00 {.
+proc gdk_drag_get_selection(context: ptr DragContext00): ptr Atom {.
     importc, libprag.}
 
-proc dragGetSelection*(context: DragContext): Atom =
-  new(result)
-  result.impl = gdk_drag_get_selection(cast[ptr DragContext00](context.impl))
-  result.ignoreFinalizer = true
+proc dragGetSelection*(context: DragContext): ptr Atom =
+  gdk_drag_get_selection(cast[ptr DragContext00](context.impl))
 
 proc gdk_drag_motion(context: ptr DragContext00; destWindow: ptr Window00;
     protocol: DragProtocol; xRoot: int32; yRoot: int32; suggestedAction: DragAction;
@@ -12450,31 +12067,10 @@ proc getDefaultRootWindow*(): Window =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc defaultRootWindow*(): Window =
-  let gobj = gdk_get_default_root_window()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdk.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 proc gdk_get_display(): cstring {.
     importc, libprag.}
 
 proc getDisplay*(): string =
-  let resul0 = gdk_get_display()
-  result = $resul0
-  cogfree(resul0)
-
-proc display*(): string =
   let resul0 = gdk_get_display()
   result = $resul0
   cogfree(resul0)
@@ -12488,19 +12084,10 @@ proc getDisplayArgName*(): string =
     return
   result = $resul0
 
-proc displayArgName*(): string =
-  let resul0 = gdk_get_display_arg_name()
-  if resul0.isNil:
-    return
-  result = $resul0
-
 proc gdk_get_program_class(): cstring {.
     importc, libprag.}
 
 proc getProgramClass*(): string =
-  result = $gdk_get_program_class()
-
-proc programClass*(): string =
   result = $gdk_get_program_class()
 
 proc gdk_get_show_events(): gboolean {.
@@ -12509,10 +12096,7 @@ proc gdk_get_show_events(): gboolean {.
 proc getShowEvents*(): bool =
   toBool(gdk_get_show_events())
 
-proc showEvents*(): bool =
-  toBool(gdk_get_show_events())
-
-proc gdk_init(argc: var int32; argv: var cstringArray) {.
+proc gdk_init(argc: var int32; argv: var ptr cstring) {.
     importc, libprag.}
 
 proc init*(argc: var int; argv: var seq[string]) =
@@ -12524,7 +12108,7 @@ proc init*(argc: var int; argv: var seq[string]) =
   argc = int(argc_00)
   argv = cstringArrayToSeq(argv_00)
 
-proc gdk_init_check(argc: var int32; argv: var cstringArray): gboolean {.
+proc gdk_init_check(argc: var int32; argv: var ptr cstring): gboolean {.
     importc, libprag.}
 
 proc initCheck*(argc: var int; argv: var seq[string]): bool =
@@ -12552,11 +12136,13 @@ proc gdk_keyval_convert_case(symbol: uint32; lower: var uint32; upper: var uint3
     importc, libprag.}
 
 proc keyvalConvertCase*(symbol: int; lower: var int; upper: var int) =
-  var upper_00 = uint32(upper)
-  var lower_00 = uint32(lower)
+  var upper_00: uint32
+  var lower_00: uint32
   gdk_keyval_convert_case(uint32(symbol), lower_00, upper_00)
-  upper = int(upper_00)
-  lower = int(lower_00)
+  if upper.addr != nil:
+    upper = int(upper_00)
+  if lower.addr != nil:
+    lower = int(lower_00)
 
 proc gdk_keyval_from_name(keyvalName: cstring): uint32 {.
     importc, libprag.}
@@ -12603,8 +12189,13 @@ proc gdk_keyval_to_upper(keyval: uint32): uint32 {.
 proc keyvalToUpper*(keyval: int): int =
   int(gdk_keyval_to_upper(uint32(keyval)))
 
-proc listVisuals*(): ptr pointer {.
-    importc: "gdk_list_visuals", libprag.}
+proc gdk_list_visuals(): ptr glib.List {.
+    importc, libprag.}
+
+proc listVisuals*(): seq[Visual] =
+  let resul0 = gdk_list_visuals()
+  result = glistObjects2seq(Visual, resul0, false)
+  g_list_free(resul0)
 
 proc notifyStartupComplete*() {.
     importc: "gdk_notify_startup_complete", libprag.}
@@ -12710,7 +12301,7 @@ proc pangoContextGetForScreen*(screen: Screen): pango.Context =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gdk_parse_args(argc: var int32; argv: var cstringArray) {.
+proc gdk_parse_args(argc: var int32; argv: var ptr cstring) {.
     importc, libprag.}
 
 proc parseArgs*(argc: var int; argv: var seq[string]) =
@@ -12793,33 +12384,34 @@ proc pointerUngrab*(time: int) =
 proc preParseLibgtkOnly*() {.
     importc: "gdk_pre_parse_libgtk_only", libprag.}
 
-proc gdk_property_delete(window: ptr Window00; property: ptr Atom00) {.
+proc gdk_property_delete(window: ptr Window00; property: Atom) {.
     importc, libprag.}
 
 proc propertyDelete*(window: Window; property: Atom) =
-  gdk_property_delete(cast[ptr Window00](window.impl), cast[ptr Atom00](property.impl))
+  gdk_property_delete(cast[ptr Window00](window.impl), property)
 
-proc gdk_query_visual_types(visualTypes: var VisualTypeArray; count: var int32) {.
+proc gdk_query_visual_types(visualTypes: var ptr VisualType; count: var int32) {.
     importc, libprag.}
 
-proc queryVisualTypes*(visualTypes: var VisualTypeArray; count: var int) =
-  var count_00 = int32(count)
+proc queryVisualTypes*(visualTypes: var ptr VisualType; count: var int) =
+  var count_00: int32
   gdk_query_visual_types(visualTypes, count_00)
-  count = int(count_00)
+  if count.addr != nil:
+    count = int(count_00)
 
-proc gdk_selection_convert(requestor: ptr Window00; selection: ptr Atom00;
-    target: ptr Atom00; time: uint32) {.
+proc gdk_selection_convert(requestor: ptr Window00; selection: Atom; target: Atom;
+    time: uint32) {.
     importc, libprag.}
 
 proc selectionConvert*(requestor: Window; selection: Atom; target: Atom;
     time: int) =
-  gdk_selection_convert(cast[ptr Window00](requestor.impl), cast[ptr Atom00](selection.impl), cast[ptr Atom00](target.impl), uint32(time))
+  gdk_selection_convert(cast[ptr Window00](requestor.impl), selection, target, uint32(time))
 
-proc gdk_selection_owner_get(selection: ptr Atom00): ptr Window00 {.
+proc gdk_selection_owner_get(selection: Atom): ptr Window00 {.
     importc, libprag.}
 
 proc selectionOwnerGet*(selection: Atom): Window =
-  let gobj = gdk_selection_owner_get(cast[ptr Atom00](selection.impl))
+  let gobj = gdk_selection_owner_get(selection)
   if gobj.isNil:
     return nil
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -12836,11 +12428,11 @@ proc selectionOwnerGet*(selection: Atom): Window =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gdk_selection_owner_get_for_display(display: ptr Display00; selection: ptr Atom00): ptr Window00 {.
+proc gdk_selection_owner_get_for_display(display: ptr Display00; selection: Atom): ptr Window00 {.
     importc, libprag.}
 
 proc selectionOwnerGetForDisplay*(display: Display; selection: Atom): Window =
-  let gobj = gdk_selection_owner_get_for_display(cast[ptr Display00](display.impl), cast[ptr Atom00](selection.impl))
+  let gobj = gdk_selection_owner_get_for_display(cast[ptr Display00](display.impl), selection)
   if gobj.isNil:
     return nil
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -12857,42 +12449,39 @@ proc selectionOwnerGetForDisplay*(display: Display; selection: Atom): Window =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gdk_selection_owner_set(owner: ptr Window00; selection: ptr Atom00;
-    time: uint32; sendEvent: gboolean): gboolean {.
+proc gdk_selection_owner_set(owner: ptr Window00; selection: Atom; time: uint32;
+    sendEvent: gboolean): gboolean {.
     importc, libprag.}
 
 proc selectionOwnerSet*(owner: Window = nil; selection: Atom; time: int;
     sendEvent: bool): bool =
-  toBool(gdk_selection_owner_set(if owner.isNil: nil else: cast[ptr Window00](owner.impl), cast[ptr Atom00](selection.impl), uint32(time), gboolean(sendEvent)))
+  toBool(gdk_selection_owner_set(if owner.isNil: nil else: cast[ptr Window00](owner.impl), selection, uint32(time), gboolean(sendEvent)))
 
 proc gdk_selection_owner_set_for_display(display: ptr Display00; owner: ptr Window00;
-    selection: ptr Atom00; time: uint32; sendEvent: gboolean): gboolean {.
+    selection: Atom; time: uint32; sendEvent: gboolean): gboolean {.
     importc, libprag.}
 
 proc selectionOwnerSetForDisplay*(display: Display; owner: Window = nil;
     selection: Atom; time: int; sendEvent: bool): bool =
-  toBool(gdk_selection_owner_set_for_display(cast[ptr Display00](display.impl), if owner.isNil: nil else: cast[ptr Window00](owner.impl), cast[ptr Atom00](selection.impl), uint32(time), gboolean(sendEvent)))
+  toBool(gdk_selection_owner_set_for_display(cast[ptr Display00](display.impl), if owner.isNil: nil else: cast[ptr Window00](owner.impl), selection, uint32(time), gboolean(sendEvent)))
 
-proc gdk_selection_send_notify(requestor: ptr Window00; selection: ptr Atom00;
-    target: ptr Atom00; property: ptr Atom00; time: uint32) {.
+proc gdk_selection_send_notify(requestor: ptr Window00; selection: Atom;
+    target: Atom; property: Atom; time: uint32) {.
     importc, libprag.}
 
 proc selectionSendNotify*(requestor: Window; selection: Atom; target: Atom;
     property: Atom; time: int) =
-  gdk_selection_send_notify(cast[ptr Window00](requestor.impl), cast[ptr Atom00](selection.impl), cast[ptr Atom00](target.impl), cast[ptr Atom00](property.impl), uint32(time))
+  gdk_selection_send_notify(cast[ptr Window00](requestor.impl), selection, target, property, uint32(time))
 
 proc gdk_selection_send_notify_for_display(display: ptr Display00; requestor: ptr Window00;
-    selection: ptr Atom00; target: ptr Atom00; property: ptr Atom00; time: uint32) {.
+    selection: Atom; target: Atom; property: Atom; time: uint32) {.
     importc, libprag.}
 
 proc selectionSendNotifyForDisplay*(display: Display; requestor: Window;
     selection: Atom; target: Atom; property: Atom; time: int) =
-  gdk_selection_send_notify_for_display(cast[ptr Display00](display.impl), cast[ptr Window00](requestor.impl), cast[ptr Atom00](selection.impl), cast[ptr Atom00](target.impl), cast[ptr Atom00](property.impl), uint32(time))
+  gdk_selection_send_notify_for_display(cast[ptr Display00](display.impl), cast[ptr Window00](requestor.impl), selection, target, property, uint32(time))
 
 proc setAllowedBackends*(backends: cstring) {.
-    importc: "gdk_set_allowed_backends", libprag.}
-
-proc `allowedBackends=`*(backends: cstring) {.
     importc: "gdk_set_allowed_backends", libprag.}
 
 proc gdk_set_double_click_time(msec: uint32) {.
@@ -12901,13 +12490,7 @@ proc gdk_set_double_click_time(msec: uint32) {.
 proc setDoubleClickTime*(msec: int) =
   gdk_set_double_click_time(uint32(msec))
 
-proc `doubleClickTime=`*(msec: uint32) {.
-    importc: "gdk_set_double_click_time", libprag.}
-
 proc setProgramClass*(programClass: cstring) {.
-    importc: "gdk_set_program_class", libprag.}
-
-proc `programClass=`*(programClass: cstring) {.
     importc: "gdk_set_program_class", libprag.}
 
 proc gdk_set_show_events(showEvents: gboolean) {.
@@ -12916,16 +12499,10 @@ proc gdk_set_show_events(showEvents: gboolean) {.
 proc setShowEvents*(showEvents: bool = true) =
   gdk_set_show_events(gboolean(showEvents))
 
-proc `showEvents=`*(showEvents: gboolean) {.
-    importc: "gdk_set_show_events", libprag.}
-
 proc gdk_setting_get(name: cstring; value: gobject.Value): gboolean {.
     importc, libprag.}
 
 proc settingGet*(name: cstring; value: gobject.Value): bool =
-  toBool(gdk_setting_get(name, value))
-
-proc `tingGet=`*(name: cstring; value: gobject.Value): bool =
   toBool(gdk_setting_get(name, value))
 
 proc gdk_synthesize_window_state(window: ptr Window00; unsetFlags: WindowState;
@@ -12958,8 +12535,8 @@ proc testSimulateKey*(window: Window; x: int; y: int; keyval: int; modifiers: Mo
     keyPressrelease: EventType): bool =
   toBool(gdk_test_simulate_key(cast[ptr Window00](window.impl), int32(x), int32(y), uint32(keyval), modifiers, keyPressrelease))
 
-proc gdk_text_property_to_utf8_list_for_display(display: ptr Display00; encoding: ptr Atom00;
-    format: int32; text: uint8Array; length: int32; list: var cstringArray): int32 {.
+proc gdk_text_property_to_utf8_list_for_display(display: ptr Display00; encoding: Atom;
+    format: int32; text: ptr uint8; length: int32; list: var ptr cstring): int32 {.
     importc, libprag.}
 
 proc textPropertyToUtf8ListForDisplay*(display: Display; encoding: Atom;
@@ -12968,8 +12545,9 @@ proc textPropertyToUtf8ListForDisplay*(display: Display; encoding: Atom;
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var list_00 = seq2CstringArray(list, fs469n23)
-  result = int(gdk_text_property_to_utf8_list_for_display(cast[ptr Display00](display.impl), cast[ptr Atom00](encoding.impl), int32(format), unsafeaddr(text[0]), int32(length), list_00))
-  list = cstringArrayToSeq(list_00)
+  result = int(gdk_text_property_to_utf8_list_for_display(cast[ptr Display00](display.impl), encoding, int32(format), cast[ptr uint8](unsafeaddr(text[0])), int32(length), list_00))
+  if list.addr != nil:
+    list = cstringArrayToSeq(list_00)
 
 proc gdk_threads_add_idle_full(priority: int32; function: SourceFunc; data: pointer;
     notify: DestroyNotify): uint32 {.

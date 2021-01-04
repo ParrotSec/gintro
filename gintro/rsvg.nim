@@ -18,10 +18,6 @@ import gobject, gdkpixbuf, cairo, gio, gmodule, glib
 const Lib = "librsvg-2.so.2"
 {.pragma: libprag, cdecl, dynlib: Lib.}
 
-type
-  uint8Array* = pointer
-
-
 proc finalizeGObject*[T](o: ref T) =
   if not o.ignoreFinalizer:
     gobject.g_object_remove_toggle_ref(o.impl, gobject.toggleNotify, addr(o[]))
@@ -108,13 +104,13 @@ proc initHandle*[T](result: var T) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc rsvg_handle_new_from_data(data: uint8Array; dataLen: uint64; error: ptr ptr glib.Error = nil): ptr Handle00 {.
+proc rsvg_handle_new_from_data(data: ptr uint8; dataLen: uint64; error: ptr ptr glib.Error = nil): ptr Handle00 {.
     importc, libprag.}
 
 proc newHandleFromData*(data: seq[uint8] | string): Handle =
   let dataLen = uint64(data.len)
   var gerror: ptr glib.Error
-  let gobj = rsvg_handle_new_from_data(unsafeaddr(data[0]), dataLen, addr gerror)
+  let gobj = rsvg_handle_new_from_data(cast[ptr uint8](unsafeaddr(data[0])), dataLen, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -138,7 +134,7 @@ proc newHandleFromData*(tdesc: typedesc; data: seq[uint8] | string): tdesc =
   let dataLen = uint64(data.len)
   var gerror: ptr glib.Error
   assert(result is Handle)
-  let gobj = rsvg_handle_new_from_data(unsafeaddr(data[0]), dataLen, addr gerror)
+  let gobj = rsvg_handle_new_from_data(cast[ptr uint8](unsafeaddr(data[0])), dataLen, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -162,7 +158,7 @@ proc initHandleFromData*[T](result: var T; data: seq[uint8] | string) {.deprecat
   let dataLen = uint64(data.len)
   var gerror: ptr glib.Error
   assert(result is Handle)
-  let gobj = rsvg_handle_new_from_data(unsafeaddr(data[0]), dataLen, addr gerror)
+  let gobj = rsvg_handle_new_from_data(cast[ptr uint8](unsafeaddr(data[0])), dataLen, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -288,10 +284,6 @@ proc getDimensionsSub*(self: Handle; dimensionData: var DimensionData;
     id: cstring = ""): bool =
   toBool(rsvg_handle_get_dimensions_sub(cast[ptr Handle00](self.impl), dimensionData, safeStringToCString(id)))
 
-proc dimensionsSub*(self: Handle; dimensionData: var DimensionData;
-    id: cstring = ""): bool =
-  toBool(rsvg_handle_get_dimensions_sub(cast[ptr Handle00](self.impl), dimensionData, safeStringToCString(id)))
-
 proc rsvg_handle_get_pixbuf(self: ptr Handle00): ptr gdkpixbuf.Pixbuf00 {.
     importc, libprag.}
 
@@ -337,25 +329,6 @@ proc rsvg_handle_get_pixbuf_sub(self: ptr Handle00; id: cstring): ptr gdkpixbuf.
     importc, libprag.}
 
 proc getPixbufSub*(self: Handle; id: cstring = ""): gdkpixbuf.Pixbuf =
-  let gobj = rsvg_handle_get_pixbuf_sub(cast[ptr Handle00](self.impl), safeStringToCString(id))
-  if gobj.isNil:
-    return nil
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdkpixbuf.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc pixbufSub*(self: Handle; id: cstring = ""): gdkpixbuf.Pixbuf =
   let gobj = rsvg_handle_get_pixbuf_sub(cast[ptr Handle00](self.impl), safeStringToCString(id))
   if gobj.isNil:
     return nil
@@ -446,28 +419,28 @@ proc rsvg_handle_set_dpi_x_y(self: ptr Handle00; dpiX: cdouble; dpiY: cdouble) {
 proc setDpiXY*(self: Handle; dpiX: cdouble; dpiY: cdouble) =
   rsvg_handle_set_dpi_x_y(cast[ptr Handle00](self.impl), dpiX, dpiY)
 
-proc rsvg_handle_set_stylesheet(self: ptr Handle00; css: uint8Array; cssLen: uint64;
+proc rsvg_handle_set_stylesheet(self: ptr Handle00; css: ptr uint8; cssLen: uint64;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc setStylesheet*(self: Handle; css: seq[uint8] | string): bool =
   let cssLen = uint64(css.len)
   var gerror: ptr glib.Error
-  let resul0 = rsvg_handle_set_stylesheet(cast[ptr Handle00](self.impl), unsafeaddr(css[0]), cssLen, addr gerror)
+  let resul0 = rsvg_handle_set_stylesheet(cast[ptr Handle00](self.impl), cast[ptr uint8](unsafeaddr(css[0])), cssLen, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc rsvg_handle_write(self: ptr Handle00; buf: uint8Array; count: uint64;
+proc rsvg_handle_write(self: ptr Handle00; buf: ptr uint8; count: uint64;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc write*(self: Handle; buf: seq[uint8] | string): bool =
   let count = uint64(buf.len)
   var gerror: ptr glib.Error
-  let resul0 = rsvg_handle_write(cast[ptr Handle00](self.impl), unsafeaddr(buf[0]), count, addr gerror)
+  let resul0 = rsvg_handle_write(cast[ptr Handle00](self.impl), cast[ptr uint8](unsafeaddr(buf[0])), count, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -689,10 +662,21 @@ proc initHandleWithFlags*[T](result: var T; flags: HandleFlags) {.deprecated.} =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 type
-  Length00* {.pure.} = object
-  Length* = ref object
-    impl*: ptr Length00
-    ignoreFinalizer*: bool
+  Unit* {.size: sizeof(cint), pure.} = enum
+    percent = 0
+    px = 1
+    em = 2
+    ex = 3
+    `in` = 4
+    cm = 5
+    mm = 6
+    pt = 7
+    pc = 8
+
+type
+  Length* {.pure, byRef.} = object
+    length*: cdouble
+    unit*: Unit
 
 type
   PositionData* {.pure, byRef.} = object
@@ -707,32 +691,19 @@ proc getPositionSub*(self: Handle; positionData: var PositionData;
     id: cstring = ""): bool =
   toBool(rsvg_handle_get_position_sub(cast[ptr Handle00](self.impl), positionData, safeStringToCString(id)))
 
-proc positionSub*(self: Handle; positionData: var PositionData;
-    id: cstring = ""): bool =
-  toBool(rsvg_handle_get_position_sub(cast[ptr Handle00](self.impl), positionData, safeStringToCString(id)))
-
 type
-  Rectangle00* {.pure.} = object
-  Rectangle* = ref object
-    impl*: ptr Rectangle00
-    ignoreFinalizer*: bool
+  Rectangle* {.pure, byRef.} = object
+    x*: cdouble
+    y*: cdouble
+    width*: cdouble
+    height*: cdouble
 
 proc rsvg_handle_get_geometry_for_element(self: ptr Handle00; id: cstring;
-    outInkRect: var Rectangle00; outLogicalRect: var Rectangle00; error: ptr ptr glib.Error = nil): gboolean {.
+    outInkRect: var Rectangle; outLogicalRect: var Rectangle; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc getGeometryForElement*(self: Handle; id: cstring = "";
-    outInkRect: var Rectangle00; outLogicalRect: var Rectangle00): bool =
-  var gerror: ptr glib.Error
-  let resul0 = rsvg_handle_get_geometry_for_element(cast[ptr Handle00](self.impl), safeStringToCString(id), outInkRect, outLogicalRect, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc geometryForElement*(self: Handle; id: cstring = "";
-    outInkRect: var Rectangle00; outLogicalRect: var Rectangle00): bool =
+    outInkRect: var Rectangle = cast[var Rectangle](nil); outLogicalRect: var Rectangle = cast[var Rectangle](nil)): bool =
   var gerror: ptr glib.Error
   let resul0 = rsvg_handle_get_geometry_for_element(cast[ptr Handle00](self.impl), safeStringToCString(id), outInkRect, outLogicalRect, addr gerror)
   if gerror != nil:
@@ -742,24 +713,14 @@ proc geometryForElement*(self: Handle; id: cstring = "";
   result = toBool(resul0)
 
 proc rsvg_handle_get_geometry_for_layer(self: ptr Handle00; id: cstring;
-    viewport: ptr Rectangle00; outInkRect: var Rectangle00; outLogicalRect: var Rectangle00;
+    viewport: Rectangle; outInkRect: var Rectangle; outLogicalRect: var Rectangle;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc getGeometryForLayer*(self: Handle; id: cstring = ""; viewport: Rectangle;
-    outInkRect: var Rectangle00; outLogicalRect: var Rectangle00): bool =
+    outInkRect: var Rectangle = cast[var Rectangle](nil); outLogicalRect: var Rectangle = cast[var Rectangle](nil)): bool =
   var gerror: ptr glib.Error
-  let resul0 = rsvg_handle_get_geometry_for_layer(cast[ptr Handle00](self.impl), safeStringToCString(id), cast[ptr Rectangle00](viewport.impl), outInkRect, outLogicalRect, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc geometryForLayer*(self: Handle; id: cstring = ""; viewport: Rectangle;
-    outInkRect: var Rectangle00; outLogicalRect: var Rectangle00): bool =
-  var gerror: ptr glib.Error
-  let resul0 = rsvg_handle_get_geometry_for_layer(cast[ptr Handle00](self.impl), safeStringToCString(id), cast[ptr Rectangle00](viewport.impl), outInkRect, outLogicalRect, addr gerror)
+  let resul0 = rsvg_handle_get_geometry_for_layer(cast[ptr Handle00](self.impl), safeStringToCString(id), viewport, outInkRect, outLogicalRect, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -767,28 +728,32 @@ proc geometryForLayer*(self: Handle; id: cstring = ""; viewport: Rectangle;
   result = toBool(resul0)
 
 proc rsvg_handle_get_intrinsic_dimensions(self: ptr Handle00; outHasWidth: var gboolean;
-    outWidth: var Length00; outHasHeight: var gboolean; outHeight: var Length00;
-    outHasViewbox: var gboolean; outViewbox: var Rectangle00) {.
+    outWidth: var Length; outHasHeight: var gboolean; outHeight: var Length;
+    outHasViewbox: var gboolean; outViewbox: var Rectangle) {.
     importc, libprag.}
 
-proc getIntrinsicDimensions*(self: Handle; outHasWidth: var bool;
-    outWidth: var Length00; outHasHeight: var bool; outHeight: var Length00;
-    outHasViewbox: var bool; outViewbox: var Rectangle00) =
-  var outHasWidth_00 = gboolean(outHasWidth)
-  var outHasHeight_00 = gboolean(outHasHeight)
-  var outHasViewbox_00 = gboolean(outHasViewbox)
+proc getIntrinsicDimensions*(self: Handle; outHasWidth: var bool = cast[var bool](nil);
+    outWidth: var Length = cast[var Length](nil); outHasHeight: var bool = cast[var bool](nil);
+    outHeight: var Length = cast[var Length](nil); outHasViewbox: var bool = cast[var bool](nil);
+    outViewbox: var Rectangle = cast[var Rectangle](nil)) =
+  var outHasWidth_00: gboolean
+  var outHasHeight_00: gboolean
+  var outHasViewbox_00: gboolean
   rsvg_handle_get_intrinsic_dimensions(cast[ptr Handle00](self.impl), outHasWidth_00, outWidth, outHasHeight_00, outHeight, outHasViewbox_00, outViewbox)
-  outHasWidth = toBool(outHasWidth_00)
-  outHasHeight = toBool(outHasHeight_00)
-  outHasViewbox = toBool(outHasViewbox_00)
+  if outHasWidth.addr != nil:
+    outHasWidth = toBool(outHasWidth_00)
+  if outHasHeight.addr != nil:
+    outHasHeight = toBool(outHasHeight_00)
+  if outHasViewbox.addr != nil:
+    outHasViewbox = toBool(outHasViewbox_00)
 
 proc rsvg_handle_render_document(self: ptr Handle00; cr: ptr cairo.Context00;
-    viewport: ptr Rectangle00; error: ptr ptr glib.Error = nil): gboolean {.
+    viewport: Rectangle; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc renderDocument*(self: Handle; cr: cairo.Context; viewport: Rectangle): bool =
   var gerror: ptr glib.Error
-  let resul0 = rsvg_handle_render_document(cast[ptr Handle00](self.impl), cast[ptr cairo.Context00](cr.impl), cast[ptr Rectangle00](viewport.impl), addr gerror)
+  let resul0 = rsvg_handle_render_document(cast[ptr Handle00](self.impl), cast[ptr cairo.Context00](cr.impl), viewport, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -796,13 +761,13 @@ proc renderDocument*(self: Handle; cr: cairo.Context; viewport: Rectangle): bool
   result = toBool(resul0)
 
 proc rsvg_handle_render_element(self: ptr Handle00; cr: ptr cairo.Context00;
-    id: cstring; elementViewport: ptr Rectangle00; error: ptr ptr glib.Error = nil): gboolean {.
+    id: cstring; elementViewport: Rectangle; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc renderElement*(self: Handle; cr: cairo.Context; id: cstring = "";
     elementViewport: Rectangle): bool =
   var gerror: ptr glib.Error
-  let resul0 = rsvg_handle_render_element(cast[ptr Handle00](self.impl), cast[ptr cairo.Context00](cr.impl), safeStringToCString(id), cast[ptr Rectangle00](elementViewport.impl), addr gerror)
+  let resul0 = rsvg_handle_render_element(cast[ptr Handle00](self.impl), cast[ptr cairo.Context00](cr.impl), safeStringToCString(id), elementViewport, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -810,13 +775,13 @@ proc renderElement*(self: Handle; cr: cairo.Context; id: cstring = "";
   result = toBool(resul0)
 
 proc rsvg_handle_render_layer(self: ptr Handle00; cr: ptr cairo.Context00;
-    id: cstring; viewport: ptr Rectangle00; error: ptr ptr glib.Error = nil): gboolean {.
+    id: cstring; viewport: Rectangle; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc renderLayer*(self: Handle; cr: cairo.Context; id: cstring = "";
     viewport: Rectangle): bool =
   var gerror: ptr glib.Error
-  let resul0 = rsvg_handle_render_layer(cast[ptr Handle00](self.impl), cast[ptr cairo.Context00](cr.impl), safeStringToCString(id), cast[ptr Rectangle00](viewport.impl), addr gerror)
+  let resul0 = rsvg_handle_render_layer(cast[ptr Handle00](self.impl), cast[ptr cairo.Context00](cr.impl), safeStringToCString(id), viewport, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -825,31 +790,16 @@ proc renderLayer*(self: Handle; cr: cairo.Context; id: cstring = "";
 
 const MAJOR_VERSION* = 2'i32
 
-const MICRO_VERSION* = 7'i32
+const MICRO_VERSION* = 2'i32
 
-const MINOR_VERSION* = 48'i32
+const MINOR_VERSION* = 50'i32
 
-type
-  Unit* {.size: sizeof(cint), pure.} = enum
-    percent = 0
-    px = 1
-    em = 2
-    ex = 3
-    `in` = 4
-    cm = 5
-    mm = 6
-    pt = 7
-    pc = 8
-
-const VERSION* = "2.48.7"
+const VERSION* = "2.50.2"
 
 proc cleanup*() {.
     importc: "rsvg_cleanup", libprag.}
 
 proc setDefaultDpi*(dpi: cdouble) {.
-    importc: "rsvg_set_default_dpi", libprag.}
-
-proc `defaultDpi=`*(dpi: cdouble) {.
     importc: "rsvg_set_default_dpi", libprag.}
 
 proc setDefaultDpiXY*(dpiX: cdouble; dpiY: cdouble) {.

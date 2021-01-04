@@ -7,8 +7,6 @@
 const Lib = ""
 {.pragma: libprag, cdecl, dynlib: Lib.}
 
-
-
 type
   Bitmap00* {.pure.} = object
   Bitmap* = ref object

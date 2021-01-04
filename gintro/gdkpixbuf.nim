@@ -13,10 +13,6 @@ import gobject, gio, glib, gmodule
 const Lib = "libgdk_pixbuf-2.0.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
 
-type
-  uint8Array* = pointer
-
-
 proc finalizeGObject*[T](o: ref T) =
   if not o.ignoreFinalizer:
     gobject.g_object_remove_toggle_ref(o.impl, gobject.toggleNotify, addr(o[]))
@@ -36,11 +32,11 @@ const PIXBUF_FEATURES_H* = 1'i32
 
 const PIXBUF_MAJOR* = 2'i32
 
-const PIXBUF_MICRO* = 0'i32
+const PIXBUF_MICRO* = 2'i32
 
-const PIXBUF_MINOR* = 40'i32
+const PIXBUF_MINOR* = 42'i32
 
-const PIXBUF_VERSION* = "2.40.0"
+const PIXBUF_VERSION* = "2.42.2"
 
 type
   Pixbuf* = ref object of gobject.Object
@@ -402,14 +398,14 @@ proc initPixbufFromFileAtSize*[T](result: var T; filename: cstring; width: int; 
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gdk_pixbuf_new_from_inline(dataLength: int32; data: uint8Array; copyPixels: gboolean;
+proc gdk_pixbuf_new_from_inline(dataLength: int32; data: ptr uint8; copyPixels: gboolean;
     error: ptr ptr glib.Error = nil): ptr Pixbuf00 {.
     importc, libprag.}
 
 proc newPixbufFromInline*(data: seq[uint8] | string; copyPixels: bool): Pixbuf {.deprecated.}  =
   let dataLength = int(data.len)
   var gerror: ptr glib.Error
-  let gobj = gdk_pixbuf_new_from_inline(int32(dataLength), unsafeaddr(data[0]), gboolean(copyPixels), addr gerror)
+  let gobj = gdk_pixbuf_new_from_inline(int32(dataLength), cast[ptr uint8](unsafeaddr(data[0])), gboolean(copyPixels), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -433,7 +429,7 @@ proc newPixbufFromInline*(tdesc: typedesc; data: seq[uint8] | string; copyPixels
   let dataLength = int(data.len)
   var gerror: ptr glib.Error
   assert(result is Pixbuf)
-  let gobj = gdk_pixbuf_new_from_inline(int32(dataLength), unsafeaddr(data[0]), gboolean(copyPixels), addr gerror)
+  let gobj = gdk_pixbuf_new_from_inline(int32(dataLength), cast[ptr uint8](unsafeaddr(data[0])), gboolean(copyPixels), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -457,7 +453,7 @@ proc initPixbufFromInline*[T](result: var T; data: seq[uint8] | string; copyPixe
   let dataLength = int(data.len)
   var gerror: ptr glib.Error
   assert(result is Pixbuf)
-  let gobj = gdk_pixbuf_new_from_inline(int32(dataLength), unsafeaddr(data[0]), gboolean(copyPixels), addr gerror)
+  let gobj = gdk_pixbuf_new_from_inline(int32(dataLength), cast[ptr uint8](unsafeaddr(data[0])), gboolean(copyPixels), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -843,7 +839,7 @@ proc initPixbufFromStreamFinish*[T](result: var T; asyncResult: gio.AsyncResult)
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gdk_pixbuf_new_from_xpm_data(data: cstringArray): ptr Pixbuf00 {.
+proc gdk_pixbuf_new_from_xpm_data(data: ptr cstring): ptr Pixbuf00 {.
     importc, libprag.}
 
 proc newPixbufFromXpmData*(data: varargs[string, `$`]): Pixbuf =
@@ -920,12 +916,6 @@ proc gdk_pixbuf_get_file_info_async(filename: cstring; cancellable: ptr gio.Canc
 proc getFileInfoAsync*(filename: cstring; cancellable: gio.Cancellable = nil;
     callback: AsyncReadyCallback; userData: pointer) =
   gdk_pixbuf_get_file_info_async(filename, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), callback, userData)
-
-proc getFormats*(): ptr pointer {.
-    importc: "gdk_pixbuf_get_formats", libprag.}
-
-proc formats*(): ptr pointer {.
-    importc: "gdk_pixbuf_get_formats", libprag.}
 
 proc gdk_pixbuf_init_modules(path: cstring; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
@@ -1184,9 +1174,6 @@ proc gdk_pixbuf_get_option(self: ptr Pixbuf00; key: cstring): cstring {.
 proc getOption*(self: Pixbuf; key: cstring): string =
   result = $gdk_pixbuf_get_option(cast[ptr Pixbuf00](self.impl), key)
 
-proc option*(self: Pixbuf; key: cstring): string =
-  result = $gdk_pixbuf_get_option(cast[ptr Pixbuf00](self.impl), key)
-
 proc gdk_pixbuf_get_options(self: ptr Pixbuf00): ptr HashTable00 {.
     importc, libprag.}
 
@@ -1196,18 +1183,14 @@ proc getOptions*(self: Pixbuf): ptr HashTable00 =
 proc options*(self: Pixbuf): ptr HashTable00 =
   gdk_pixbuf_get_options(cast[ptr Pixbuf00](self.impl))
 
-proc gdk_pixbuf_get_pixels_with_length(self: ptr Pixbuf00; length: var uint32): uint8Array {.
+proc gdk_pixbuf_get_pixels_with_length(self: ptr Pixbuf00; length: var uint32): ptr uint8 {.
     importc, libprag.}
 
 proc getPixels*(self: Pixbuf; length: var int): seq[uint8] =
-  var length_00 = uint32(length)
-  result = uint8ArrayZT2seq(gdk_pixbuf_get_pixels_with_length(cast[ptr Pixbuf00](self.impl), length_00))
-  length = int(length_00)
-
-proc pixels*(self: Pixbuf; length: var int): seq[uint8] =
-  var length_00 = uint32(length)
-  result = uint8ArrayZT2seq(gdk_pixbuf_get_pixels_with_length(cast[ptr Pixbuf00](self.impl), length_00))
-  length = int(length_00)
+  var length_00: uint32
+  result = uint8ArrayToSeq(gdk_pixbuf_get_pixels_with_length(cast[ptr Pixbuf00](self.impl), length_00), length.int)
+  if length.addr != nil:
+    length = int(length_00)
 
 proc gdk_pixbuf_get_rowstride(self: ptr Pixbuf00): int32 {.
     importc, libprag.}
@@ -1277,8 +1260,8 @@ proc saturateAndPixelate*(self: Pixbuf; dest: Pixbuf; saturation: cfloat;
   gdk_pixbuf_saturate_and_pixelate(cast[ptr Pixbuf00](self.impl), cast[ptr Pixbuf00](dest.impl), saturation, gboolean(pixelate))
 
 proc gdk_pixbuf_save_to_streamv(self: ptr Pixbuf00; stream: ptr gio.OutputStream00;
-    `type`: cstring; optionKeys: cstringArray; optionValues: cstringArray;
-    cancellable: ptr gio.Cancellable00; error: ptr ptr glib.Error = nil): gboolean {.
+    `type`: cstring; optionKeys: ptr cstring; optionValues: ptr cstring; cancellable: ptr gio.Cancellable00;
+    error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc saveToStreamv*(self: Pixbuf; stream: gio.OutputStream; `type`: cstring;
@@ -1296,8 +1279,8 @@ proc saveToStreamv*(self: Pixbuf; stream: gio.OutputStream; `type`: cstring;
   result = toBool(resul0)
 
 proc gdk_pixbuf_save_to_streamv_async(self: ptr Pixbuf00; stream: ptr gio.OutputStream00;
-    `type`: cstring; optionKeys: cstringArray; optionValues: cstringArray;
-    cancellable: ptr gio.Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
+    `type`: cstring; optionKeys: ptr cstring; optionValues: ptr cstring; cancellable: ptr gio.Cancellable00;
+    callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
 
 proc saveToStreamvAsync*(self: Pixbuf; stream: gio.OutputStream;
@@ -1310,7 +1293,7 @@ proc saveToStreamvAsync*(self: Pixbuf; stream: gio.OutputStream;
   gdk_pixbuf_save_to_streamv_async(cast[ptr Pixbuf00](self.impl), cast[ptr gio.OutputStream00](stream.impl), `type`, seq2CstringArray(optionKeys, fs469n23), seq2CstringArray(optionValues, fs469n232), if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), callback, userData)
 
 proc gdk_pixbuf_savev(self: ptr Pixbuf00; filename: cstring; `type`: cstring;
-    optionKeys: cstringArray; optionValues: cstringArray; error: ptr ptr glib.Error = nil): gboolean {.
+    optionKeys: ptr cstring; optionValues: ptr cstring; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc savev*(self: Pixbuf; filename: cstring; `type`: cstring; optionKeys: openArray[string];
@@ -1385,6 +1368,12 @@ when defined(gcDestructors):
       boxedFree(gdk_pixbuf_format_get_type(), cast[ptr PixbufFormat00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var PixbufFormat) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGdkPixbufFormat)
+
 proc gdk_pixbuf_format_free(self: ptr PixbufFormat00) {.
     importc, libprag.}
 
@@ -1415,7 +1404,7 @@ proc description*(self: PixbufFormat): string =
   result = $resul0
   cogfree(resul0)
 
-proc gdk_pixbuf_format_get_extensions(self: ptr PixbufFormat00): cstringArray {.
+proc gdk_pixbuf_format_get_extensions(self: ptr PixbufFormat00): ptr cstring {.
     importc, libprag.}
 
 proc getExtensions*(self: PixbufFormat): seq[string] =
@@ -1441,7 +1430,7 @@ proc license*(self: PixbufFormat): string =
   result = $resul0
   cogfree(resul0)
 
-proc gdk_pixbuf_format_get_mime_types(self: ptr PixbufFormat00): cstringArray {.
+proc gdk_pixbuf_format_get_mime_types(self: ptr PixbufFormat00): ptr cstring {.
     importc, libprag.}
 
 proc getMimeTypes*(self: PixbufFormat): seq[string] =
@@ -1504,19 +1493,8 @@ proc `disabled=`*(self: PixbufFormat; disabled: bool) =
 proc gdk_pixbuf_get_file_info(filename: cstring; width: var int32; height: var int32): ptr PixbufFormat00 {.
     importc, libprag.}
 
-proc getFileInfo*(filename: cstring; width: var int; height: var int): PixbufFormat =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
-  let impl0 = gdk_pixbuf_get_file_info(filename, width_00, height_00)
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreeGdkPixbufFormat)
-  result.impl = impl0
-  result.ignoreFinalizer = true
-  width = int(width_00)
-  height = int(height_00)
-
-proc fileInfo*(filename: cstring; width: var int; height: var int): PixbufFormat =
+proc getFileInfo*(filename: cstring; width: var int = cast[var int](nil);
+    height: var int = cast[var int](nil)): PixbufFormat =
   var width_00 = int32(width)
   var height_00 = int32(height)
   let impl0 = gdk_pixbuf_get_file_info(filename, width_00, height_00)
@@ -1548,21 +1526,8 @@ proc getFileInfoFinish*(asyncResult: gio.AsyncResult; width: var int;
   width = int(width_00)
   height = int(height_00)
 
-proc fileInfoFinish*(asyncResult: gio.AsyncResult; width: var int;
-    height: var int): PixbufFormat =
-  var gerror: ptr glib.Error
-  var width_00 = int32(width)
-  var height_00 = int32(height)
-  let impl0 = gdk_pixbuf_get_file_info_finish(cast[ptr gio.AsyncResult00](asyncResult.impl), width_00, height_00, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  fnew(result, gBoxedFreeGdkPixbufFormat)
-  result.impl = impl0
-  result.ignoreFinalizer = true
-  width = int(width_00)
-  height = int(height_00)
+proc getPixbufFormats*(): ptr glib.SList {.
+    importc: "gdk_pixbuf_get_formats", libprag.}
 
 type
   PixbufRotation* {.size: sizeof(cint), pure.} = enum
@@ -1984,7 +1949,7 @@ when defined(gcDestructors):
 proc gdk_pixbuf_animation_iter_advance(self: ptr PixbufAnimationIter00; currentTime: glib.TimeVal): gboolean {.
     importc, libprag.}
 
-proc advance*(self: PixbufAnimationIter; currentTime: glib.TimeVal = cast[ptr glib.TimeVal](nil)[]): bool =
+proc advance*(self: PixbufAnimationIter; currentTime: glib.TimeVal = cast[var glib.TimeVal](nil)): bool =
   toBool(gdk_pixbuf_animation_iter_advance(cast[ptr PixbufAnimationIter00](self.impl), currentTime))
 
 proc gdk_pixbuf_animation_iter_get_delay_time(self: ptr PixbufAnimationIter00): int32 {.
@@ -2040,24 +2005,7 @@ proc onCurrentlyLoadingFrame*(self: PixbufAnimationIter): bool =
 proc gdk_pixbuf_animation_get_iter(self: ptr PixbufAnimation00; startTime: glib.TimeVal): ptr PixbufAnimationIter00 {.
     importc, libprag.}
 
-proc getIter*(self: PixbufAnimation; startTime: glib.TimeVal = cast[ptr glib.TimeVal](nil)[]): PixbufAnimationIter =
-  let gobj = gdk_pixbuf_animation_get_iter(cast[ptr PixbufAnimation00](self.impl), startTime)
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gdkpixbuf.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc iter*(self: PixbufAnimation; startTime: glib.TimeVal = cast[ptr glib.TimeVal](nil)[]): PixbufAnimationIter =
+proc getIter*(self: PixbufAnimation; startTime: glib.TimeVal = cast[var glib.TimeVal](nil)): PixbufAnimationIter =
   let gobj = gdk_pixbuf_animation_get_iter(cast[ptr PixbufAnimation00](self.impl), startTime)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -2075,9 +2023,9 @@ proc iter*(self: PixbufAnimation; startTime: glib.TimeVal = cast[ptr glib.TimeVa
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 type
-  PixbufDestroyNotify* = proc (pixels: uint8Array; data: pointer) {.cdecl.}
+  PixbufDestroyNotify* = proc (pixels: ptr uint8; data: pointer) {.cdecl.}
 
-proc gdk_pixbuf_new_from_data(data: uint8Array; colorspace: Colorspace; hasAlpha: gboolean;
+proc gdk_pixbuf_new_from_data(data: ptr uint8; colorspace: Colorspace; hasAlpha: gboolean;
     bitsPerSample: int32; width: int32; height: int32; rowstride: int32; destroyFn: PixbufDestroyNotify;
     destroyFnData: pointer): ptr Pixbuf00 {.
     importc, libprag.}
@@ -2085,7 +2033,7 @@ proc gdk_pixbuf_new_from_data(data: uint8Array; colorspace: Colorspace; hasAlpha
 proc newPixbufFromData*(data: seq[uint8] | string; colorspace: Colorspace;
     hasAlpha: bool; bitsPerSample: int; width: int; height: int; rowstride: int;
     destroyFn: PixbufDestroyNotify; destroyFnData: pointer): Pixbuf =
-  let gobj = gdk_pixbuf_new_from_data(unsafeaddr(data[0]), colorspace, gboolean(hasAlpha), int32(bitsPerSample), int32(width), int32(height), int32(rowstride), destroyFn, destroyFnData)
+  let gobj = gdk_pixbuf_new_from_data(cast[ptr uint8](unsafeaddr(data[0])), colorspace, gboolean(hasAlpha), int32(bitsPerSample), int32(width), int32(height), int32(rowstride), destroyFn, destroyFnData)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -2105,7 +2053,7 @@ proc newPixbufFromData*(tdesc: typedesc; data: seq[uint8] | string; colorspace: 
     hasAlpha: bool; bitsPerSample: int; width: int; height: int; rowstride: int;
     destroyFn: PixbufDestroyNotify; destroyFnData: pointer): tdesc =
   assert(result is Pixbuf)
-  let gobj = gdk_pixbuf_new_from_data(unsafeaddr(data[0]), colorspace, gboolean(hasAlpha), int32(bitsPerSample), int32(width), int32(height), int32(rowstride), destroyFn, destroyFnData)
+  let gobj = gdk_pixbuf_new_from_data(cast[ptr uint8](unsafeaddr(data[0])), colorspace, gboolean(hasAlpha), int32(bitsPerSample), int32(width), int32(height), int32(rowstride), destroyFn, destroyFnData)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -2125,7 +2073,7 @@ proc initPixbufFromData*[T](result: var T; data: seq[uint8] | string; colorspace
     hasAlpha: bool; bitsPerSample: int; width: int; height: int; rowstride: int;
     destroyFn: PixbufDestroyNotify; destroyFnData: pointer) {.deprecated.} =
   assert(result is Pixbuf)
-  let gobj = gdk_pixbuf_new_from_data(unsafeaddr(data[0]), colorspace, gboolean(hasAlpha), int32(bitsPerSample), int32(width), int32(height), int32(rowstride), destroyFn, destroyFnData)
+  let gobj = gdk_pixbuf_new_from_data(cast[ptr uint8](unsafeaddr(data[0])), colorspace, gboolean(hasAlpha), int32(bitsPerSample), int32(width), int32(height), int32(rowstride), destroyFn, destroyFnData)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -2483,14 +2431,14 @@ proc gdk_pixbuf_loader_set_size(self: ptr PixbufLoader00; width: int32; height: 
 proc setSize*(self: PixbufLoader; width: int; height: int) =
   gdk_pixbuf_loader_set_size(cast[ptr PixbufLoader00](self.impl), int32(width), int32(height))
 
-proc gdk_pixbuf_loader_write(self: ptr PixbufLoader00; buf: uint8Array; count: uint64;
+proc gdk_pixbuf_loader_write(self: ptr PixbufLoader00; buf: ptr uint8; count: uint64;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc write*(self: PixbufLoader; buf: seq[uint8] | string): bool =
   let count = uint64(buf.len)
   var gerror: ptr glib.Error
-  let resul0 = gdk_pixbuf_loader_write(cast[ptr PixbufLoader00](self.impl), unsafeaddr(buf[0]), count, addr gerror)
+  let resul0 = gdk_pixbuf_loader_write(cast[ptr PixbufLoader00](self.impl), cast[ptr uint8](unsafeaddr(buf[0])), count, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -2511,10 +2459,10 @@ proc writeBytes*(self: PixbufLoader; buffer: glib.Bytes): bool =
   result = toBool(resul0)
 
 type
-  PixbufSaveFunc* = proc (buf: uint8Array; count: uint64; error: var ptr glib.Error; data: pointer): gboolean {.cdecl.}
+  PixbufSaveFunc* = proc (buf: ptr uint8; count: uint64; error: var ptr glib.Error; data: pointer): gboolean {.cdecl.}
 
 proc gdk_pixbuf_save_to_callbackv(self: ptr Pixbuf00; saveFunc: PixbufSaveFunc;
-    userData: pointer; `type`: cstring; optionKeys: cstringArray; optionValues: cstringArray;
+    userData: pointer; `type`: cstring; optionKeys: ptr cstring; optionValues: ptr cstring;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 

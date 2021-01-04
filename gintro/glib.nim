@@ -4,29 +4,14 @@
 # libgobject-2.0.so.0,libglib-2.0.so.0
 {.warning[UnusedImport]: off.}
 
-const Lib = "libgobject-2.0.so.0"
+const Lib = "libglib-2.0.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
-
-type
-  uint8Array* = pointer
-  cdoubleArray* = pointer
-  Variant00Array* = pointer
-  gbooleanArray* = pointer
-  LogField00Array* = pointer
-  VariantType00Array* = pointer
-  DebugKey00Array* = pointer
-  OptionEntry00Array* = pointer
-  PollFD00Array* = pointer
-  int32Array* = pointer
-
 const GobjectLib* = "libgobject-2.0.so.0"
 {.pragma: gobjectlibprag, cdecl, dynlib: GobjectLib.}
 type
   GException* = object of CatchableError
 type
   GArray00* = pointer
-type
-  Regex00Array* = pointer
 type
   ucstring* = distinct cstring
 type
@@ -90,18 +75,36 @@ proc uint8ArrayZT2seq*(p: pointer): seq[uint8] =
     result.add(a[i])
     inc(i)
 
+proc uint8ArrayToSeq*(s: ptr uint8; n: int): seq[uint8] =
+  let a = cast[ptr UncheckedArray[uint8]](s)
+  for i in 0 ..< n:
+    result.add(a[i])
+
+proc uint32ArrayToSeq*(s: ptr uint32; n: int): seq[uint32] =
+  let a = cast[ptr UncheckedArray[uint32]](s)
+  for i in 0 ..< n:
+    result.add(a[i])
+
+proc int32ArrayToSeq*(s: ptr int32; n: int): seq[int32] =
+  let a = cast[ptr UncheckedArray[int32]](s)
+  for i in 0 ..< n:
+    result.add(a[i])
+
+proc cstringArrayToSeq*(s: ptr cstring): seq[string] =
+  system.cstringArrayToSeq(cast[cstringArray](s))
+
 proc cogfree*(mem: pointer) {.importc: "g_free", libprag.}
-proc g_strfreev*(strArray: cstringArray) {.importc: "g_strfreev", libprag.}
+proc g_strfreev*(strArray: ptr cstring) {.importc: "g_strfreev", libprag.}
 proc toBool*(g: gboolean): bool = g.int != 0
 proc safeStringToCString*(s: cstring): cstring = (if s.len == 0: nil else: s)
 
-proc seq2cstringArray*(s: openarray[string]; a: var cstringArray): cstringArray =
+proc seq2cstringArray*(s: openarray[string]; a: var cstringArray): ptr cstring =
   assert s.high < 256 - 1
   let x = cast[ptr UncheckedArray[string]](s)
   for i in 0 .. s.high:
     a[i] = addr(x[i][0])
   a[s.len] = nil
-  return a
+  return cast[ptr cstring](a)
     
 
 
@@ -111,7 +114,7 @@ type
     code*: int32
     message*: cstring
 
-proc g_error_get_type*(): GType {.importc, libprag.}
+proc g_error_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc g_error_free*(self: Error) {.
     importc, libprag.}
@@ -141,7 +144,7 @@ type
     impl*: ptr Array00
     ignoreFinalizer*: bool
 
-proc g_array_get_type*(): GType {.importc, libprag.}
+proc g_array_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGArray*(self: Array) =
   if not self.ignoreFinalizer:
@@ -152,6 +155,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_array_get_type(), cast[ptr Array00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var Array) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGArray)
 
 type
   AsciiType* {.size: sizeof(cint), pure.} = enum
@@ -386,62 +395,33 @@ proc getAdded*(self: BookmarkFile; uri: cstring): int64 =
     raise newException(GException, msg)
   result = resul0
 
-proc added*(self: BookmarkFile; uri: cstring): int64 =
-  var gerror: ptr glib.Error
-  let resul0 = g_bookmark_file_get_added(cast[ptr BookmarkFile00](self.impl), uri, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = resul0
-
 proc g_bookmark_file_get_app_info(self: ptr BookmarkFile00; uri: cstring;
     name: cstring; exec: var cstring; count: var uint32; stamp: var int64;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc getAppInfo*(self: BookmarkFile; uri: cstring; name: cstring;
-    exec: var string; count: var int; stamp: var int64): bool =
+    exec: var string = cast[var string](nil); count: var int = cast[var int](nil);
+    stamp: var int64 = cast[var int64](nil)): bool =
   var gerror: ptr glib.Error
-  var count_00 = uint32(count)
-  var exec_00 = cstring(exec)
+  var count_00: uint32
+  var exec_00: cstring
   let resul0 = g_bookmark_file_get_app_info(cast[ptr BookmarkFile00](self.impl), uri, name, exec_00, count_00, stamp, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  count = int(count_00)
-  exec = $(exec_00)
-
-proc appInfo*(self: BookmarkFile; uri: cstring; name: cstring;
-    exec: var string; count: var int; stamp: var int64): bool =
-  var gerror: ptr glib.Error
-  var count_00 = uint32(count)
-  var exec_00 = cstring(exec)
-  let resul0 = g_bookmark_file_get_app_info(cast[ptr BookmarkFile00](self.impl), uri, name, exec_00, count_00, stamp, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-  count = int(count_00)
-  exec = $(exec_00)
+  if count.addr != nil:
+    count = int(count_00)
+  if exec.addr != nil:
+    exec = $(exec_00)
 
 proc g_bookmark_file_get_applications(self: ptr BookmarkFile00; uri: cstring;
-    length: var uint64; error: ptr ptr glib.Error = nil): cstringArray {.
+    length: var uint64; error: ptr ptr glib.Error = nil): ptr cstring {.
     importc, libprag.}
 
-proc getApplications*(self: BookmarkFile; uri: cstring; length: var uint64): seq[string] =
-  var gerror: ptr glib.Error
-  let resul0 = g_bookmark_file_get_applications(cast[ptr BookmarkFile00](self.impl), uri, length, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = cstringArrayToSeq(resul0)
-
-proc applications*(self: BookmarkFile; uri: cstring; length: var uint64): seq[string] =
+proc getApplications*(self: BookmarkFile; uri: cstring; length: var uint64 = cast[var uint64](nil)): seq[string] =
   var gerror: ptr glib.Error
   let resul0 = g_bookmark_file_get_applications(cast[ptr BookmarkFile00](self.impl), uri, length, addr gerror)
   if gerror != nil:
@@ -464,30 +444,11 @@ proc getDescription*(self: BookmarkFile; uri: cstring): string =
   result = $resul0
   cogfree(resul0)
 
-proc description*(self: BookmarkFile; uri: cstring): string =
-  var gerror: ptr glib.Error
-  let resul0 = g_bookmark_file_get_description(cast[ptr BookmarkFile00](self.impl), uri, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = $resul0
-  cogfree(resul0)
-
 proc g_bookmark_file_get_groups(self: ptr BookmarkFile00; uri: cstring; length: var uint64;
-    error: ptr ptr glib.Error = nil): cstringArray {.
+    error: ptr ptr glib.Error = nil): ptr cstring {.
     importc, libprag.}
 
-proc getGroups*(self: BookmarkFile; uri: cstring; length: var uint64): seq[string] =
-  var gerror: ptr glib.Error
-  let resul0 = g_bookmark_file_get_groups(cast[ptr BookmarkFile00](self.impl), uri, length, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = cstringArrayToSeq(resul0)
-
-proc groups*(self: BookmarkFile; uri: cstring; length: var uint64): seq[string] =
+proc getGroups*(self: BookmarkFile; uri: cstring; length: var uint64 = cast[var uint64](nil)): seq[string] =
   var gerror: ptr glib.Error
   let resul0 = g_bookmark_file_get_groups(cast[ptr BookmarkFile00](self.impl), uri, length, addr gerror)
   if gerror != nil:
@@ -500,48 +461,27 @@ proc g_bookmark_file_get_icon(self: ptr BookmarkFile00; uri: cstring; href: var 
     mimeType: var cstring; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc getIcon*(self: BookmarkFile; uri: cstring; href: var string;
-    mimeType: var string): bool =
+proc getIcon*(self: BookmarkFile; uri: cstring; href: var string = cast[var string](nil);
+    mimeType: var string = cast[var string](nil)): bool =
   var gerror: ptr glib.Error
-  var href_00 = cstring(href)
-  var mimeType_00 = cstring(mimeType)
+  var href_00: cstring
+  var mimeType_00: cstring
   let resul0 = g_bookmark_file_get_icon(cast[ptr BookmarkFile00](self.impl), uri, href_00, mimeType_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  href = $(href_00)
-  mimeType = $(mimeType_00)
-
-proc icon*(self: BookmarkFile; uri: cstring; href: var string;
-    mimeType: var string): bool =
-  var gerror: ptr glib.Error
-  var href_00 = cstring(href)
-  var mimeType_00 = cstring(mimeType)
-  let resul0 = g_bookmark_file_get_icon(cast[ptr BookmarkFile00](self.impl), uri, href_00, mimeType_00, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-  href = $(href_00)
-  mimeType = $(mimeType_00)
+  if href.addr != nil:
+    href = $(href_00)
+  if mimeType.addr != nil:
+    mimeType = $(mimeType_00)
 
 proc g_bookmark_file_get_is_private(self: ptr BookmarkFile00; uri: cstring;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc getIsPrivate*(self: BookmarkFile; uri: cstring): bool =
-  var gerror: ptr glib.Error
-  let resul0 = g_bookmark_file_get_is_private(cast[ptr BookmarkFile00](self.impl), uri, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc isPrivate*(self: BookmarkFile; uri: cstring): bool =
   var gerror: ptr glib.Error
   let resul0 = g_bookmark_file_get_is_private(cast[ptr BookmarkFile00](self.impl), uri, addr gerror)
   if gerror != nil:
@@ -564,30 +504,11 @@ proc getMimeType*(self: BookmarkFile; uri: cstring): string =
   result = $resul0
   cogfree(resul0)
 
-proc mimeType*(self: BookmarkFile; uri: cstring): string =
-  var gerror: ptr glib.Error
-  let resul0 = g_bookmark_file_get_mime_type(cast[ptr BookmarkFile00](self.impl), uri, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = $resul0
-  cogfree(resul0)
-
 proc g_bookmark_file_get_modified(self: ptr BookmarkFile00; uri: cstring;
     error: ptr ptr glib.Error = nil): int64 {.
     importc, libprag.}
 
 proc getModified*(self: BookmarkFile; uri: cstring): int64 =
-  var gerror: ptr glib.Error
-  let resul0 = g_bookmark_file_get_modified(cast[ptr BookmarkFile00](self.impl), uri, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = resul0
-
-proc modified*(self: BookmarkFile; uri: cstring): int64 =
   var gerror: ptr glib.Error
   let resul0 = g_bookmark_file_get_modified(cast[ptr BookmarkFile00](self.impl), uri, addr gerror)
   if gerror != nil:
@@ -618,25 +539,10 @@ proc getTitle*(self: BookmarkFile; uri: cstring = ""): string =
   result = $resul0
   cogfree(resul0)
 
-proc title*(self: BookmarkFile; uri: cstring = ""): string =
-  var gerror: ptr glib.Error
-  let resul0 = g_bookmark_file_get_title(cast[ptr BookmarkFile00](self.impl), safeStringToCString(uri), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = $resul0
-  cogfree(resul0)
-
-proc g_bookmark_file_get_uris(self: ptr BookmarkFile00; length: var uint64): cstringArray {.
+proc g_bookmark_file_get_uris(self: ptr BookmarkFile00; length: var uint64): ptr cstring {.
     importc, libprag.}
 
-proc getUris*(self: BookmarkFile; length: var uint64): seq[string] =
-  let resul0 = g_bookmark_file_get_uris(cast[ptr BookmarkFile00](self.impl), length)
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc uris*(self: BookmarkFile; length: var uint64): seq[string] =
+proc getUris*(self: BookmarkFile; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = g_bookmark_file_get_uris(cast[ptr BookmarkFile00](self.impl), length)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
@@ -646,15 +552,6 @@ proc g_bookmark_file_get_visited(self: ptr BookmarkFile00; uri: cstring;
     importc, libprag.}
 
 proc getVisited*(self: BookmarkFile; uri: cstring): int64 =
-  var gerror: ptr glib.Error
-  let resul0 = g_bookmark_file_get_visited(cast[ptr BookmarkFile00](self.impl), uri, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = resul0
-
-proc visited*(self: BookmarkFile; uri: cstring): int64 =
   var gerror: ptr glib.Error
   let resul0 = g_bookmark_file_get_visited(cast[ptr BookmarkFile00](self.impl), uri, addr gerror)
   if gerror != nil:
@@ -695,14 +592,14 @@ proc g_bookmark_file_has_item(self: ptr BookmarkFile00; uri: cstring): gboolean 
 proc hasItem*(self: BookmarkFile; uri: cstring): bool =
   toBool(g_bookmark_file_has_item(cast[ptr BookmarkFile00](self.impl), uri))
 
-proc g_bookmark_file_load_from_data(self: ptr BookmarkFile00; data: uint8Array;
+proc g_bookmark_file_load_from_data(self: ptr BookmarkFile00; data: ptr uint8;
     length: uint64; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc loadFromData*(self: BookmarkFile; data: seq[uint8] | string): bool =
   let length = uint64(data.len)
   var gerror: ptr glib.Error
-  let resul0 = g_bookmark_file_load_from_data(cast[ptr BookmarkFile00](self.impl), unsafeaddr(data[0]), length, addr gerror)
+  let resul0 = g_bookmark_file_load_from_data(cast[ptr BookmarkFile00](self.impl), cast[ptr uint8](unsafeaddr(data[0])), length, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -714,16 +611,17 @@ proc g_bookmark_file_load_from_data_dirs(self: ptr BookmarkFile00; file: cstring
     importc, libprag.}
 
 proc loadFromDataDirs*(self: BookmarkFile; file: cstring;
-    fullPath: var string): bool =
+    fullPath: var string = cast[var string](nil)): bool =
   var gerror: ptr glib.Error
-  var fullPath_00 = cstring(fullPath)
+  var fullPath_00: cstring
   let resul0 = g_bookmark_file_load_from_data_dirs(cast[ptr BookmarkFile00](self.impl), file, fullPath_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  fullPath = $(fullPath_00)
+  if fullPath.addr != nil:
+    fullPath = $(fullPath_00)
 
 proc g_bookmark_file_load_from_file(self: ptr BookmarkFile00; filename: cstring;
     error: ptr ptr glib.Error = nil): gboolean {.
@@ -819,7 +717,7 @@ proc setDescription*(self: BookmarkFile; uri: cstring = "";
     description: cstring) =
   g_bookmark_file_set_description(cast[ptr BookmarkFile00](self.impl), safeStringToCString(uri), description)
 
-proc g_bookmark_file_set_groups(self: ptr BookmarkFile00; uri: cstring; groups: cstringArray;
+proc g_bookmark_file_set_groups(self: ptr BookmarkFile00; uri: cstring; groups: ptr cstring;
     length: uint64) {.
     importc, libprag.}
 
@@ -872,17 +770,17 @@ proc setVisited*(self: BookmarkFile; uri: cstring; visited: int64) =
   g_bookmark_file_set_visited(cast[ptr BookmarkFile00](self.impl), uri, visited)
 
 proc g_bookmark_file_to_data(self: ptr BookmarkFile00; length: var uint64;
-    error: ptr ptr glib.Error = nil): uint8Array {.
+    error: ptr ptr glib.Error = nil): ptr uint8 {.
     importc, libprag.}
 
-proc toData*(self: BookmarkFile; length: var uint64): seq[uint8] =
+proc toData*(self: BookmarkFile; length: var uint64 = cast[var uint64](nil)): seq[uint8] =
   var gerror: ptr glib.Error
   let resul0 = g_bookmark_file_to_data(cast[ptr BookmarkFile00](self.impl), length, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = uint8ArrayZT2seq(resul0)
+  result = uint8ArrayToSeq(resul0, length.int)
   cogfree(resul0)
 
 proc g_bookmark_file_to_file(self: ptr BookmarkFile00; filename: cstring;
@@ -897,6 +795,948 @@ proc toFile*(self: BookmarkFile; filename: cstring): bool =
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
+
+type
+  DateTime00* {.pure.} = object
+  DateTime* = ref object
+    impl*: ptr DateTime00
+    ignoreFinalizer*: bool
+
+proc g_date_time_get_type*(): GType {.importc, gobjectlibprag.}
+
+proc gBoxedFreeGDateTime*(self: DateTime) =
+  if not self.ignoreFinalizer:
+    boxedFree(g_date_time_get_type(), cast[ptr DateTime00](self.impl))
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(DateTime()[])) =
+    if not self.ignoreFinalizer and self.impl != nil:
+      boxedFree(g_date_time_get_type(), cast[ptr DateTime00](self.impl))
+      self.impl = nil
+
+proc newWithFinalizer*(x: var DateTime) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGDateTime)
+
+proc g_date_time_unref(self: ptr DateTime00) {.
+    importc, libprag.}
+
+proc unref*(self: DateTime) =
+  g_date_time_unref(cast[ptr DateTime00](self.impl))
+
+proc finalizerunref*(self: DateTime) =
+  if not self.ignoreFinalizer:
+    g_date_time_unref(self.impl)
+
+proc g_date_time_new_from_timeval_local(tv: TimeVal): ptr DateTime00 {.
+    importc, libprag.}
+
+proc newDateTimeFromTimevalLocal*(tv: TimeVal): DateTime {.deprecated.}  =
+  let impl0 = g_date_time_new_from_timeval_local(tv)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc newDateTimeFromTimevalLocal*(tdesc: typedesc; tv: TimeVal): tdesc {.deprecated.}  =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_from_timeval_local(tv)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc initDateTimeFromTimevalLocal*[T](result: var T; tv: TimeVal) {.deprecated.} =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_from_timeval_local(tv)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_new_from_timeval_utc(tv: TimeVal): ptr DateTime00 {.
+    importc, libprag.}
+
+proc newDateTimeFromTimevalUtc*(tv: TimeVal): DateTime {.deprecated.}  =
+  let impl0 = g_date_time_new_from_timeval_utc(tv)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc newDateTimeFromTimevalUtc*(tdesc: typedesc; tv: TimeVal): tdesc {.deprecated.}  =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_from_timeval_utc(tv)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc initDateTimeFromTimevalUtc*[T](result: var T; tv: TimeVal) {.deprecated.} =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_from_timeval_utc(tv)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_new_from_unix_local(t: int64): ptr DateTime00 {.
+    importc, libprag.}
+
+proc newDateTimeFromUnixLocal*(t: int64): DateTime =
+  let impl0 = g_date_time_new_from_unix_local(t)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc newDateTimeFromUnixLocal*(tdesc: typedesc; t: int64): tdesc =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_from_unix_local(t)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc initDateTimeFromUnixLocal*[T](result: var T; t: int64) {.deprecated.} =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_from_unix_local(t)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_new_from_unix_utc(t: int64): ptr DateTime00 {.
+    importc, libprag.}
+
+proc newDateTimeFromUnixUtc*(t: int64): DateTime =
+  let impl0 = g_date_time_new_from_unix_utc(t)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc newDateTimeFromUnixUtc*(tdesc: typedesc; t: int64): tdesc =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_from_unix_utc(t)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc initDateTimeFromUnixUtc*[T](result: var T; t: int64) {.deprecated.} =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_from_unix_utc(t)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_new_local(year: int32; month: int32; day: int32; hour: int32;
+    minute: int32; seconds: cdouble): ptr DateTime00 {.
+    importc, libprag.}
+
+proc newDateTimeLocal*(year: int; month: int; day: int; hour: int; minute: int;
+    seconds: cdouble): DateTime =
+  let impl0 = g_date_time_new_local(int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc newDateTimeLocal*(tdesc: typedesc; year: int; month: int; day: int; hour: int; minute: int;
+    seconds: cdouble): tdesc =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_local(int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc initDateTimeLocal*[T](result: var T; year: int; month: int; day: int; hour: int; minute: int;
+    seconds: cdouble) {.deprecated.} =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_local(int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_new_now_local(): ptr DateTime00 {.
+    importc, libprag.}
+
+proc newDateTimeNowLocal*(): DateTime =
+  let impl0 = g_date_time_new_now_local()
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc newDateTimeNowLocal*(tdesc: typedesc): tdesc =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_now_local()
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc initDateTimeNowLocal*[T](result: var T) {.deprecated.} =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_now_local()
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_new_now_utc(): ptr DateTime00 {.
+    importc, libprag.}
+
+proc newDateTimeNowUtc*(): DateTime =
+  let impl0 = g_date_time_new_now_utc()
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc newDateTimeNowUtc*(tdesc: typedesc): tdesc =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_now_utc()
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc initDateTimeNowUtc*[T](result: var T) {.deprecated.} =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_now_utc()
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_new_utc(year: int32; month: int32; day: int32; hour: int32;
+    minute: int32; seconds: cdouble): ptr DateTime00 {.
+    importc, libprag.}
+
+proc newDateTimeUtc*(year: int; month: int; day: int; hour: int; minute: int;
+    seconds: cdouble): DateTime =
+  let impl0 = g_date_time_new_utc(int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc newDateTimeUtc*(tdesc: typedesc; year: int; month: int; day: int; hour: int; minute: int;
+    seconds: cdouble): tdesc =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_utc(int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc initDateTimeUtc*[T](result: var T; year: int; month: int; day: int; hour: int; minute: int;
+    seconds: cdouble) {.deprecated.} =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_utc(int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_add(self: ptr DateTime00; timespan: int64): ptr DateTime00 {.
+    importc, libprag.}
+
+proc add*(self: DateTime; timespan: int64): DateTime =
+  let impl0 = g_date_time_add(cast[ptr DateTime00](self.impl), timespan)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_add_days(self: ptr DateTime00; days: int32): ptr DateTime00 {.
+    importc, libprag.}
+
+proc addDays*(self: DateTime; days: int): DateTime =
+  let impl0 = g_date_time_add_days(cast[ptr DateTime00](self.impl), int32(days))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_add_full(self: ptr DateTime00; years: int32; months: int32;
+    days: int32; hours: int32; minutes: int32; seconds: cdouble): ptr DateTime00 {.
+    importc, libprag.}
+
+proc addFull*(self: DateTime; years: int; months: int; days: int;
+    hours: int; minutes: int; seconds: cdouble): DateTime =
+  let impl0 = g_date_time_add_full(cast[ptr DateTime00](self.impl), int32(years), int32(months), int32(days), int32(hours), int32(minutes), seconds)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_add_hours(self: ptr DateTime00; hours: int32): ptr DateTime00 {.
+    importc, libprag.}
+
+proc addHours*(self: DateTime; hours: int): DateTime =
+  let impl0 = g_date_time_add_hours(cast[ptr DateTime00](self.impl), int32(hours))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_add_minutes(self: ptr DateTime00; minutes: int32): ptr DateTime00 {.
+    importc, libprag.}
+
+proc addMinutes*(self: DateTime; minutes: int): DateTime =
+  let impl0 = g_date_time_add_minutes(cast[ptr DateTime00](self.impl), int32(minutes))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_add_months(self: ptr DateTime00; months: int32): ptr DateTime00 {.
+    importc, libprag.}
+
+proc addMonths*(self: DateTime; months: int): DateTime =
+  let impl0 = g_date_time_add_months(cast[ptr DateTime00](self.impl), int32(months))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_add_seconds(self: ptr DateTime00; seconds: cdouble): ptr DateTime00 {.
+    importc, libprag.}
+
+proc addSeconds*(self: DateTime; seconds: cdouble): DateTime =
+  let impl0 = g_date_time_add_seconds(cast[ptr DateTime00](self.impl), seconds)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_add_weeks(self: ptr DateTime00; weeks: int32): ptr DateTime00 {.
+    importc, libprag.}
+
+proc addWeeks*(self: DateTime; weeks: int): DateTime =
+  let impl0 = g_date_time_add_weeks(cast[ptr DateTime00](self.impl), int32(weeks))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_add_years(self: ptr DateTime00; years: int32): ptr DateTime00 {.
+    importc, libprag.}
+
+proc addYears*(self: DateTime; years: int): DateTime =
+  let impl0 = g_date_time_add_years(cast[ptr DateTime00](self.impl), int32(years))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_difference(self: ptr DateTime00; begin: ptr DateTime00): int64 {.
+    importc, libprag.}
+
+proc difference*(self: DateTime; begin: DateTime): int64 =
+  g_date_time_difference(cast[ptr DateTime00](self.impl), cast[ptr DateTime00](begin.impl))
+
+proc g_date_time_format(self: ptr DateTime00; format: cstring): cstring {.
+    importc, libprag.}
+
+proc format*(self: DateTime; format: cstring): string =
+  let resul0 = g_date_time_format(cast[ptr DateTime00](self.impl), format)
+  if resul0.isNil:
+    return
+  result = $resul0
+  cogfree(resul0)
+
+proc g_date_time_format_iso8601(self: ptr DateTime00): cstring {.
+    importc, libprag.}
+
+proc formatIso8601*(self: DateTime): string =
+  let resul0 = g_date_time_format_iso8601(cast[ptr DateTime00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+  cogfree(resul0)
+
+proc g_date_time_get_day_of_month(self: ptr DateTime00): int32 {.
+    importc, libprag.}
+
+proc getDayOfMonth*(self: DateTime): int =
+  int(g_date_time_get_day_of_month(cast[ptr DateTime00](self.impl)))
+
+proc dayOfMonth*(self: DateTime): int =
+  int(g_date_time_get_day_of_month(cast[ptr DateTime00](self.impl)))
+
+proc g_date_time_get_day_of_week(self: ptr DateTime00): int32 {.
+    importc, libprag.}
+
+proc getDayOfWeek*(self: DateTime): int =
+  int(g_date_time_get_day_of_week(cast[ptr DateTime00](self.impl)))
+
+proc dayOfWeek*(self: DateTime): int =
+  int(g_date_time_get_day_of_week(cast[ptr DateTime00](self.impl)))
+
+proc g_date_time_get_day_of_year(self: ptr DateTime00): int32 {.
+    importc, libprag.}
+
+proc getDayOfYear*(self: DateTime): int =
+  int(g_date_time_get_day_of_year(cast[ptr DateTime00](self.impl)))
+
+proc dayOfYear*(self: DateTime): int =
+  int(g_date_time_get_day_of_year(cast[ptr DateTime00](self.impl)))
+
+proc g_date_time_get_hour(self: ptr DateTime00): int32 {.
+    importc, libprag.}
+
+proc getHour*(self: DateTime): int =
+  int(g_date_time_get_hour(cast[ptr DateTime00](self.impl)))
+
+proc hour*(self: DateTime): int =
+  int(g_date_time_get_hour(cast[ptr DateTime00](self.impl)))
+
+proc g_date_time_get_microsecond(self: ptr DateTime00): int32 {.
+    importc, libprag.}
+
+proc getMicrosecond*(self: DateTime): int =
+  int(g_date_time_get_microsecond(cast[ptr DateTime00](self.impl)))
+
+proc microsecond*(self: DateTime): int =
+  int(g_date_time_get_microsecond(cast[ptr DateTime00](self.impl)))
+
+proc g_date_time_get_minute(self: ptr DateTime00): int32 {.
+    importc, libprag.}
+
+proc getMinute*(self: DateTime): int =
+  int(g_date_time_get_minute(cast[ptr DateTime00](self.impl)))
+
+proc minute*(self: DateTime): int =
+  int(g_date_time_get_minute(cast[ptr DateTime00](self.impl)))
+
+proc g_date_time_get_month(self: ptr DateTime00): int32 {.
+    importc, libprag.}
+
+proc getMonth*(self: DateTime): int =
+  int(g_date_time_get_month(cast[ptr DateTime00](self.impl)))
+
+proc month*(self: DateTime): int =
+  int(g_date_time_get_month(cast[ptr DateTime00](self.impl)))
+
+proc g_date_time_get_second(self: ptr DateTime00): int32 {.
+    importc, libprag.}
+
+proc getSecond*(self: DateTime): int =
+  int(g_date_time_get_second(cast[ptr DateTime00](self.impl)))
+
+proc second*(self: DateTime): int =
+  int(g_date_time_get_second(cast[ptr DateTime00](self.impl)))
+
+proc g_date_time_get_seconds(self: ptr DateTime00): cdouble {.
+    importc, libprag.}
+
+proc getSeconds*(self: DateTime): cdouble =
+  g_date_time_get_seconds(cast[ptr DateTime00](self.impl))
+
+proc seconds*(self: DateTime): cdouble =
+  g_date_time_get_seconds(cast[ptr DateTime00](self.impl))
+
+proc g_date_time_get_timezone_abbreviation(self: ptr DateTime00): cstring {.
+    importc, libprag.}
+
+proc getTimezoneAbbreviation*(self: DateTime): string =
+  result = $g_date_time_get_timezone_abbreviation(cast[ptr DateTime00](self.impl))
+
+proc timezoneAbbreviation*(self: DateTime): string =
+  result = $g_date_time_get_timezone_abbreviation(cast[ptr DateTime00](self.impl))
+
+proc g_date_time_get_utc_offset(self: ptr DateTime00): int64 {.
+    importc, libprag.}
+
+proc getUtcOffset*(self: DateTime): int64 =
+  g_date_time_get_utc_offset(cast[ptr DateTime00](self.impl))
+
+proc utcOffset*(self: DateTime): int64 =
+  g_date_time_get_utc_offset(cast[ptr DateTime00](self.impl))
+
+proc g_date_time_get_week_numbering_year(self: ptr DateTime00): int32 {.
+    importc, libprag.}
+
+proc getWeekNumberingYear*(self: DateTime): int =
+  int(g_date_time_get_week_numbering_year(cast[ptr DateTime00](self.impl)))
+
+proc weekNumberingYear*(self: DateTime): int =
+  int(g_date_time_get_week_numbering_year(cast[ptr DateTime00](self.impl)))
+
+proc g_date_time_get_week_of_year(self: ptr DateTime00): int32 {.
+    importc, libprag.}
+
+proc getWeekOfYear*(self: DateTime): int =
+  int(g_date_time_get_week_of_year(cast[ptr DateTime00](self.impl)))
+
+proc weekOfYear*(self: DateTime): int =
+  int(g_date_time_get_week_of_year(cast[ptr DateTime00](self.impl)))
+
+proc g_date_time_get_year(self: ptr DateTime00): int32 {.
+    importc, libprag.}
+
+proc getYear*(self: DateTime): int =
+  int(g_date_time_get_year(cast[ptr DateTime00](self.impl)))
+
+proc year*(self: DateTime): int =
+  int(g_date_time_get_year(cast[ptr DateTime00](self.impl)))
+
+proc g_date_time_get_ymd(self: ptr DateTime00; year: var int32; month: var int32;
+    day: var int32) {.
+    importc, libprag.}
+
+proc getYmd*(self: DateTime; year: var int = cast[var int](nil);
+    month: var int = cast[var int](nil); day: var int = cast[var int](nil)) =
+  var day_00: int32
+  var year_00: int32
+  var month_00: int32
+  g_date_time_get_ymd(cast[ptr DateTime00](self.impl), year_00, month_00, day_00)
+  if day.addr != nil:
+    day = int(day_00)
+  if year.addr != nil:
+    year = int(year_00)
+  if month.addr != nil:
+    month = int(month_00)
+
+proc g_date_time_is_daylight_savings(self: ptr DateTime00): gboolean {.
+    importc, libprag.}
+
+proc isDaylightSavings*(self: DateTime): bool =
+  toBool(g_date_time_is_daylight_savings(cast[ptr DateTime00](self.impl)))
+
+proc g_date_time_ref(self: ptr DateTime00): ptr DateTime00 {.
+    importc, libprag.}
+
+proc `ref`*(self: DateTime): DateTime =
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = g_date_time_ref(cast[ptr DateTime00](self.impl))
+
+proc g_date_time_to_local(self: ptr DateTime00): ptr DateTime00 {.
+    importc, libprag.}
+
+proc toLocal*(self: DateTime): DateTime =
+  let impl0 = g_date_time_to_local(cast[ptr DateTime00](self.impl))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_to_timeval(self: ptr DateTime00; tv: TimeVal): gboolean {.
+    importc, libprag.}
+
+proc toTimeval*(self: DateTime; tv: TimeVal): bool =
+  toBool(g_date_time_to_timeval(cast[ptr DateTime00](self.impl), tv))
+
+proc g_date_time_to_unix(self: ptr DateTime00): int64 {.
+    importc, libprag.}
+
+proc toUnix*(self: DateTime): int64 =
+  g_date_time_to_unix(cast[ptr DateTime00](self.impl))
+
+proc g_date_time_to_utc(self: ptr DateTime00): ptr DateTime00 {.
+    importc, libprag.}
+
+proc toUtc*(self: DateTime): DateTime =
+  let impl0 = g_date_time_to_utc(cast[ptr DateTime00](self.impl))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_compare(dt1: pointer; dt2: pointer): int32 {.
+    importc, libprag.}
+
+proc compare*(dt1: pointer; dt2: pointer): int =
+  int(g_date_time_compare(dt1, dt2))
+
+proc g_date_time_equal(dt1: pointer; dt2: pointer): gboolean {.
+    importc, libprag.}
+
+proc equal*(dt1: pointer; dt2: pointer): bool =
+  toBool(g_date_time_equal(dt1, dt2))
+
+proc g_date_time_hash(datetime: pointer): uint32 {.
+    importc, libprag.}
+
+proc hash*(datetime: pointer): int =
+  int(g_date_time_hash(datetime))
+
+proc g_bookmark_file_get_added_date_time(self: ptr BookmarkFile00; uri: cstring;
+    error: ptr ptr glib.Error = nil): ptr DateTime00 {.
+    importc, libprag.}
+
+proc getAddedDateTime*(self: BookmarkFile; uri: cstring): DateTime =
+  var gerror: ptr glib.Error
+  let impl0 = g_bookmark_file_get_added_date_time(cast[ptr BookmarkFile00](self.impl), uri, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+  result.ignoreFinalizer = true
+
+proc g_bookmark_file_get_application_info(self: ptr BookmarkFile00; uri: cstring;
+    name: cstring; exec: var cstring; count: var uint32; stamp: var ptr DateTime00;
+    error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc getApplicationInfo*(self: BookmarkFile; uri: cstring;
+    name: cstring; exec: var string = cast[var string](nil); count: var int = cast[var int](nil);
+    stamp: var DateTime = cast[var DateTime](nil)): bool =
+  if addr(stamp) != nil:
+    fnew(stamp, gBoxedFreeGDateTime)
+  if addr(stamp) != nil:
+    stamp.ignoreFinalizer = true
+  var gerror: ptr glib.Error
+  var count_00: uint32
+  var exec_00: cstring
+  let resul0 = g_bookmark_file_get_application_info(cast[ptr BookmarkFile00](self.impl), uri, name, exec_00, count_00, cast[var ptr DateTime00](if addr(stamp) == nil: nil else: addr stamp.impl), addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+  if count.addr != nil:
+    count = int(count_00)
+  if exec.addr != nil:
+    exec = $(exec_00)
+
+proc g_bookmark_file_get_modified_date_time(self: ptr BookmarkFile00; uri: cstring;
+    error: ptr ptr glib.Error = nil): ptr DateTime00 {.
+    importc, libprag.}
+
+proc getModifiedDateTime*(self: BookmarkFile; uri: cstring): DateTime =
+  var gerror: ptr glib.Error
+  let impl0 = g_bookmark_file_get_modified_date_time(cast[ptr BookmarkFile00](self.impl), uri, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+  result.ignoreFinalizer = true
+
+proc g_bookmark_file_get_visited_date_time(self: ptr BookmarkFile00; uri: cstring;
+    error: ptr ptr glib.Error = nil): ptr DateTime00 {.
+    importc, libprag.}
+
+proc getVisitedDateTime*(self: BookmarkFile; uri: cstring): DateTime =
+  var gerror: ptr glib.Error
+  let impl0 = g_bookmark_file_get_visited_date_time(cast[ptr BookmarkFile00](self.impl), uri, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+  result.ignoreFinalizer = true
+
+proc g_bookmark_file_set_added_date_time(self: ptr BookmarkFile00; uri: cstring;
+    added: ptr DateTime00) {.
+    importc, libprag.}
+
+proc setAddedDateTime*(self: BookmarkFile; uri: cstring;
+    added: DateTime) =
+  g_bookmark_file_set_added_date_time(cast[ptr BookmarkFile00](self.impl), uri, cast[ptr DateTime00](added.impl))
+
+proc g_bookmark_file_set_application_info(self: ptr BookmarkFile00; uri: cstring;
+    name: cstring; exec: cstring; count: int32; stamp: ptr DateTime00; error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc setApplicationInfo*(self: BookmarkFile; uri: cstring;
+    name: cstring; exec: cstring; count: int; stamp: DateTime = nil): bool =
+  var gerror: ptr glib.Error
+  let resul0 = g_bookmark_file_set_application_info(cast[ptr BookmarkFile00](self.impl), uri, name, exec, int32(count), if stamp.isNil: nil else: cast[ptr DateTime00](stamp.impl), addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+
+proc g_bookmark_file_set_modified_date_time(self: ptr BookmarkFile00; uri: cstring;
+    modified: ptr DateTime00) {.
+    importc, libprag.}
+
+proc setModifiedDateTime*(self: BookmarkFile; uri: cstring;
+    modified: DateTime) =
+  g_bookmark_file_set_modified_date_time(cast[ptr BookmarkFile00](self.impl), uri, cast[ptr DateTime00](modified.impl))
+
+proc g_bookmark_file_set_visited_date_time(self: ptr BookmarkFile00; uri: cstring;
+    visited: ptr DateTime00) {.
+    importc, libprag.}
+
+proc setVisitedDateTime*(self: BookmarkFile; uri: cstring;
+    visited: DateTime) =
+  g_bookmark_file_set_visited_date_time(cast[ptr BookmarkFile00](self.impl), uri, cast[ptr DateTime00](visited.impl))
+
+type
+  TimeZone00* {.pure.} = object
+  TimeZone* = ref object
+    impl*: ptr TimeZone00
+    ignoreFinalizer*: bool
+
+proc g_time_zone_get_type*(): GType {.importc, gobjectlibprag.}
+
+proc gBoxedFreeGTimeZone*(self: TimeZone) =
+  if not self.ignoreFinalizer:
+    boxedFree(g_time_zone_get_type(), cast[ptr TimeZone00](self.impl))
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(TimeZone()[])) =
+    if not self.ignoreFinalizer and self.impl != nil:
+      boxedFree(g_time_zone_get_type(), cast[ptr TimeZone00](self.impl))
+      self.impl = nil
+
+proc newWithFinalizer*(x: var TimeZone) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGTimeZone)
+
+proc g_time_zone_unref(self: ptr TimeZone00) {.
+    importc, libprag.}
+
+proc unref*(self: TimeZone) =
+  g_time_zone_unref(cast[ptr TimeZone00](self.impl))
+
+proc finalizerunref*(self: TimeZone) =
+  if not self.ignoreFinalizer:
+    g_time_zone_unref(self.impl)
+
+proc g_time_zone_new_local(): ptr TimeZone00 {.
+    importc, libprag.}
+
+proc newTimeZoneLocal*(): TimeZone =
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_new_local()
+
+proc newTimeZoneLocal*(tdesc: typedesc): tdesc =
+  assert(result is TimeZone)
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_new_local()
+
+proc initTimeZoneLocal*[T](result: var T) {.deprecated.} =
+  assert(result is TimeZone)
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_new_local()
+
+proc g_time_zone_new_offset(seconds: int32): ptr TimeZone00 {.
+    importc, libprag.}
+
+proc newTimeZoneOffset*(seconds: int): TimeZone =
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_new_offset(int32(seconds))
+
+proc newTimeZoneOffset*(tdesc: typedesc; seconds: int): tdesc =
+  assert(result is TimeZone)
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_new_offset(int32(seconds))
+
+proc initTimeZoneOffset*[T](result: var T; seconds: int) {.deprecated.} =
+  assert(result is TimeZone)
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_new_offset(int32(seconds))
+
+proc g_time_zone_new_utc(): ptr TimeZone00 {.
+    importc, libprag.}
+
+proc newTimeZoneUtc*(): TimeZone =
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_new_utc()
+
+proc newTimeZoneUtc*(tdesc: typedesc): tdesc =
+  assert(result is TimeZone)
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_new_utc()
+
+proc initTimeZoneUtc*[T](result: var T) {.deprecated.} =
+  assert(result is TimeZone)
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_new_utc()
+
+proc g_time_zone_get_abbreviation(self: ptr TimeZone00; interval: int32): cstring {.
+    importc, libprag.}
+
+proc getAbbreviation*(self: TimeZone; interval: int): string =
+  result = $g_time_zone_get_abbreviation(cast[ptr TimeZone00](self.impl), int32(interval))
+
+proc g_time_zone_get_identifier(self: ptr TimeZone00): cstring {.
+    importc, libprag.}
+
+proc getIdentifier*(self: TimeZone): string =
+  result = $g_time_zone_get_identifier(cast[ptr TimeZone00](self.impl))
+
+proc identifier*(self: TimeZone): string =
+  result = $g_time_zone_get_identifier(cast[ptr TimeZone00](self.impl))
+
+proc g_time_zone_get_offset(self: ptr TimeZone00; interval: int32): int32 {.
+    importc, libprag.}
+
+proc getOffset*(self: TimeZone; interval: int): int =
+  int(g_time_zone_get_offset(cast[ptr TimeZone00](self.impl), int32(interval)))
+
+proc g_time_zone_is_dst(self: ptr TimeZone00; interval: int32): gboolean {.
+    importc, libprag.}
+
+proc isDst*(self: TimeZone; interval: int): bool =
+  toBool(g_time_zone_is_dst(cast[ptr TimeZone00](self.impl), int32(interval)))
+
+proc g_time_zone_ref(self: ptr TimeZone00): ptr TimeZone00 {.
+    importc, libprag.}
+
+proc `ref`*(self: TimeZone): TimeZone =
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_ref(cast[ptr TimeZone00](self.impl))
+
+proc g_time_zone_new(identifier: cstring): ptr TimeZone00 {.
+    importc, libprag.}
+
+proc newTimeZone*(identifier: cstring = ""): TimeZone =
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_new(safeStringToCString(identifier))
+
+proc newTimeZone*(tdesc: typedesc; identifier: cstring = ""): tdesc =
+  assert(result is TimeZone)
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_new(safeStringToCString(identifier))
+
+proc initTimeZone*[T](result: var T; identifier: cstring = "") {.deprecated.} =
+  assert(result is TimeZone)
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_time_zone_new(safeStringToCString(identifier))
+
+proc g_date_time_new_from_iso8601(text: cstring; defaultTz: ptr TimeZone00): ptr DateTime00 {.
+    importc, libprag.}
+
+proc newDateTimeFromIso8601*(text: cstring; defaultTz: TimeZone = nil): DateTime =
+  let impl0 = g_date_time_new_from_iso8601(text, if defaultTz.isNil: nil else: cast[ptr TimeZone00](defaultTz.impl))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc newDateTimeFromIso8601*(tdesc: typedesc; text: cstring; defaultTz: TimeZone = nil): tdesc =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_from_iso8601(text, if defaultTz.isNil: nil else: cast[ptr TimeZone00](defaultTz.impl))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc initDateTimeFromIso8601*[T](result: var T; text: cstring; defaultTz: TimeZone = nil) {.deprecated.} =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_from_iso8601(text, if defaultTz.isNil: nil else: cast[ptr TimeZone00](defaultTz.impl))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_new_now(tz: ptr TimeZone00): ptr DateTime00 {.
+    importc, libprag.}
+
+proc newDateTimeNow*(tz: TimeZone): DateTime =
+  let impl0 = g_date_time_new_now(cast[ptr TimeZone00](tz.impl))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc newDateTimeNow*(tdesc: typedesc; tz: TimeZone): tdesc =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_now(cast[ptr TimeZone00](tz.impl))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc initDateTimeNow*[T](result: var T; tz: TimeZone) {.deprecated.} =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new_now(cast[ptr TimeZone00](tz.impl))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_get_timezone(self: ptr DateTime00): ptr TimeZone00 {.
+    importc, libprag.}
+
+proc getTimezone*(self: DateTime): TimeZone =
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_date_time_get_timezone(cast[ptr DateTime00](self.impl))
+  result.ignoreFinalizer = true
+
+proc timezone*(self: DateTime): TimeZone =
+  fnew(result, gBoxedFreeGTimeZone)
+  result.impl = g_date_time_get_timezone(cast[ptr DateTime00](self.impl))
+  result.ignoreFinalizer = true
+
+proc g_date_time_to_timezone(self: ptr DateTime00; tz: ptr TimeZone00): ptr DateTime00 {.
+    importc, libprag.}
+
+proc toTimezone*(self: DateTime; tz: TimeZone): DateTime =
+  let impl0 = g_date_time_to_timezone(cast[ptr DateTime00](self.impl), cast[ptr TimeZone00](tz.impl))
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc g_date_time_new(tz: ptr TimeZone00; year: int32; month: int32; day: int32;
+    hour: int32; minute: int32; seconds: cdouble): ptr DateTime00 {.
+    importc, libprag.}
+
+proc newDateTime*(tz: TimeZone; year: int; month: int; day: int; hour: int;
+    minute: int; seconds: cdouble): DateTime =
+  let impl0 = g_date_time_new(cast[ptr TimeZone00](tz.impl), int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc newDateTime*(tdesc: typedesc; tz: TimeZone; year: int; month: int; day: int; hour: int;
+    minute: int; seconds: cdouble): tdesc =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new(cast[ptr TimeZone00](tz.impl), int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+proc initDateTime*[T](result: var T; tz: TimeZone; year: int; month: int; day: int; hour: int;
+    minute: int; seconds: cdouble) {.deprecated.} =
+  assert(result is DateTime)
+  let impl0 = g_date_time_new(cast[ptr TimeZone00](tz.impl), int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
+  if impl0.isNil:
+    return nil
+  fnew(result, gBoxedFreeGDateTime)
+  result.impl = impl0
+
+type
+  TimeType* {.size: sizeof(cint), pure.} = enum
+    standard = 0
+    daylight = 1
+    universal = 2
+
+proc g_time_zone_adjust_time(self: ptr TimeZone00; `type`: TimeType; time: ptr int64): int32 {.
+    importc, libprag.}
+
+proc adjustTime*(self: TimeZone; `type`: TimeType; time: ptr int64): int =
+  int(g_time_zone_adjust_time(cast[ptr TimeZone00](self.impl), `type`, time))
+
+proc g_time_zone_find_interval(self: ptr TimeZone00; `type`: TimeType; time: int64): int32 {.
+    importc, libprag.}
+
+proc findInterval*(self: TimeZone; `type`: TimeType; time: int64): int =
+  int(g_time_zone_find_interval(cast[ptr TimeZone00](self.impl), `type`, time))
 
 type
   BookmarkFileError* {.size: sizeof(cint), pure.} = enum
@@ -915,7 +1755,7 @@ type
     impl*: ptr ByteArray00
     ignoreFinalizer*: bool
 
-proc g_byte_array_get_type*(): GType {.importc, libprag.}
+proc g_byte_array_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGByteArray*(self: ByteArray) =
   if not self.ignoreFinalizer:
@@ -927,6 +1767,12 @@ when defined(gcDestructors):
       boxedFree(g_byte_array_get_type(), cast[ptr ByteArray00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var ByteArray) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGByteArray)
+
 proc g_byte_array_free(array: ptr ByteArray00; freeSegment: gboolean): ptr uint8 {.
     importc, libprag.}
 
@@ -936,12 +1782,12 @@ proc free*(array: ptr ByteArray00; freeSegment: bool): ptr uint8 =
 proc new*(): ptr ByteArray00 {.
     importc: "g_byte_array_new", libprag.}
 
-proc g_byte_array_new_take(data: uint8Array; len: uint64): ptr ByteArray00 {.
+proc g_byte_array_new_take(data: ptr uint8; len: uint64): ptr ByteArray00 {.
     importc, libprag.}
 
 proc newTake*(data: seq[uint8] | string): ptr ByteArray00 =
   let len = uint64(data.len)
-  g_byte_array_new_take(unsafeaddr(data[0]), len)
+  g_byte_array_new_take(cast[ptr uint8](unsafeaddr(data[0])), len)
 
 proc steal*(array: ptr ByteArray00; len: var uint64): ptr uint8 {.
     importc: "g_byte_array_steal", libprag.}
@@ -962,7 +1808,7 @@ type
     impl*: ptr Bytes00
     ignoreFinalizer*: bool
 
-proc g_bytes_get_type*(): GType {.importc, libprag.}
+proc g_bytes_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGBytes*(self: Bytes) =
   if not self.ignoreFinalizer:
@@ -974,6 +1820,12 @@ when defined(gcDestructors):
       boxedFree(g_bytes_get_type(), cast[ptr Bytes00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var Bytes) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGBytes)
+
 proc g_bytes_unref(self: ptr Bytes00) {.
     importc, libprag.}
 
@@ -984,25 +1836,25 @@ proc finalizerunref*(self: Bytes) =
   if not self.ignoreFinalizer:
     g_bytes_unref(self.impl)
 
-proc g_bytes_new_take(data: uint8Array; size: uint64): ptr Bytes00 {.
+proc g_bytes_new_take(data: ptr uint8; size: uint64): ptr Bytes00 {.
     importc, libprag.}
 
 proc newBytesTake*(data: seq[uint8] | string): Bytes =
   let size = uint64(data.len)
   fnew(result, gBoxedFreeGBytes)
-  result.impl = g_bytes_new_take(unsafeaddr(data[0]), size)
+  result.impl = g_bytes_new_take(cast[ptr uint8](unsafeaddr(data[0])), size)
 
 proc newBytesTake*(tdesc: typedesc; data: seq[uint8] | string): tdesc =
   let size = uint64(data.len)
   assert(result is Bytes)
   fnew(result, gBoxedFreeGBytes)
-  result.impl = g_bytes_new_take(unsafeaddr(data[0]), size)
+  result.impl = g_bytes_new_take(cast[ptr uint8](unsafeaddr(data[0])), size)
 
 proc initBytesTake*[T](result: var T; data: seq[uint8] | string) {.deprecated.} =
   let size = uint64(data.len)
   assert(result is Bytes)
   fnew(result, gBoxedFreeGBytes)
-  result.impl = g_bytes_new_take(unsafeaddr(data[0]), size)
+  result.impl = g_bytes_new_take(cast[ptr uint8](unsafeaddr(data[0])), size)
 
 proc g_bytes_compare(self: ptr Bytes00; bytes2: ptr Bytes00): int32 {.
     importc, libprag.}
@@ -1016,20 +1868,14 @@ proc g_bytes_equal(self: ptr Bytes00; bytes2: ptr Bytes00): gboolean {.
 proc equal*(self: Bytes; bytes2: Bytes): bool =
   toBool(g_bytes_equal(cast[ptr Bytes00](self.impl), cast[ptr Bytes00](bytes2.impl)))
 
-proc g_bytes_get_data(self: ptr Bytes00; size: var uint64): uint8Array {.
+proc g_bytes_get_data(self: ptr Bytes00; size: var uint64): ptr uint8 {.
     importc, libprag.}
 
-proc getData*(self: Bytes; size: var uint64): seq[uint8] =
+proc getData*(self: Bytes; size: var uint64 = cast[var uint64](nil)): seq[uint8] =
   let resul0 = g_bytes_get_data(cast[ptr Bytes00](self.impl), size)
   if resul0.isNil:
     return
-  result = uint8ArrayZT2seq(resul0)
-
-proc data*(self: Bytes; size: var uint64): seq[uint8] =
-  let resul0 = g_bytes_get_data(cast[ptr Bytes00](self.impl), size)
-  if resul0.isNil:
-    return
-  result = uint8ArrayZT2seq(resul0)
+  result = uint8ArrayToSeq(resul0, size.int)
 
 proc g_bytes_get_size(self: ptr Bytes00): uint64 {.
     importc, libprag.}
@@ -1060,25 +1906,25 @@ proc `ref`*(self: Bytes): Bytes =
   fnew(result, gBoxedFreeGBytes)
   result.impl = g_bytes_ref(cast[ptr Bytes00](self.impl))
 
-proc g_bytes_new(data: uint8Array; size: uint64): ptr Bytes00 {.
+proc g_bytes_new(data: ptr uint8; size: uint64): ptr Bytes00 {.
     importc, libprag.}
 
 proc newBytes*(data: seq[uint8] | string): Bytes =
   let size = uint64(data.len)
   fnew(result, gBoxedFreeGBytes)
-  result.impl = g_bytes_new(unsafeaddr(data[0]), size)
+  result.impl = g_bytes_new(cast[ptr uint8](unsafeaddr(data[0])), size)
 
 proc newBytes*(tdesc: typedesc; data: seq[uint8] | string): tdesc =
   let size = uint64(data.len)
   assert(result is Bytes)
   fnew(result, gBoxedFreeGBytes)
-  result.impl = g_bytes_new(unsafeaddr(data[0]), size)
+  result.impl = g_bytes_new(cast[ptr uint8](unsafeaddr(data[0])), size)
 
 proc initBytes*[T](result: var T; data: seq[uint8] | string) {.deprecated.} =
   let size = uint64(data.len)
   assert(result is Bytes)
   fnew(result, gBoxedFreeGBytes)
-  result.impl = g_bytes_new(unsafeaddr(data[0]), size)
+  result.impl = g_bytes_new(cast[ptr uint8](unsafeaddr(data[0])), size)
 
 proc g_bytes_unref_to_array(self: ptr Bytes00): ptr ByteArray00 {.
     importc, libprag.}
@@ -1086,12 +1932,12 @@ proc g_bytes_unref_to_array(self: ptr Bytes00): ptr ByteArray00 {.
 proc unrefToArray*(self: Bytes): ptr ByteArray00 =
   g_bytes_unref_to_array(cast[ptr Bytes00](self.impl))
 
-proc g_bytes_unref_to_data(self: ptr Bytes00; size: var uint64): uint8Array {.
+proc g_bytes_unref_to_data(self: ptr Bytes00; size: var uint64): ptr uint8 {.
     importc, libprag.}
 
 proc unrefToData*(self: Bytes; size: var uint64): seq[uint8] =
   let resul0 = g_bytes_unref_to_data(cast[ptr Bytes00](self.impl), size)
-  result = uint8ArrayZT2seq(resul0)
+  result = uint8ArrayToSeq(resul0, size.int)
   cogfree(resul0)
 
 proc g_byte_array_free_to_bytes(array: ptr ByteArray00): ptr Bytes00 {.
@@ -1113,7 +1959,7 @@ type
     impl*: ptr Checksum00
     ignoreFinalizer*: bool
 
-proc g_checksum_get_type*(): GType {.importc, libprag.}
+proc g_checksum_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGChecksum*(self: Checksum) =
   if not self.ignoreFinalizer:
@@ -1124,6 +1970,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_checksum_get_type(), cast[ptr Checksum00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var Checksum) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGChecksum)
 
 proc g_checksum_free(self: ptr Checksum00) {.
     importc, libprag.}
@@ -1154,12 +2006,12 @@ proc g_checksum_reset(self: ptr Checksum00) {.
 proc reset*(self: Checksum) =
   g_checksum_reset(cast[ptr Checksum00](self.impl))
 
-proc g_checksum_update(self: ptr Checksum00; data: uint8Array; length: int64) {.
+proc g_checksum_update(self: ptr Checksum00; data: ptr uint8; length: int64) {.
     importc, libprag.}
 
 proc update*(self: Checksum; data: seq[uint8] | string) =
   let length = int64(data.len)
-  g_checksum_update(cast[ptr Checksum00](self.impl), unsafeaddr(data[0]), length)
+  g_checksum_update(cast[ptr Checksum00](self.impl), cast[ptr uint8](unsafeaddr(data[0])), length)
 
 type
   ChecksumType* {.size: sizeof(cint), pure.} = enum
@@ -1202,34 +2054,33 @@ type
   CompareFunc* = proc (a: pointer; b: pointer): int32 {.cdecl.}
 
 type
-  Cond00* {.pure.} = object
-  Cond* = ref object
-    impl*: ptr Cond00
-    ignoreFinalizer*: bool
+  Cond* {.pure, byRef.} = object
+    p*: pointer
+    i*: array[2, uint32]
 
-proc g_cond_broadcast(self: ptr Cond00) {.
+proc g_cond_broadcast(self: Cond) {.
     importc, libprag.}
 
 proc broadcast*(self: Cond) =
-  g_cond_broadcast(cast[ptr Cond00](self.impl))
+  g_cond_broadcast(self)
 
-proc g_cond_clear(self: ptr Cond00) {.
+proc g_cond_clear(self: Cond) {.
     importc, libprag.}
 
 proc clear*(self: Cond) =
-  g_cond_clear(cast[ptr Cond00](self.impl))
+  g_cond_clear(self)
 
-proc g_cond_init(self: ptr Cond00) {.
+proc g_cond_init(self: Cond) {.
     importc, libprag.}
 
 proc init*(self: Cond) =
-  g_cond_init(cast[ptr Cond00](self.impl))
+  g_cond_init(self)
 
-proc g_cond_signal(self: ptr Cond00) {.
+proc g_cond_signal(self: Cond) {.
     importc, libprag.}
 
 proc signal*(self: Cond) =
-  g_cond_signal(cast[ptr Cond00](self.impl))
+  g_cond_signal(self)
 
 type
   ConvertError* {.size: sizeof(cint), pure.} = enum
@@ -1258,10 +2109,7 @@ const DIR_SEPARATOR* = 47'i32
 const DIR_SEPARATOR_S* = "/"
 
 type
-  Data00* {.pure.} = object
-  Data* = ref object
-    impl*: ptr Data00
-    ignoreFinalizer*: bool
+  Data* {.pure, byRef.} = object
 
 type
   DataForeachFunc* = proc (keyId: uint32; data: pointer; userData: pointer) {.cdecl.}
@@ -1272,7 +2120,7 @@ type
     impl*: ptr Date00
     ignoreFinalizer*: bool
 
-proc g_date_get_type*(): GType {.importc, libprag.}
+proc g_date_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGDate*(self: Date) =
   if not self.ignoreFinalizer:
@@ -1283,6 +2131,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_date_get_type(), cast[ptr Date00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var Date) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGDate)
 
 proc g_date_free(self: ptr Date00) {.
     importc, libprag.}
@@ -1653,9 +2507,6 @@ proc `month=`*(self: Date; month: DateMonth) =
 proc getDaysInMonth*(month: DateMonth; year: uint16): uint8 {.
     importc: "g_date_get_days_in_month", libprag.}
 
-proc daysInMonth*(month: DateMonth; year: uint16): uint8 {.
-    importc: "g_date_get_days_in_month", libprag.}
-
 proc g_date_valid_dmy(day: uint8; month: DateMonth; year: uint16): gboolean {.
     importc, libprag.}
 
@@ -1701,730 +2552,33 @@ type
     year = 2
 
 type
-  DateTime00* {.pure.} = object
-  DateTime* = ref object
-    impl*: ptr DateTime00
-    ignoreFinalizer*: bool
-
-proc g_date_time_get_type*(): GType {.importc, libprag.}
-
-proc gBoxedFreeGDateTime*(self: DateTime) =
-  if not self.ignoreFinalizer:
-    boxedFree(g_date_time_get_type(), cast[ptr DateTime00](self.impl))
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(DateTime()[])) =
-    if not self.ignoreFinalizer and self.impl != nil:
-      boxedFree(g_date_time_get_type(), cast[ptr DateTime00](self.impl))
-      self.impl = nil
-
-proc g_date_time_unref(self: ptr DateTime00) {.
-    importc, libprag.}
-
-proc unref*(self: DateTime) =
-  g_date_time_unref(cast[ptr DateTime00](self.impl))
-
-proc finalizerunref*(self: DateTime) =
-  if not self.ignoreFinalizer:
-    g_date_time_unref(self.impl)
-
-proc g_date_time_new_from_timeval_local(tv: TimeVal): ptr DateTime00 {.
-    importc, libprag.}
-
-proc newDateTimeFromTimevalLocal*(tv: TimeVal): DateTime {.deprecated.}  =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_from_timeval_local(tv)
-
-proc newDateTimeFromTimevalLocal*(tdesc: typedesc; tv: TimeVal): tdesc {.deprecated.}  =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_from_timeval_local(tv)
-
-proc initDateTimeFromTimevalLocal*[T](result: var T; tv: TimeVal) {.deprecated.} =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_from_timeval_local(tv)
-
-proc g_date_time_new_from_timeval_utc(tv: TimeVal): ptr DateTime00 {.
-    importc, libprag.}
-
-proc newDateTimeFromTimevalUtc*(tv: TimeVal): DateTime {.deprecated.}  =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_from_timeval_utc(tv)
-
-proc newDateTimeFromTimevalUtc*(tdesc: typedesc; tv: TimeVal): tdesc {.deprecated.}  =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_from_timeval_utc(tv)
-
-proc initDateTimeFromTimevalUtc*[T](result: var T; tv: TimeVal) {.deprecated.} =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_from_timeval_utc(tv)
-
-proc g_date_time_new_from_unix_local(t: int64): ptr DateTime00 {.
-    importc, libprag.}
-
-proc newDateTimeFromUnixLocal*(t: int64): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_from_unix_local(t)
-
-proc newDateTimeFromUnixLocal*(tdesc: typedesc; t: int64): tdesc =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_from_unix_local(t)
-
-proc initDateTimeFromUnixLocal*[T](result: var T; t: int64) {.deprecated.} =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_from_unix_local(t)
-
-proc g_date_time_new_from_unix_utc(t: int64): ptr DateTime00 {.
-    importc, libprag.}
-
-proc newDateTimeFromUnixUtc*(t: int64): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_from_unix_utc(t)
-
-proc newDateTimeFromUnixUtc*(tdesc: typedesc; t: int64): tdesc =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_from_unix_utc(t)
-
-proc initDateTimeFromUnixUtc*[T](result: var T; t: int64) {.deprecated.} =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_from_unix_utc(t)
-
-proc g_date_time_new_local(year: int32; month: int32; day: int32; hour: int32;
-    minute: int32; seconds: cdouble): ptr DateTime00 {.
-    importc, libprag.}
-
-proc newDateTimeLocal*(year: int; month: int; day: int; hour: int; minute: int;
-    seconds: cdouble): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_local(int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
-
-proc newDateTimeLocal*(tdesc: typedesc; year: int; month: int; day: int; hour: int; minute: int;
-    seconds: cdouble): tdesc =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_local(int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
-
-proc initDateTimeLocal*[T](result: var T; year: int; month: int; day: int; hour: int; minute: int;
-    seconds: cdouble) {.deprecated.} =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_local(int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
-
-proc g_date_time_new_now_local(): ptr DateTime00 {.
-    importc, libprag.}
-
-proc newDateTimeNowLocal*(): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_now_local()
-
-proc newDateTimeNowLocal*(tdesc: typedesc): tdesc =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_now_local()
-
-proc initDateTimeNowLocal*[T](result: var T) {.deprecated.} =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_now_local()
-
-proc g_date_time_new_now_utc(): ptr DateTime00 {.
-    importc, libprag.}
-
-proc newDateTimeNowUtc*(): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_now_utc()
-
-proc newDateTimeNowUtc*(tdesc: typedesc): tdesc =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_now_utc()
-
-proc initDateTimeNowUtc*[T](result: var T) {.deprecated.} =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_now_utc()
-
-proc g_date_time_new_utc(year: int32; month: int32; day: int32; hour: int32;
-    minute: int32; seconds: cdouble): ptr DateTime00 {.
-    importc, libprag.}
-
-proc newDateTimeUtc*(year: int; month: int; day: int; hour: int; minute: int;
-    seconds: cdouble): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_utc(int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
-
-proc newDateTimeUtc*(tdesc: typedesc; year: int; month: int; day: int; hour: int; minute: int;
-    seconds: cdouble): tdesc =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_utc(int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
-
-proc initDateTimeUtc*[T](result: var T; year: int; month: int; day: int; hour: int; minute: int;
-    seconds: cdouble) {.deprecated.} =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_utc(int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
-
-proc g_date_time_add(self: ptr DateTime00; timespan: int64): ptr DateTime00 {.
-    importc, libprag.}
-
-proc add*(self: DateTime; timespan: int64): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_add(cast[ptr DateTime00](self.impl), timespan)
-
-proc g_date_time_add_days(self: ptr DateTime00; days: int32): ptr DateTime00 {.
-    importc, libprag.}
-
-proc addDays*(self: DateTime; days: int): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_add_days(cast[ptr DateTime00](self.impl), int32(days))
-
-proc g_date_time_add_full(self: ptr DateTime00; years: int32; months: int32;
-    days: int32; hours: int32; minutes: int32; seconds: cdouble): ptr DateTime00 {.
-    importc, libprag.}
-
-proc addFull*(self: DateTime; years: int; months: int; days: int;
-    hours: int; minutes: int; seconds: cdouble): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_add_full(cast[ptr DateTime00](self.impl), int32(years), int32(months), int32(days), int32(hours), int32(minutes), seconds)
-
-proc g_date_time_add_hours(self: ptr DateTime00; hours: int32): ptr DateTime00 {.
-    importc, libprag.}
-
-proc addHours*(self: DateTime; hours: int): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_add_hours(cast[ptr DateTime00](self.impl), int32(hours))
-
-proc g_date_time_add_minutes(self: ptr DateTime00; minutes: int32): ptr DateTime00 {.
-    importc, libprag.}
-
-proc addMinutes*(self: DateTime; minutes: int): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_add_minutes(cast[ptr DateTime00](self.impl), int32(minutes))
-
-proc g_date_time_add_months(self: ptr DateTime00; months: int32): ptr DateTime00 {.
-    importc, libprag.}
-
-proc addMonths*(self: DateTime; months: int): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_add_months(cast[ptr DateTime00](self.impl), int32(months))
-
-proc g_date_time_add_seconds(self: ptr DateTime00; seconds: cdouble): ptr DateTime00 {.
-    importc, libprag.}
-
-proc addSeconds*(self: DateTime; seconds: cdouble): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_add_seconds(cast[ptr DateTime00](self.impl), seconds)
-
-proc g_date_time_add_weeks(self: ptr DateTime00; weeks: int32): ptr DateTime00 {.
-    importc, libprag.}
-
-proc addWeeks*(self: DateTime; weeks: int): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_add_weeks(cast[ptr DateTime00](self.impl), int32(weeks))
-
-proc g_date_time_add_years(self: ptr DateTime00; years: int32): ptr DateTime00 {.
-    importc, libprag.}
-
-proc addYears*(self: DateTime; years: int): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_add_years(cast[ptr DateTime00](self.impl), int32(years))
-
-proc g_date_time_difference(self: ptr DateTime00; begin: ptr DateTime00): int64 {.
-    importc, libprag.}
-
-proc difference*(self: DateTime; begin: DateTime): int64 =
-  g_date_time_difference(cast[ptr DateTime00](self.impl), cast[ptr DateTime00](begin.impl))
-
-proc g_date_time_format(self: ptr DateTime00; format: cstring): cstring {.
-    importc, libprag.}
-
-proc format*(self: DateTime; format: cstring): string =
-  let resul0 = g_date_time_format(cast[ptr DateTime00](self.impl), format)
-  result = $resul0
-  cogfree(resul0)
-
-proc g_date_time_format_iso8601(self: ptr DateTime00): cstring {.
-    importc, libprag.}
-
-proc formatIso8601*(self: DateTime): string =
-  let resul0 = g_date_time_format_iso8601(cast[ptr DateTime00](self.impl))
-  result = $resul0
-  cogfree(resul0)
-
-proc g_date_time_get_day_of_month(self: ptr DateTime00): int32 {.
-    importc, libprag.}
-
-proc getDayOfMonth*(self: DateTime): int =
-  int(g_date_time_get_day_of_month(cast[ptr DateTime00](self.impl)))
-
-proc dayOfMonth*(self: DateTime): int =
-  int(g_date_time_get_day_of_month(cast[ptr DateTime00](self.impl)))
-
-proc g_date_time_get_day_of_week(self: ptr DateTime00): int32 {.
-    importc, libprag.}
-
-proc getDayOfWeek*(self: DateTime): int =
-  int(g_date_time_get_day_of_week(cast[ptr DateTime00](self.impl)))
-
-proc dayOfWeek*(self: DateTime): int =
-  int(g_date_time_get_day_of_week(cast[ptr DateTime00](self.impl)))
-
-proc g_date_time_get_day_of_year(self: ptr DateTime00): int32 {.
-    importc, libprag.}
-
-proc getDayOfYear*(self: DateTime): int =
-  int(g_date_time_get_day_of_year(cast[ptr DateTime00](self.impl)))
-
-proc dayOfYear*(self: DateTime): int =
-  int(g_date_time_get_day_of_year(cast[ptr DateTime00](self.impl)))
-
-proc g_date_time_get_hour(self: ptr DateTime00): int32 {.
-    importc, libprag.}
-
-proc getHour*(self: DateTime): int =
-  int(g_date_time_get_hour(cast[ptr DateTime00](self.impl)))
-
-proc hour*(self: DateTime): int =
-  int(g_date_time_get_hour(cast[ptr DateTime00](self.impl)))
-
-proc g_date_time_get_microsecond(self: ptr DateTime00): int32 {.
-    importc, libprag.}
-
-proc getMicrosecond*(self: DateTime): int =
-  int(g_date_time_get_microsecond(cast[ptr DateTime00](self.impl)))
-
-proc microsecond*(self: DateTime): int =
-  int(g_date_time_get_microsecond(cast[ptr DateTime00](self.impl)))
-
-proc g_date_time_get_minute(self: ptr DateTime00): int32 {.
-    importc, libprag.}
-
-proc getMinute*(self: DateTime): int =
-  int(g_date_time_get_minute(cast[ptr DateTime00](self.impl)))
-
-proc minute*(self: DateTime): int =
-  int(g_date_time_get_minute(cast[ptr DateTime00](self.impl)))
-
-proc g_date_time_get_month(self: ptr DateTime00): int32 {.
-    importc, libprag.}
-
-proc getMonth*(self: DateTime): int =
-  int(g_date_time_get_month(cast[ptr DateTime00](self.impl)))
-
-proc month*(self: DateTime): int =
-  int(g_date_time_get_month(cast[ptr DateTime00](self.impl)))
-
-proc g_date_time_get_second(self: ptr DateTime00): int32 {.
-    importc, libprag.}
-
-proc getSecond*(self: DateTime): int =
-  int(g_date_time_get_second(cast[ptr DateTime00](self.impl)))
-
-proc second*(self: DateTime): int =
-  int(g_date_time_get_second(cast[ptr DateTime00](self.impl)))
-
-proc g_date_time_get_seconds(self: ptr DateTime00): cdouble {.
-    importc, libprag.}
-
-proc getSeconds*(self: DateTime): cdouble =
-  g_date_time_get_seconds(cast[ptr DateTime00](self.impl))
-
-proc seconds*(self: DateTime): cdouble =
-  g_date_time_get_seconds(cast[ptr DateTime00](self.impl))
-
-proc g_date_time_get_timezone_abbreviation(self: ptr DateTime00): cstring {.
-    importc, libprag.}
-
-proc getTimezoneAbbreviation*(self: DateTime): string =
-  result = $g_date_time_get_timezone_abbreviation(cast[ptr DateTime00](self.impl))
-
-proc timezoneAbbreviation*(self: DateTime): string =
-  result = $g_date_time_get_timezone_abbreviation(cast[ptr DateTime00](self.impl))
-
-proc g_date_time_get_utc_offset(self: ptr DateTime00): int64 {.
-    importc, libprag.}
-
-proc getUtcOffset*(self: DateTime): int64 =
-  g_date_time_get_utc_offset(cast[ptr DateTime00](self.impl))
-
-proc utcOffset*(self: DateTime): int64 =
-  g_date_time_get_utc_offset(cast[ptr DateTime00](self.impl))
-
-proc g_date_time_get_week_numbering_year(self: ptr DateTime00): int32 {.
-    importc, libprag.}
-
-proc getWeekNumberingYear*(self: DateTime): int =
-  int(g_date_time_get_week_numbering_year(cast[ptr DateTime00](self.impl)))
-
-proc weekNumberingYear*(self: DateTime): int =
-  int(g_date_time_get_week_numbering_year(cast[ptr DateTime00](self.impl)))
-
-proc g_date_time_get_week_of_year(self: ptr DateTime00): int32 {.
-    importc, libprag.}
-
-proc getWeekOfYear*(self: DateTime): int =
-  int(g_date_time_get_week_of_year(cast[ptr DateTime00](self.impl)))
-
-proc weekOfYear*(self: DateTime): int =
-  int(g_date_time_get_week_of_year(cast[ptr DateTime00](self.impl)))
-
-proc g_date_time_get_year(self: ptr DateTime00): int32 {.
-    importc, libprag.}
-
-proc getYear*(self: DateTime): int =
-  int(g_date_time_get_year(cast[ptr DateTime00](self.impl)))
-
-proc year*(self: DateTime): int =
-  int(g_date_time_get_year(cast[ptr DateTime00](self.impl)))
-
-proc g_date_time_get_ymd(self: ptr DateTime00; year: var int32; month: var int32;
-    day: var int32) {.
-    importc, libprag.}
-
-proc getYmd*(self: DateTime; year: var int; month: var int; day: var int) =
-  var day_00 = int32(day)
-  var year_00 = int32(year)
-  var month_00 = int32(month)
-  g_date_time_get_ymd(cast[ptr DateTime00](self.impl), year_00, month_00, day_00)
-  day = int(day_00)
-  year = int(year_00)
-  month = int(month_00)
-
-proc g_date_time_is_daylight_savings(self: ptr DateTime00): gboolean {.
-    importc, libprag.}
-
-proc isDaylightSavings*(self: DateTime): bool =
-  toBool(g_date_time_is_daylight_savings(cast[ptr DateTime00](self.impl)))
-
-proc g_date_time_ref(self: ptr DateTime00): ptr DateTime00 {.
-    importc, libprag.}
-
-proc `ref`*(self: DateTime): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_ref(cast[ptr DateTime00](self.impl))
-
-proc g_date_time_to_local(self: ptr DateTime00): ptr DateTime00 {.
-    importc, libprag.}
-
-proc toLocal*(self: DateTime): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_to_local(cast[ptr DateTime00](self.impl))
-
-proc g_date_time_to_timeval(self: ptr DateTime00; tv: TimeVal): gboolean {.
-    importc, libprag.}
-
-proc toTimeval*(self: DateTime; tv: TimeVal): bool =
-  toBool(g_date_time_to_timeval(cast[ptr DateTime00](self.impl), tv))
-
-proc g_date_time_to_unix(self: ptr DateTime00): int64 {.
-    importc, libprag.}
-
-proc toUnix*(self: DateTime): int64 =
-  g_date_time_to_unix(cast[ptr DateTime00](self.impl))
-
-proc g_date_time_to_utc(self: ptr DateTime00): ptr DateTime00 {.
-    importc, libprag.}
-
-proc toUtc*(self: DateTime): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_to_utc(cast[ptr DateTime00](self.impl))
-
-proc g_date_time_compare(dt1: pointer; dt2: pointer): int32 {.
-    importc, libprag.}
-
-proc compare*(dt1: pointer; dt2: pointer): int =
-  int(g_date_time_compare(dt1, dt2))
-
-proc g_date_time_equal(dt1: pointer; dt2: pointer): gboolean {.
-    importc, libprag.}
-
-proc equal*(dt1: pointer; dt2: pointer): bool =
-  toBool(g_date_time_equal(dt1, dt2))
-
-proc g_date_time_hash(datetime: pointer): uint32 {.
-    importc, libprag.}
-
-proc hash*(datetime: pointer): int =
-  int(g_date_time_hash(datetime))
-
-type
-  TimeZone00* {.pure.} = object
-  TimeZone* = ref object
-    impl*: ptr TimeZone00
-    ignoreFinalizer*: bool
-
-proc g_time_zone_get_type*(): GType {.importc, libprag.}
-
-proc gBoxedFreeGTimeZone*(self: TimeZone) =
-  if not self.ignoreFinalizer:
-    boxedFree(g_time_zone_get_type(), cast[ptr TimeZone00](self.impl))
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(TimeZone()[])) =
-    if not self.ignoreFinalizer and self.impl != nil:
-      boxedFree(g_time_zone_get_type(), cast[ptr TimeZone00](self.impl))
-      self.impl = nil
-
-proc g_time_zone_unref(self: ptr TimeZone00) {.
-    importc, libprag.}
-
-proc unref*(self: TimeZone) =
-  g_time_zone_unref(cast[ptr TimeZone00](self.impl))
-
-proc finalizerunref*(self: TimeZone) =
-  if not self.ignoreFinalizer:
-    g_time_zone_unref(self.impl)
-
-proc g_time_zone_new_local(): ptr TimeZone00 {.
-    importc, libprag.}
-
-proc newTimeZoneLocal*(): TimeZone =
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_new_local()
-
-proc newTimeZoneLocal*(tdesc: typedesc): tdesc =
-  assert(result is TimeZone)
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_new_local()
-
-proc initTimeZoneLocal*[T](result: var T) {.deprecated.} =
-  assert(result is TimeZone)
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_new_local()
-
-proc g_time_zone_new_offset(seconds: int32): ptr TimeZone00 {.
-    importc, libprag.}
-
-proc newTimeZoneOffset*(seconds: int): TimeZone =
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_new_offset(int32(seconds))
-
-proc newTimeZoneOffset*(tdesc: typedesc; seconds: int): tdesc =
-  assert(result is TimeZone)
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_new_offset(int32(seconds))
-
-proc initTimeZoneOffset*[T](result: var T; seconds: int) {.deprecated.} =
-  assert(result is TimeZone)
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_new_offset(int32(seconds))
-
-proc g_time_zone_new_utc(): ptr TimeZone00 {.
-    importc, libprag.}
-
-proc newTimeZoneUtc*(): TimeZone =
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_new_utc()
-
-proc newTimeZoneUtc*(tdesc: typedesc): tdesc =
-  assert(result is TimeZone)
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_new_utc()
-
-proc initTimeZoneUtc*[T](result: var T) {.deprecated.} =
-  assert(result is TimeZone)
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_new_utc()
-
-proc g_time_zone_get_abbreviation(self: ptr TimeZone00; interval: int32): cstring {.
-    importc, libprag.}
-
-proc getAbbreviation*(self: TimeZone; interval: int): string =
-  result = $g_time_zone_get_abbreviation(cast[ptr TimeZone00](self.impl), int32(interval))
-
-proc abbreviation*(self: TimeZone; interval: int): string =
-  result = $g_time_zone_get_abbreviation(cast[ptr TimeZone00](self.impl), int32(interval))
-
-proc g_time_zone_get_identifier(self: ptr TimeZone00): cstring {.
-    importc, libprag.}
-
-proc getIdentifier*(self: TimeZone): string =
-  result = $g_time_zone_get_identifier(cast[ptr TimeZone00](self.impl))
-
-proc identifier*(self: TimeZone): string =
-  result = $g_time_zone_get_identifier(cast[ptr TimeZone00](self.impl))
-
-proc g_time_zone_get_offset(self: ptr TimeZone00; interval: int32): int32 {.
-    importc, libprag.}
-
-proc getOffset*(self: TimeZone; interval: int): int =
-  int(g_time_zone_get_offset(cast[ptr TimeZone00](self.impl), int32(interval)))
-
-proc offset*(self: TimeZone; interval: int): int =
-  int(g_time_zone_get_offset(cast[ptr TimeZone00](self.impl), int32(interval)))
-
-proc g_time_zone_is_dst(self: ptr TimeZone00; interval: int32): gboolean {.
-    importc, libprag.}
-
-proc isDst*(self: TimeZone; interval: int): bool =
-  toBool(g_time_zone_is_dst(cast[ptr TimeZone00](self.impl), int32(interval)))
-
-proc g_time_zone_ref(self: ptr TimeZone00): ptr TimeZone00 {.
-    importc, libprag.}
-
-proc `ref`*(self: TimeZone): TimeZone =
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_ref(cast[ptr TimeZone00](self.impl))
-
-proc g_time_zone_new(identifier: cstring): ptr TimeZone00 {.
-    importc, libprag.}
-
-proc newTimeZone*(identifier: cstring = ""): TimeZone =
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_new(safeStringToCString(identifier))
-
-proc newTimeZone*(tdesc: typedesc; identifier: cstring = ""): tdesc =
-  assert(result is TimeZone)
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_new(safeStringToCString(identifier))
-
-proc initTimeZone*[T](result: var T; identifier: cstring = "") {.deprecated.} =
-  assert(result is TimeZone)
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_time_zone_new(safeStringToCString(identifier))
-
-proc g_date_time_new_from_iso8601(text: cstring; defaultTz: ptr TimeZone00): ptr DateTime00 {.
-    importc, libprag.}
-
-proc newDateTimeFromIso8601*(text: cstring; defaultTz: TimeZone = nil): DateTime =
-  let impl0 = g_date_time_new_from_iso8601(text, if defaultTz.isNil: nil else: cast[ptr TimeZone00](defaultTz.impl))
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = impl0
-
-proc newDateTimeFromIso8601*(tdesc: typedesc; text: cstring; defaultTz: TimeZone = nil): tdesc =
-  assert(result is DateTime)
-  let impl0 = g_date_time_new_from_iso8601(text, if defaultTz.isNil: nil else: cast[ptr TimeZone00](defaultTz.impl))
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = impl0
-
-proc initDateTimeFromIso8601*[T](result: var T; text: cstring; defaultTz: TimeZone = nil) {.deprecated.} =
-  assert(result is DateTime)
-  let impl0 = g_date_time_new_from_iso8601(text, if defaultTz.isNil: nil else: cast[ptr TimeZone00](defaultTz.impl))
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = impl0
-
-proc g_date_time_new_now(tz: ptr TimeZone00): ptr DateTime00 {.
-    importc, libprag.}
-
-proc newDateTimeNow*(tz: TimeZone): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_now(cast[ptr TimeZone00](tz.impl))
-
-proc newDateTimeNow*(tdesc: typedesc; tz: TimeZone): tdesc =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_now(cast[ptr TimeZone00](tz.impl))
-
-proc initDateTimeNow*[T](result: var T; tz: TimeZone) {.deprecated.} =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new_now(cast[ptr TimeZone00](tz.impl))
-
-proc g_date_time_get_timezone(self: ptr DateTime00): ptr TimeZone00 {.
-    importc, libprag.}
-
-proc getTimezone*(self: DateTime): TimeZone =
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_date_time_get_timezone(cast[ptr DateTime00](self.impl))
-  result.ignoreFinalizer = true
-
-proc timezone*(self: DateTime): TimeZone =
-  fnew(result, gBoxedFreeGTimeZone)
-  result.impl = g_date_time_get_timezone(cast[ptr DateTime00](self.impl))
-  result.ignoreFinalizer = true
-
-proc g_date_time_to_timezone(self: ptr DateTime00; tz: ptr TimeZone00): ptr DateTime00 {.
-    importc, libprag.}
-
-proc toTimezone*(self: DateTime; tz: TimeZone): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_to_timezone(cast[ptr DateTime00](self.impl), cast[ptr TimeZone00](tz.impl))
-
-proc g_date_time_new(tz: ptr TimeZone00; year: int32; month: int32; day: int32;
-    hour: int32; minute: int32; seconds: cdouble): ptr DateTime00 {.
-    importc, libprag.}
-
-proc newDateTime*(tz: TimeZone; year: int; month: int; day: int; hour: int;
-    minute: int; seconds: cdouble): DateTime =
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new(cast[ptr TimeZone00](tz.impl), int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
-
-proc newDateTime*(tdesc: typedesc; tz: TimeZone; year: int; month: int; day: int; hour: int;
-    minute: int; seconds: cdouble): tdesc =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new(cast[ptr TimeZone00](tz.impl), int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
-
-proc initDateTime*[T](result: var T; tz: TimeZone; year: int; month: int; day: int; hour: int;
-    minute: int; seconds: cdouble) {.deprecated.} =
-  assert(result is DateTime)
-  fnew(result, gBoxedFreeGDateTime)
-  result.impl = g_date_time_new(cast[ptr TimeZone00](tz.impl), int32(year), int32(month), int32(day), int32(hour), int32(minute), seconds)
-
-type
-  TimeType* {.size: sizeof(cint), pure.} = enum
-    standard = 0
-    daylight = 1
-    universal = 2
-
-proc g_time_zone_adjust_time(self: ptr TimeZone00; `type`: TimeType; time: ptr int64): int32 {.
-    importc, libprag.}
-
-proc adjustTime*(self: TimeZone; `type`: TimeType; time: ptr int64): int =
-  int(g_time_zone_adjust_time(cast[ptr TimeZone00](self.impl), `type`, time))
-
-proc g_time_zone_find_interval(self: ptr TimeZone00; `type`: TimeType; time: int64): int32 {.
-    importc, libprag.}
-
-proc findInterval*(self: TimeZone; `type`: TimeType; time: int64): int =
-  int(g_time_zone_find_interval(cast[ptr TimeZone00](self.impl), `type`, time))
-
-type
-  DebugKey00* {.pure.} = object
-  DebugKey* = ref object
-    impl*: ptr DebugKey00
-    ignoreFinalizer*: bool
+  DebugKey* {.pure, byRef.} = object
+    key*: cstring
+    value*: uint32
 
 type
   DestroyNotify* = proc (data: pointer) {.cdecl.}
 
 type
-  Dir00* {.pure.} = object
-  Dir* = ref object
-    impl*: ptr Dir00
-    ignoreFinalizer*: bool
+  Dir* {.pure, byRef.} = object
 
-proc g_dir_close(self: ptr Dir00) {.
+proc g_dir_close(self: Dir) {.
     importc, libprag.}
 
 proc close*(self: Dir) =
-  g_dir_close(cast[ptr Dir00](self.impl))
+  g_dir_close(self)
 
-proc g_dir_read_name(self: ptr Dir00): cstring {.
+proc g_dir_read_name(self: Dir): cstring {.
     importc, libprag.}
 
 proc readName*(self: Dir): string =
-  result = $g_dir_read_name(cast[ptr Dir00](self.impl))
+  result = $g_dir_read_name(self)
 
-proc g_dir_rewind(self: ptr Dir00) {.
+proc g_dir_rewind(self: Dir) {.
     importc, libprag.}
 
 proc rewind*(self: Dir) =
-  g_dir_rewind(cast[ptr Dir00](self.impl))
+  g_dir_rewind(self)
 
 proc g_dir_make_tmp(tmpl: cstring; error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
@@ -2440,10 +2594,8 @@ proc makeTmp*(tmpl: cstring = ""): string =
   cogfree(resul0)
 
 type
-  DoubleIEEE75400* {.pure, union.} = object
-  DoubleIEEE754* = ref object
-    impl*: ptr DoubleIEEE75400
-    ignoreFinalizer*: bool
+  DoubleIEEE754* {.pure, byRef, union.} = object
+    vDouble*: cdouble
 
 type
   DuplicateFunc* = proc (data: pointer; userData: pointer): pointer {.cdecl.}
@@ -2493,6 +2645,14 @@ type
     failed = 24
 
 type
+  FileSetContentsFlag* {.size: sizeof(cint), pure.} = enum
+    consistent = 0
+    durable = 1
+    onlyExisting = 2
+
+  FileSetContentsFlags* {.size: sizeof(cint).} = set[FileSetContentsFlag]
+
+type
   FileTest* {.size: sizeof(cint), pure.} = enum
     isRegular = 1
     isSymlink = 2
@@ -2501,10 +2661,8 @@ type
     exists = 16
 
 type
-  FloatIEEE75400* {.pure, union.} = object
-  FloatIEEE754* = ref object
-    impl*: ptr FloatIEEE75400
-    ignoreFinalizer*: bool
+  FloatIEEE754* {.pure, byRef, union.} = object
+    vFloat*: cfloat
 
 type
   FormatSizeFlag* {.size: sizeof(cint), pure.} = enum
@@ -2583,7 +2741,7 @@ type
     impl*: ptr HashTable00
     ignoreFinalizer*: bool
 
-proc g_hash_table_get_type*(): GType {.importc, libprag.}
+proc g_hash_table_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGHashTable*(self: HashTable) =
   if not self.ignoreFinalizer:
@@ -2594,6 +2752,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_hash_table_get_type(), cast[ptr HashTable00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var HashTable) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGHashTable)
 
 proc g_hash_table_unref(hashTable: ptr HashTable00) {.
     importc, libprag.}
@@ -2628,7 +2792,7 @@ proc g_hash_table_lookup_extended(hashTable: ptr HashTable00; lookupKey: pointer
     importc, libprag.}
 
 proc lookupExtended*(hashTable: ptr HashTable00; lookupKey: pointer;
-    origKey: var pointer; value: var pointer): bool =
+    origKey: var pointer = cast[var pointer](nil); value: var pointer = cast[var pointer](nil)): bool =
   toBool(g_hash_table_lookup_extended(hashTable, lookupKey, origKey, value))
 
 proc g_hash_table_remove(hashTable: ptr HashTable00; key: pointer): gboolean {.
@@ -2666,7 +2830,7 @@ proc g_hash_table_steal_extended(hashTable: ptr HashTable00; lookupKey: pointer;
     importc, libprag.}
 
 proc stealExtended*(hashTable: ptr HashTable00; lookupKey: pointer;
-    stolenKey: var pointer; stolenValue: var pointer): bool =
+    stolenKey: var pointer = cast[var pointer](nil); stolenValue: var pointer = cast[var pointer](nil)): bool =
   toBool(g_hash_table_steal_extended(hashTable, lookupKey, stolenKey, stolenValue))
 
 proc g_hash_table_add(hashTable: ptr HashTable00; key: pointer): gboolean {.
@@ -2676,41 +2840,44 @@ proc add*(hashTable: ptr HashTable00; key: pointer): bool =
   toBool(g_hash_table_add(hashTable, key))
 
 type
-  HashTableIter00* {.pure.} = object
-  HashTableIter* = ref object
-    impl*: ptr HashTableIter00
-    ignoreFinalizer*: bool
+  HashTableIter* {.pure, byRef.} = object
+    dummy1*: pointer
+    dummy2*: pointer
+    dummy3*: pointer
+    dummy4*: int32
+    dummy5*: gboolean
+    dummy6*: pointer
 
-proc g_hash_table_iter_init(self: ptr HashTableIter00; hashTable: ptr HashTable00) {.
+proc g_hash_table_iter_init(self: HashTableIter; hashTable: ptr HashTable00) {.
     importc, libprag.}
 
 proc init*(self: HashTableIter; hashTable: ptr HashTable00) =
-  g_hash_table_iter_init(cast[ptr HashTableIter00](self.impl), hashTable)
+  g_hash_table_iter_init(self, hashTable)
 
-proc g_hash_table_iter_next(self: ptr HashTableIter00; key: var pointer;
-    value: var pointer): gboolean {.
+proc g_hash_table_iter_next(self: HashTableIter; key: var pointer; value: var pointer): gboolean {.
     importc, libprag.}
 
-proc next*(self: HashTableIter; key: var pointer; value: var pointer): bool =
-  toBool(g_hash_table_iter_next(cast[ptr HashTableIter00](self.impl), key, value))
+proc next*(self: HashTableIter; key: var pointer = cast[var pointer](nil);
+    value: var pointer = cast[var pointer](nil)): bool =
+  toBool(g_hash_table_iter_next(self, key, value))
 
-proc g_hash_table_iter_remove(self: ptr HashTableIter00) {.
+proc g_hash_table_iter_remove(self: HashTableIter) {.
     importc, libprag.}
 
 proc remove*(self: HashTableIter) =
-  g_hash_table_iter_remove(cast[ptr HashTableIter00](self.impl))
+  g_hash_table_iter_remove(self)
 
-proc g_hash_table_iter_replace(self: ptr HashTableIter00; value: pointer) {.
+proc g_hash_table_iter_replace(self: HashTableIter; value: pointer) {.
     importc, libprag.}
 
 proc replace*(self: HashTableIter; value: pointer) =
-  g_hash_table_iter_replace(cast[ptr HashTableIter00](self.impl), value)
+  g_hash_table_iter_replace(self, value)
 
-proc g_hash_table_iter_steal(self: ptr HashTableIter00) {.
+proc g_hash_table_iter_steal(self: HashTableIter) {.
     importc, libprag.}
 
 proc steal*(self: HashTableIter) =
-  g_hash_table_iter_steal(cast[ptr HashTableIter00](self.impl))
+  g_hash_table_iter_steal(self)
 
 type
   Hmac00* {.pure.} = object
@@ -2740,18 +2907,18 @@ proc g_hmac_get_string(self: ptr Hmac00): cstring {.
 proc getString*(self: Hmac): string =
   result = $g_hmac_get_string(cast[ptr Hmac00](self.impl))
 
-proc g_hmac_get_digest(self: ptr Hmac00; buffer: uint8Array; digestLen: var uint64) {.
+proc g_hmac_get_digest(self: ptr Hmac00; buffer: ptr uint8; digestLen: var uint64) {.
     importc, libprag.}
 
 proc getDigest*(self: Hmac; buffer: seq[uint8] | string; digestLen: var uint64) =
-  g_hmac_get_digest(cast[ptr Hmac00](self.impl), unsafeaddr(buffer[0]), digestLen)
+  g_hmac_get_digest(cast[ptr Hmac00](self.impl), cast[ptr uint8](unsafeaddr(buffer[0])), digestLen)
 
-proc g_hmac_update(self: ptr Hmac00; data: uint8Array; length: int64) {.
+proc g_hmac_update(self: ptr Hmac00; data: ptr uint8; length: int64) {.
     importc, libprag.}
 
 proc update*(self: Hmac; data: seq[uint8] | string) =
   let length = int64(data.len)
-  g_hmac_update(cast[ptr Hmac00](self.impl), unsafeaddr(data[0]), length)
+  g_hmac_update(cast[ptr Hmac00](self.impl), cast[ptr uint8](unsafeaddr(data[0])), length)
 
 type
   Hook00* {.pure.} = object
@@ -2869,7 +3036,7 @@ type
     impl*: ptr IOChannel00
     ignoreFinalizer*: bool
 
-proc g_io_channel_get_type*(): GType {.importc, libprag.}
+proc g_io_channel_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGIOChannel*(self: IOChannel) =
   if not self.ignoreFinalizer:
@@ -2880,6 +3047,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_io_channel_get_type(), cast[ptr IOChannel00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var IOChannel) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGIOChannel)
 
 proc g_io_channel_unref(self: ptr IOChannel00) {.
     importc, libprag.}
@@ -2954,9 +3127,6 @@ proc g_io_channel_get_line_term(self: ptr IOChannel00; length: ptr int32): cstri
     importc, libprag.}
 
 proc getLineTerm*(self: IOChannel; length: ptr int32): string =
-  result = $g_io_channel_get_line_term(cast[ptr IOChannel00](self.impl), length)
-
-proc lineTerm*(self: IOChannel; length: ptr int32): string =
   result = $g_io_channel_get_line_term(cast[ptr IOChannel00](self.impl), length)
 
 proc g_io_channel_init(self: ptr IOChannel00) {.
@@ -3049,13 +3219,15 @@ proc initIOChannelFile*[T](result: var T; filename: cstring; mode: cstring) {.de
   result.impl = impl0
 
 type
-  IOCondition* {.size: sizeof(cint), pure.} = enum
-    `in` = 1
-    pri = 2
-    `out` = 4
-    err = 8
-    hup = 16
-    nval = 32
+  IOCFlag* {.size: sizeof(cint), pure.} = enum
+    `in` = 0
+    pri = 1
+    `out` = 2
+    err = 3
+    hup = 4
+    nval = 5
+
+  IOCondition* {.size: sizeof(cint).} = set[IOCFlag]
 
 proc g_io_channel_get_buffer_condition(self: ptr IOChannel00): IOCondition {.
     importc, libprag.}
@@ -3229,9 +3401,6 @@ proc g_string_set_size(self: String; len: uint64): ptr String {.
 proc setSize*(self: String; len: uint64): ptr String =
   g_string_set_size(self, len)
 
-proc `size=`*(self: String; len: uint64): ptr String =
-  g_string_set_size(self, len)
-
 proc g_string_truncate(self: String; len: uint64): ptr String {.
     importc, libprag.}
 
@@ -3319,15 +3488,15 @@ proc flush*(self: IOChannel): IOStatus =
     raise newException(GException, msg)
   result = resul0
 
-proc g_io_channel_read_chars(self: ptr IOChannel00; buf: uint8Array; count: uint64;
+proc g_io_channel_read_chars(self: ptr IOChannel00; buf: ptr uint8; count: uint64;
     bytesRead: var uint64; error: ptr ptr glib.Error = nil): IOStatus {.
     importc, libprag.}
 
 proc readChars*(self: IOChannel; buf: var (seq[uint8] | string);
-    bytesRead: var uint64): IOStatus =
+    bytesRead: var uint64 = cast[var uint64](nil)): IOStatus =
   let count = uint64(buf.len)
   var gerror: ptr glib.Error
-  let resul0 = g_io_channel_read_chars(cast[ptr IOChannel00](self.impl), unsafeaddr(buf[0]), count, bytesRead, addr gerror)
+  let resul0 = g_io_channel_read_chars(cast[ptr IOChannel00](self.impl), cast[ptr uint8](unsafeaddr(buf[0])), count, bytesRead, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -3338,17 +3507,18 @@ proc g_io_channel_read_line(self: ptr IOChannel00; strReturn: var cstring;
     length: var uint64; terminatorPos: var uint64; error: ptr ptr glib.Error = nil): IOStatus {.
     importc, libprag.}
 
-proc readLine*(self: IOChannel; strReturn: var string; length: var uint64;
-    terminatorPos: var uint64): IOStatus =
+proc readLine*(self: IOChannel; strReturn: var string; length: var uint64 = cast[var uint64](nil);
+    terminatorPos: var uint64 = cast[var uint64](nil)): IOStatus =
   var gerror: ptr glib.Error
-  var strReturn_00 = cstring(strReturn)
+  var strReturn_00: cstring
   let resul0 = g_io_channel_read_line(cast[ptr IOChannel00](self.impl), strReturn_00, length, terminatorPos, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = resul0
-  strReturn = $(strReturn_00)
+  if strReturn.addr != nil:
+    strReturn = $(strReturn_00)
 
 proc g_io_channel_read_line_string(self: ptr IOChannel00; buffer: String;
     terminatorPos: ptr uint64; error: ptr ptr glib.Error = nil): IOStatus {.
@@ -3363,14 +3533,14 @@ proc readLineString*(self: IOChannel; buffer: String; terminatorPos: ptr uint64)
     raise newException(GException, msg)
   result = resul0
 
-proc g_io_channel_read_to_end(self: ptr IOChannel00; strReturn: var uint8Array;
+proc g_io_channel_read_to_end(self: ptr IOChannel00; strReturn: var ptr uint8;
     length: var uint64; error: ptr ptr glib.Error = nil): IOStatus {.
     importc, libprag.}
 
 proc readToEnd*(self: IOChannel; strReturn: var (seq[uint8] | string);
     length: var uint64): IOStatus =
   var gerror: ptr glib.Error
-  var strReturn_00: pointer
+  var strReturn_00: ptr uint8
   let resul0 = g_io_channel_read_to_end(cast[ptr IOChannel00](self.impl), strReturn_00, length, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
@@ -3420,28 +3590,10 @@ proc setEncoding*(self: IOChannel; encoding: cstring = ""): IOStatus =
     raise newException(GException, msg)
   result = resul0
 
-proc `encoding=`*(self: IOChannel; encoding: cstring = ""): IOStatus =
-  var gerror: ptr glib.Error
-  let resul0 = g_io_channel_set_encoding(cast[ptr IOChannel00](self.impl), safeStringToCString(encoding), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = resul0
-
 proc g_io_channel_set_flags(self: ptr IOChannel00; flags: IOFlags; error: ptr ptr glib.Error = nil): IOStatus {.
     importc, libprag.}
 
 proc setFlags*(self: IOChannel; flags: IOFlags): IOStatus =
-  var gerror: ptr glib.Error
-  let resul0 = g_io_channel_set_flags(cast[ptr IOChannel00](self.impl), flags, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = resul0
-
-proc `flags=`*(self: IOChannel; flags: IOFlags): IOStatus =
   var gerror: ptr glib.Error
   let resul0 = g_io_channel_set_flags(cast[ptr IOChannel00](self.impl), flags, addr gerror)
   if gerror != nil:
@@ -3462,14 +3614,14 @@ proc shutdown*(self: IOChannel; flush: bool): IOStatus =
     raise newException(GException, msg)
   result = resul0
 
-proc g_io_channel_write_chars(self: ptr IOChannel00; buf: uint8Array; count: int64;
+proc g_io_channel_write_chars(self: ptr IOChannel00; buf: ptr uint8; count: int64;
     bytesWritten: var uint64; error: ptr ptr glib.Error = nil): IOStatus {.
     importc, libprag.}
 
 proc writeChars*(self: IOChannel; buf: seq[uint8] | string;
     count: int64; bytesWritten: var uint64): IOStatus =
   var gerror: ptr glib.Error
-  let resul0 = g_io_channel_write_chars(cast[ptr IOChannel00](self.impl), unsafeaddr(buf[0]), count, bytesWritten, addr gerror)
+  let resul0 = g_io_channel_write_chars(cast[ptr IOChannel00](self.impl), cast[ptr uint8](unsafeaddr(buf[0])), count, bytesWritten, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -3572,7 +3724,7 @@ type
     impl*: ptr KeyFile00
     ignoreFinalizer*: bool
 
-proc g_key_file_get_type*(): GType {.importc, libprag.}
+proc g_key_file_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGKeyFile*(self: KeyFile) =
   if not self.ignoreFinalizer:
@@ -3583,6 +3735,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_key_file_get_type(), cast[ptr KeyFile00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var KeyFile) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGKeyFile)
 
 proc g_key_file_unref(self: ptr KeyFile00) {.
     importc, libprag.}
@@ -3607,31 +3765,12 @@ proc getBoolean*(self: KeyFile; groupName: cstring; key: cstring): bool =
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc boolean*(self: KeyFile; groupName: cstring; key: cstring): bool =
-  var gerror: ptr glib.Error
-  let resul0 = g_key_file_get_boolean(cast[ptr KeyFile00](self.impl), groupName, key, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
 proc g_key_file_get_boolean_list(self: ptr KeyFile00; groupName: cstring;
-    key: cstring; length: var uint64; error: ptr ptr glib.Error = nil): gbooleanArray {.
+    key: cstring; length: var uint64; error: ptr ptr glib.Error = nil): ptr gboolean {.
     importc, libprag.}
 
 proc getBooleanList*(self: KeyFile; groupName: cstring; key: cstring;
-    length: var uint64): gbooleanArray =
-  var gerror: ptr glib.Error
-  let resul0 = g_key_file_get_boolean_list(cast[ptr KeyFile00](self.impl), groupName, key, length, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = resul0
-
-proc booleanList*(self: KeyFile; groupName: cstring; key: cstring;
-    length: var uint64): gbooleanArray =
+    length: var uint64): ptr gboolean =
   var gerror: ptr glib.Error
   let resul0 = g_key_file_get_boolean_list(cast[ptr KeyFile00](self.impl), groupName, key, length, addr gerror)
   if gerror != nil:
@@ -3654,16 +3793,6 @@ proc getComment*(self: KeyFile; groupName: cstring = ""; key: cstring): string =
   result = $resul0
   cogfree(resul0)
 
-proc comment*(self: KeyFile; groupName: cstring = ""; key: cstring): string =
-  var gerror: ptr glib.Error
-  let resul0 = g_key_file_get_comment(cast[ptr KeyFile00](self.impl), safeStringToCString(groupName), key, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = $resul0
-  cogfree(resul0)
-
 proc g_key_file_get_double(self: ptr KeyFile00; groupName: cstring; key: cstring;
     error: ptr ptr glib.Error = nil): cdouble {.
     importc, libprag.}
@@ -3677,21 +3806,12 @@ proc getDouble*(self: KeyFile; groupName: cstring; key: cstring): cdouble =
     raise newException(GException, msg)
   result = resul0
 
-proc double*(self: KeyFile; groupName: cstring; key: cstring): cdouble =
-  var gerror: ptr glib.Error
-  let resul0 = g_key_file_get_double(cast[ptr KeyFile00](self.impl), groupName, key, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = resul0
-
 proc g_key_file_get_double_list(self: ptr KeyFile00; groupName: cstring;
-    key: cstring; length: var uint64; error: ptr ptr glib.Error = nil): cdoubleArray {.
+    key: cstring; length: var uint64; error: ptr ptr glib.Error = nil): ptr cdouble {.
     importc, libprag.}
 
 proc getDoubleList*(self: KeyFile; groupName: cstring; key: cstring;
-    length: var uint64): cdoubleArray =
+    length: var uint64): ptr cdouble =
   var gerror: ptr glib.Error
   let resul0 = g_key_file_get_double_list(cast[ptr KeyFile00](self.impl), groupName, key, length, addr gerror)
   if gerror != nil:
@@ -3700,25 +3820,10 @@ proc getDoubleList*(self: KeyFile; groupName: cstring; key: cstring;
     raise newException(GException, msg)
   result = resul0
 
-proc doubleList*(self: KeyFile; groupName: cstring; key: cstring;
-    length: var uint64): cdoubleArray =
-  var gerror: ptr glib.Error
-  let resul0 = g_key_file_get_double_list(cast[ptr KeyFile00](self.impl), groupName, key, length, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = resul0
-
-proc g_key_file_get_groups(self: ptr KeyFile00; length: var uint64): cstringArray {.
+proc g_key_file_get_groups(self: ptr KeyFile00; length: var uint64): ptr cstring {.
     importc, libprag.}
 
-proc getGroups*(self: KeyFile; length: var uint64): seq[string] =
-  let resul0 = g_key_file_get_groups(cast[ptr KeyFile00](self.impl), length)
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc groups*(self: KeyFile; length: var uint64): seq[string] =
+proc getGroups*(self: KeyFile; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = g_key_file_get_groups(cast[ptr KeyFile00](self.impl), length)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
@@ -3749,17 +3854,8 @@ proc getInteger*(self: KeyFile; groupName: cstring; key: cstring): int =
     raise newException(GException, msg)
   result = int(resul0)
 
-proc integer*(self: KeyFile; groupName: cstring; key: cstring): int =
-  var gerror: ptr glib.Error
-  let resul0 = g_key_file_get_integer(cast[ptr KeyFile00](self.impl), groupName, key, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = int(resul0)
-
 proc g_key_file_get_integer_list(self: ptr KeyFile00; groupName: cstring;
-    key: cstring; length: var uint64; error: ptr ptr glib.Error = nil): int32Array {.
+    key: cstring; length: var uint64; error: ptr ptr glib.Error = nil): ptr int32 {.
     importc, libprag.}
 
 proc getIntegerList*(self: KeyFile; groupName: cstring; key: cstring;
@@ -3770,32 +3866,14 @@ proc getIntegerList*(self: KeyFile; groupName: cstring; key: cstring;
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = int32ArrayZT2seq(resul0)
-
-proc integerList*(self: KeyFile; groupName: cstring; key: cstring;
-    length: var uint64): seq[int32] =
-  var gerror: ptr glib.Error
-  let resul0 = g_key_file_get_integer_list(cast[ptr KeyFile00](self.impl), groupName, key, length, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = int32ArrayZT2seq(resul0)
+  result = int32ArrayToSeq(resul0, length.int)
+  cogfree(resul0)
 
 proc g_key_file_get_keys(self: ptr KeyFile00; groupName: cstring; length: var uint64;
-    error: ptr ptr glib.Error = nil): cstringArray {.
+    error: ptr ptr glib.Error = nil): ptr cstring {.
     importc, libprag.}
 
-proc getKeys*(self: KeyFile; groupName: cstring; length: var uint64): seq[string] =
-  var gerror: ptr glib.Error
-  let resul0 = g_key_file_get_keys(cast[ptr KeyFile00](self.impl), groupName, length, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = cstringArrayToSeq(resul0)
-
-proc keys*(self: KeyFile; groupName: cstring; length: var uint64): seq[string] =
+proc getKeys*(self: KeyFile; groupName: cstring; length: var uint64 = cast[var uint64](nil)): seq[string] =
   var gerror: ptr glib.Error
   let resul0 = g_key_file_get_keys(cast[ptr KeyFile00](self.impl), groupName, length, addr gerror)
   if gerror != nil:
@@ -3809,14 +3887,6 @@ proc g_key_file_get_locale_for_key(self: ptr KeyFile00; groupName: cstring;
     importc, libprag.}
 
 proc getLocaleForKey*(self: KeyFile; groupName: cstring; key: cstring;
-    locale: cstring = ""): string =
-  let resul0 = g_key_file_get_locale_for_key(cast[ptr KeyFile00](self.impl), groupName, key, safeStringToCString(locale))
-  if resul0.isNil:
-    return
-  result = $resul0
-  cogfree(resul0)
-
-proc localeForKey*(self: KeyFile; groupName: cstring; key: cstring;
     locale: cstring = ""): string =
   let resul0 = g_key_file_get_locale_for_key(cast[ptr KeyFile00](self.impl), groupName, key, safeStringToCString(locale))
   if resul0.isNil:
@@ -3839,33 +3909,12 @@ proc getLocaleString*(self: KeyFile; groupName: cstring; key: cstring;
   result = $resul0
   cogfree(resul0)
 
-proc localeString*(self: KeyFile; groupName: cstring; key: cstring;
-    locale: cstring = ""): string =
-  var gerror: ptr glib.Error
-  let resul0 = g_key_file_get_locale_string(cast[ptr KeyFile00](self.impl), groupName, key, safeStringToCString(locale), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = $resul0
-  cogfree(resul0)
-
 proc g_key_file_get_locale_string_list(self: ptr KeyFile00; groupName: cstring;
-    key: cstring; locale: cstring; length: var uint64; error: ptr ptr glib.Error = nil): cstringArray {.
+    key: cstring; locale: cstring; length: var uint64; error: ptr ptr glib.Error = nil): ptr cstring {.
     importc, libprag.}
 
 proc getLocaleStringList*(self: KeyFile; groupName: cstring;
-    key: cstring; locale: cstring = ""; length: var uint64): seq[string] =
-  var gerror: ptr glib.Error
-  let resul0 = g_key_file_get_locale_string_list(cast[ptr KeyFile00](self.impl), groupName, key, safeStringToCString(locale), length, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = cstringArrayToSeq(resul0)
-
-proc localeStringList*(self: KeyFile; groupName: cstring;
-    key: cstring; locale: cstring = ""; length: var uint64): seq[string] =
+    key: cstring; locale: cstring = ""; length: var uint64 = cast[var uint64](nil)): seq[string] =
   var gerror: ptr glib.Error
   let resul0 = g_key_file_get_locale_string_list(cast[ptr KeyFile00](self.impl), groupName, key, safeStringToCString(locale), length, addr gerror)
   if gerror != nil:
@@ -3902,21 +3951,11 @@ proc getString*(self: KeyFile; groupName: cstring; key: cstring): string =
   cogfree(resul0)
 
 proc g_key_file_get_string_list(self: ptr KeyFile00; groupName: cstring;
-    key: cstring; length: var uint64; error: ptr ptr glib.Error = nil): cstringArray {.
+    key: cstring; length: var uint64; error: ptr ptr glib.Error = nil): ptr cstring {.
     importc, libprag.}
 
 proc getStringList*(self: KeyFile; groupName: cstring; key: cstring;
-    length: var uint64): seq[string] =
-  var gerror: ptr glib.Error
-  let resul0 = g_key_file_get_string_list(cast[ptr KeyFile00](self.impl), groupName, key, length, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = cstringArrayToSeq(resul0)
-
-proc stringList*(self: KeyFile; groupName: cstring; key: cstring;
-    length: var uint64): seq[string] =
+    length: var uint64 = cast[var uint64](nil)): seq[string] =
   var gerror: ptr glib.Error
   let resul0 = g_key_file_get_string_list(cast[ptr KeyFile00](self.impl), groupName, key, length, addr gerror)
   if gerror != nil:
@@ -3943,16 +3982,6 @@ proc g_key_file_get_value(self: ptr KeyFile00; groupName: cstring; key: cstring;
     importc, libprag.}
 
 proc getValue*(self: KeyFile; groupName: cstring; key: cstring): string =
-  var gerror: ptr glib.Error
-  let resul0 = g_key_file_get_value(cast[ptr KeyFile00](self.impl), groupName, key, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = $resul0
-  cogfree(resul0)
-
-proc value*(self: KeyFile; groupName: cstring; key: cstring): string =
   var gerror: ptr glib.Error
   let resul0 = g_key_file_get_value(cast[ptr KeyFile00](self.impl), groupName, key, addr gerror)
   if gerror != nil:
@@ -4027,11 +4056,11 @@ proc setBoolean*(self: KeyFile; groupName: cstring; key: cstring;
   g_key_file_set_boolean(cast[ptr KeyFile00](self.impl), groupName, key, gboolean(value))
 
 proc g_key_file_set_boolean_list(self: ptr KeyFile00; groupName: cstring;
-    key: cstring; list: gbooleanArray; length: uint64) {.
+    key: cstring; list: ptr gboolean; length: uint64) {.
     importc, libprag.}
 
 proc setBooleanList*(self: KeyFile; groupName: cstring; key: cstring;
-    list: gbooleanArray; length: uint64) =
+    list: ptr gboolean; length: uint64) =
   g_key_file_set_boolean_list(cast[ptr KeyFile00](self.impl), groupName, key, list, length)
 
 proc g_key_file_set_comment(self: ptr KeyFile00; groupName: cstring; key: cstring;
@@ -4057,11 +4086,11 @@ proc setDouble*(self: KeyFile; groupName: cstring; key: cstring;
   g_key_file_set_double(cast[ptr KeyFile00](self.impl), groupName, key, value)
 
 proc g_key_file_set_double_list(self: ptr KeyFile00; groupName: cstring;
-    key: cstring; list: cdoubleArray; length: uint64) {.
+    key: cstring; list: ptr cdouble; length: uint64) {.
     importc, libprag.}
 
 proc setDoubleList*(self: KeyFile; groupName: cstring; key: cstring;
-    list: cdoubleArray; length: uint64) =
+    list: ptr cdouble; length: uint64) =
   g_key_file_set_double_list(cast[ptr KeyFile00](self.impl), groupName, key, list, length)
 
 proc g_key_file_set_int64(self: ptr KeyFile00; groupName: cstring; key: cstring;
@@ -4081,13 +4110,13 @@ proc setInteger*(self: KeyFile; groupName: cstring; key: cstring;
   g_key_file_set_integer(cast[ptr KeyFile00](self.impl), groupName, key, int32(value))
 
 proc g_key_file_set_integer_list(self: ptr KeyFile00; groupName: cstring;
-    key: cstring; list: int32Array; length: uint64) {.
+    key: cstring; list: ptr int32; length: uint64) {.
     importc, libprag.}
 
 proc setIntegerList*(self: KeyFile; groupName: cstring; key: cstring;
     list: seq[int32]) =
   let length = uint64(list.len)
-  g_key_file_set_integer_list(cast[ptr KeyFile00](self.impl), groupName, key, unsafeaddr(list[0]), length)
+  g_key_file_set_integer_list(cast[ptr KeyFile00](self.impl), groupName, key, cast[ptr int32](unsafeaddr(list[0])), length)
 
 proc g_key_file_set_list_separator(self: ptr KeyFile00; separator: int8) {.
     importc, libprag.}
@@ -4107,7 +4136,7 @@ proc setLocaleString*(self: KeyFile; groupName: cstring; key: cstring;
   g_key_file_set_locale_string(cast[ptr KeyFile00](self.impl), groupName, key, locale, string)
 
 proc g_key_file_set_locale_string_list(self: ptr KeyFile00; groupName: cstring;
-    key: cstring; locale: cstring; list: cstringArray; length: uint64) {.
+    key: cstring; locale: cstring; list: ptr cstring; length: uint64) {.
     importc, libprag.}
 
 proc setLocaleStringList*(self: KeyFile; groupName: cstring;
@@ -4125,7 +4154,7 @@ proc setString*(self: KeyFile; groupName: cstring; key: cstring;
   g_key_file_set_string(cast[ptr KeyFile00](self.impl), groupName, key, string)
 
 proc g_key_file_set_string_list(self: ptr KeyFile00; groupName: cstring;
-    key: cstring; list: cstringArray; length: uint64) {.
+    key: cstring; list: ptr cstring; length: uint64) {.
     importc, libprag.}
 
 proc setStringList*(self: KeyFile; groupName: cstring; key: cstring;
@@ -4153,7 +4182,7 @@ proc setValue*(self: KeyFile; groupName: cstring; key: cstring;
 proc g_key_file_to_data(self: ptr KeyFile00; length: var uint64; error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
 
-proc toData*(self: KeyFile; length: var uint64): string =
+proc toData*(self: KeyFile; length: var uint64 = cast[var uint64](nil)): string =
   var gerror: ptr glib.Error
   let resul0 = g_key_file_to_data(cast[ptr KeyFile00](self.impl), length, addr gerror)
   if gerror != nil:
@@ -4218,35 +4247,37 @@ proc g_key_file_load_from_data_dirs(self: ptr KeyFile00; file: cstring; fullPath
     flags: KeyFileFlags; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc loadFromDataDirs*(self: KeyFile; file: cstring; fullPath: var string;
+proc loadFromDataDirs*(self: KeyFile; file: cstring; fullPath: var string = cast[var string](nil);
     flags: KeyFileFlags): bool =
   var gerror: ptr glib.Error
-  var fullPath_00 = cstring(fullPath)
+  var fullPath_00: cstring
   let resul0 = g_key_file_load_from_data_dirs(cast[ptr KeyFile00](self.impl), file, fullPath_00, flags, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  fullPath = $(fullPath_00)
+  if fullPath.addr != nil:
+    fullPath = $(fullPath_00)
 
-proc g_key_file_load_from_dirs(self: ptr KeyFile00; file: cstring; searchDirs: cstringArray;
+proc g_key_file_load_from_dirs(self: ptr KeyFile00; file: cstring; searchDirs: ptr cstring;
     fullPath: var cstring; flags: KeyFileFlags; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc loadFromDirs*(self: KeyFile; file: cstring; searchDirs: openArray[string];
-    fullPath: var string; flags: KeyFileFlags): bool =
+    fullPath: var string = cast[var string](nil); flags: KeyFileFlags): bool =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var gerror: ptr glib.Error
-  var fullPath_00 = cstring(fullPath)
+  var fullPath_00: cstring
   let resul0 = g_key_file_load_from_dirs(cast[ptr KeyFile00](self.impl), file, seq2CstringArray(searchDirs, fs469n23), fullPath_00, flags, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  fullPath = $(fullPath_00)
+  if fullPath.addr != nil:
+    fullPath = $(fullPath_00)
 
 proc g_key_file_load_from_file(self: ptr KeyFile00; file: cstring; flags: KeyFileFlags;
     error: ptr ptr glib.Error = nil): gboolean {.
@@ -4285,16 +4316,20 @@ const LOG_FATAL_MASK* = 5'i32
 const LOG_LEVEL_USER_SHIFT* = 8'i32
 
 type
-  List00* {.pure.} = object
-  List* = ref object
-    impl*: ptr List00
-    ignoreFinalizer*: bool
+  List* {.pure, byRef.} = object
+    data*: pointer
+    next*: ptr glib.List
+    prev*: ptr glib.List
+
+proc g_list_free*(list: ptr glib.List) {.importc: "g_list_free", libprag.}
+
+proc g_list_prepend*(list: ptr glib.List; data: pointer): ptr glib.List  {.importc:  "g_list_prepend", libprag.}
 
 type
-  LogField00* {.pure.} = object
-  LogField* = ref object
-    impl*: ptr LogField00
-    ignoreFinalizer*: bool
+  LogField* {.pure, byRef.} = object
+    key*: cstring
+    value*: pointer
+    length*: int64
 
 type
   LogLevelFlags* {.size: sizeof(cint), pure.} = enum
@@ -4317,8 +4352,7 @@ type
     handled = 1
 
 type
-  LogWriterFunc* = proc (logLevel: LogLevelFlags; fields: LogField00Array; nFields: uint64;
-    userData: pointer): LogWriterOutput {.cdecl.}
+  LogWriterFunc* = proc (logLevel: LogLevelFlags; fields: ptr LogField; nFields: uint64; userData: pointer): LogWriterOutput {.cdecl.}
 
 const MAJOR_VERSION* = 2'i32
 
@@ -4338,9 +4372,9 @@ const MAXUINT64* = 18446744073709551615'u64
 
 const MAXUINT8* = 255'u8
 
-const MICRO_VERSION* = 1'i32
+const MICRO_VERSION* = 2'i32
 
-const MINOR_VERSION* = 64'i32
+const MINOR_VERSION* = 66'i32
 
 const MODULE_SUFFIX* = "so"
 
@@ -4350,7 +4384,7 @@ type
     impl*: ptr MainContext00
     ignoreFinalizer*: bool
 
-proc g_main_context_get_type*(): GType {.importc, libprag.}
+proc g_main_context_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGMainContext*(self: MainContext) =
   if not self.ignoreFinalizer:
@@ -4361,6 +4395,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_main_context_get_type(), cast[ptr MainContext00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var MainContext) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGMainContext)
 
 proc g_main_context_unref(self: ptr MainContext00) {.
     importc, libprag.}
@@ -4411,10 +4451,11 @@ proc popThreadDefault*(self: MainContext) =
 proc g_main_context_prepare(self: ptr MainContext00; priority: var int32): gboolean {.
     importc, libprag.}
 
-proc prepare*(self: MainContext; priority: var int): bool =
-  var priority_00 = int32(priority)
+proc prepare*(self: MainContext; priority: var int = cast[var int](nil)): bool =
+  var priority_00: int32
   result = toBool(g_main_context_prepare(cast[ptr MainContext00](self.impl), priority_00))
-  priority = int(priority_00)
+  if priority.addr != nil:
+    priority = int(priority_00)
 
 proc g_main_context_push_thread_default(self: ptr MainContext00) {.
     importc, libprag.}
@@ -4474,11 +4515,6 @@ proc getThreadDefault*(): MainContext =
   result.impl = g_main_context_get_thread_default()
   result.ignoreFinalizer = true
 
-proc threadDefault*(): MainContext =
-  fnew(result, gBoxedFreeGMainContext)
-  result.impl = g_main_context_get_thread_default()
-  result.ignoreFinalizer = true
-
 proc g_main_context_ref_thread_default(): ptr MainContext00 {.
     importc, libprag.}
 
@@ -4498,7 +4534,7 @@ type
     impl*: ptr Source00
     ignoreFinalizer*: bool
 
-proc g_source_get_type*(): GType {.importc, libprag.}
+proc g_source_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGSource*(self: Source) =
   if not self.ignoreFinalizer:
@@ -4509,6 +4545,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_source_get_type(), cast[ptr Source00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var Source) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGSource)
 
 proc g_source_unref(self: ptr Source00) {.
     importc, libprag.}
@@ -4790,64 +4832,55 @@ proc setCallbackIndirect*(self: Source; callbackData: pointer;
   g_source_set_callback_indirect(cast[ptr Source00](self.impl), callbackData, cast[ptr SourceCallbackFuncs00](callbackFuncs.impl))
 
 type
-  PollFD00* {.pure.} = object
-  PollFD* = ref object
-    impl*: ptr PollFD00
-    ignoreFinalizer*: bool
+  PollFD* {.pure, byRef.} = object
+    fd*: int32
+    events*: uint16
+    revents*: uint16
 
-proc g_pollfd_get_type*(): GType {.importc, libprag.}
+proc g_pollfd_get_type*(): GType {.importc, gobjectlibprag.}
 
-proc gBoxedFreeGPollFD*(self: PollFD) =
-  if not self.ignoreFinalizer:
-    boxedFree(g_pollfd_get_type(), cast[ptr PollFD00](self.impl))
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(PollFD()[])) =
-    if not self.ignoreFinalizer and self.impl != nil:
-      boxedFree(g_pollfd_get_type(), cast[ptr PollFD00](self.impl))
-      self.impl = nil
-
-proc g_main_context_add_poll(self: ptr MainContext00; fd: ptr PollFD00; priority: int32) {.
+proc g_main_context_add_poll(self: ptr MainContext00; fd: PollFD; priority: int32) {.
     importc, libprag.}
 
 proc addPoll*(self: MainContext; fd: PollFD; priority: int) =
-  g_main_context_add_poll(cast[ptr MainContext00](self.impl), cast[ptr PollFD00](fd.impl), int32(priority))
+  g_main_context_add_poll(cast[ptr MainContext00](self.impl), fd, int32(priority))
 
-proc g_main_context_check(self: ptr MainContext00; maxPriority: int32; fds: PollFD00Array;
+proc g_main_context_check(self: ptr MainContext00; maxPriority: int32; fds: ptr PollFD;
     nFds: int32): gboolean {.
     importc, libprag.}
 
-proc check*(self: MainContext; maxPriority: int; fds: PollFD00Array;
+proc check*(self: MainContext; maxPriority: int; fds: ptr PollFD;
     nFds: int): bool =
   toBool(g_main_context_check(cast[ptr MainContext00](self.impl), int32(maxPriority), fds, int32(nFds)))
 
 proc g_main_context_query(self: ptr MainContext00; maxPriority: int32; timeout: var int32;
-    fds: var PollFD00Array; nFds: int32): int32 {.
+    fds: var ptr PollFD; nFds: int32): int32 {.
     importc, libprag.}
 
 proc query*(self: MainContext; maxPriority: int; timeout: var int;
-    fds: var PollFD00Array; nFds: int): int =
-  var timeout_00 = int32(timeout)
+    fds: var ptr PollFD; nFds: int): int =
+  var timeout_00: int32
   result = int(g_main_context_query(cast[ptr MainContext00](self.impl), int32(maxPriority), timeout_00, fds, int32(nFds)))
-  timeout = int(timeout_00)
+  if timeout.addr != nil:
+    timeout = int(timeout_00)
 
-proc g_main_context_remove_poll(self: ptr MainContext00; fd: ptr PollFD00) {.
+proc g_main_context_remove_poll(self: ptr MainContext00; fd: PollFD) {.
     importc, libprag.}
 
 proc removePoll*(self: MainContext; fd: PollFD) =
-  g_main_context_remove_poll(cast[ptr MainContext00](self.impl), cast[ptr PollFD00](fd.impl))
+  g_main_context_remove_poll(cast[ptr MainContext00](self.impl), fd)
 
-proc g_source_add_poll(self: ptr Source00; fd: ptr PollFD00) {.
+proc g_source_add_poll(self: ptr Source00; fd: PollFD) {.
     importc, libprag.}
 
 proc addPoll*(self: Source; fd: PollFD) =
-  g_source_add_poll(cast[ptr Source00](self.impl), cast[ptr PollFD00](fd.impl))
+  g_source_add_poll(cast[ptr Source00](self.impl), fd)
 
-proc g_source_remove_poll(self: ptr Source00; fd: ptr PollFD00) {.
+proc g_source_remove_poll(self: ptr Source00; fd: PollFD) {.
     importc, libprag.}
 
 proc removePoll*(self: Source; fd: PollFD) =
-  g_source_remove_poll(cast[ptr Source00](self.impl), cast[ptr PollFD00](fd.impl))
+  g_source_remove_poll(cast[ptr Source00](self.impl), fd)
 
 type
   MainLoop00* {.pure.} = object
@@ -4855,7 +4888,7 @@ type
     impl*: ptr MainLoop00
     ignoreFinalizer*: bool
 
-proc g_main_loop_get_type*(): GType {.importc, libprag.}
+proc g_main_loop_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGMainLoop*(self: MainLoop) =
   if not self.ignoreFinalizer:
@@ -4866,6 +4899,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_main_loop_get_type(), cast[ptr MainLoop00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var MainLoop) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGMainLoop)
 
 proc g_main_loop_unref(self: ptr MainLoop00) {.
     importc, libprag.}
@@ -4938,7 +4977,7 @@ type
     impl*: ptr MappedFile00
     ignoreFinalizer*: bool
 
-proc g_mapped_file_get_type*(): GType {.importc, libprag.}
+proc g_mapped_file_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGMappedFile*(self: MappedFile) =
   if not self.ignoreFinalizer:
@@ -4949,6 +4988,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_mapped_file_get_type(), cast[ptr MappedFile00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var MappedFile) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGMappedFile)
 
 proc g_mapped_file_free(self: ptr MappedFile00) {.
     importc, libprag.}
@@ -5105,7 +5150,7 @@ type
     impl*: ptr MarkupParseContext00
     ignoreFinalizer*: bool
 
-proc g_markup_parse_context_get_type*(): GType {.importc, libprag.}
+proc g_markup_parse_context_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGMarkupParseContext*(self: MarkupParseContext) =
   if not self.ignoreFinalizer:
@@ -5116,6 +5161,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_markup_parse_context_get_type(), cast[ptr MarkupParseContext00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var MarkupParseContext) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGMarkupParseContext)
 
 proc g_markup_parse_context_free(self: ptr MarkupParseContext00) {.
     importc, libprag.}
@@ -5152,13 +5203,15 @@ proc g_markup_parse_context_get_position(self: ptr MarkupParseContext00;
     lineNumber: var int32; charNumber: var int32) {.
     importc, libprag.}
 
-proc getPosition*(self: MarkupParseContext; lineNumber: var int;
-    charNumber: var int) =
-  var charNumber_00 = int32(charNumber)
-  var lineNumber_00 = int32(lineNumber)
+proc getPosition*(self: MarkupParseContext; lineNumber: var int = cast[var int](nil);
+    charNumber: var int = cast[var int](nil)) =
+  var charNumber_00: int32
+  var lineNumber_00: int32
   g_markup_parse_context_get_position(cast[ptr MarkupParseContext00](self.impl), lineNumber_00, charNumber_00)
-  charNumber = int(charNumber_00)
-  lineNumber = int(lineNumber_00)
+  if charNumber.addr != nil:
+    charNumber = int(charNumber_00)
+  if lineNumber.addr != nil:
+    lineNumber = int(lineNumber_00)
 
 proc g_markup_parse_context_get_user_data(self: ptr MarkupParseContext00): pointer {.
     importc, libprag.}
@@ -5259,7 +5312,7 @@ type
     impl*: ptr MatchInfo00
     ignoreFinalizer*: bool
 
-proc g_match_info_get_type*(): GType {.importc, libprag.}
+proc g_match_info_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGMatchInfo*(self: MatchInfo) =
   if not self.ignoreFinalizer:
@@ -5270,6 +5323,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_match_info_get_type(), cast[ptr MatchInfo00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var MatchInfo) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGMatchInfo)
 
 proc g_match_info_free(self: ptr MatchInfo00) {.
     importc, libprag.}
@@ -5291,7 +5350,7 @@ proc fetch*(self: MatchInfo; matchNum: int): string =
   result = $resul0
   cogfree(resul0)
 
-proc g_match_info_fetch_all(self: ptr MatchInfo00): cstringArray {.
+proc g_match_info_fetch_all(self: ptr MatchInfo00): ptr cstring {.
     importc, libprag.}
 
 proc fetchAll*(self: MatchInfo): seq[string] =
@@ -5313,25 +5372,29 @@ proc g_match_info_fetch_named_pos(self: ptr MatchInfo00; name: cstring; startPos
     endPos: var int32): gboolean {.
     importc, libprag.}
 
-proc fetchNamedPos*(self: MatchInfo; name: cstring; startPos: var int;
-    endPos: var int): bool =
-  var endPos_00 = int32(endPos)
-  var startPos_00 = int32(startPos)
+proc fetchNamedPos*(self: MatchInfo; name: cstring; startPos: var int = cast[var int](nil);
+    endPos: var int = cast[var int](nil)): bool =
+  var endPos_00: int32
+  var startPos_00: int32
   result = toBool(g_match_info_fetch_named_pos(cast[ptr MatchInfo00](self.impl), name, startPos_00, endPos_00))
-  endPos = int(endPos_00)
-  startPos = int(startPos_00)
+  if endPos.addr != nil:
+    endPos = int(endPos_00)
+  if startPos.addr != nil:
+    startPos = int(startPos_00)
 
 proc g_match_info_fetch_pos(self: ptr MatchInfo00; matchNum: int32; startPos: var int32;
     endPos: var int32): gboolean {.
     importc, libprag.}
 
-proc fetchPos*(self: MatchInfo; matchNum: int; startPos: var int;
-    endPos: var int): bool =
-  var endPos_00 = int32(endPos)
-  var startPos_00 = int32(startPos)
+proc fetchPos*(self: MatchInfo; matchNum: int; startPos: var int = cast[var int](nil);
+    endPos: var int = cast[var int](nil)): bool =
+  var endPos_00: int32
+  var startPos_00: int32
   result = toBool(g_match_info_fetch_pos(cast[ptr MatchInfo00](self.impl), int32(matchNum), startPos_00, endPos_00))
-  endPos = int(endPos_00)
-  startPos = int(startPos_00)
+  if endPos.addr != nil:
+    endPos = int(endPos_00)
+  if startPos.addr != nil:
+    startPos = int(startPos_00)
 
 proc g_match_info_expand_references(self: ptr MatchInfo00; stringToExpand: cstring;
     error: ptr ptr glib.Error = nil): cstring {.
@@ -5411,7 +5474,7 @@ type
     impl*: ptr Regex00
     ignoreFinalizer*: bool
 
-proc g_regex_get_type*(): GType {.importc, libprag.}
+proc g_regex_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGRegex*(self: Regex) =
   if not self.ignoreFinalizer:
@@ -5422,6 +5485,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_regex_get_type(), cast[ptr Regex00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var Regex) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGRegex)
 
 proc g_regex_unref(self: ptr Regex00) {.
     importc, libprag.}
@@ -5484,9 +5553,6 @@ proc g_regex_get_string_number(self: ptr Regex00; name: cstring): int32 {.
 proc getStringNumber*(self: Regex; name: cstring): int =
   int(g_regex_get_string_number(cast[ptr Regex00](self.impl), name))
 
-proc stringNumber*(self: Regex; name: cstring): int =
-  int(g_regex_get_string_number(cast[ptr Regex00](self.impl), name))
-
 proc g_regex_ref(self: ptr Regex00): ptr Regex00 {.
     importc, libprag.}
 
@@ -5498,16 +5564,17 @@ proc g_regex_check_replacement(replacement: cstring; hasReferences: var gboolean
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc checkReplacement*(replacement: cstring; hasReferences: var bool): bool =
+proc checkReplacement*(replacement: cstring; hasReferences: var bool = cast[var bool](nil)): bool =
   var gerror: ptr glib.Error
-  var hasReferences_00 = gboolean(hasReferences)
+  var hasReferences_00: gboolean
   let resul0 = g_regex_check_replacement(replacement, hasReferences_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  hasReferences = toBool(hasReferences_00)
+  if hasReferences.addr != nil:
+    hasReferences = toBool(hasReferences_00)
 
 proc g_regex_escape_nul(string: cstring; length: int32): cstring {.
     importc, libprag.}
@@ -5517,7 +5584,7 @@ proc escapeNul*(string: cstring; length: int): string =
   result = $resul0
   cogfree(resul0)
 
-proc g_regex_escape_string(string: cstringArray; length: int32): cstring {.
+proc g_regex_escape_string(string: ptr cstring; length: int32): cstring {.
     importc, libprag.}
 
 proc escapeString*(string: openArray[string]; length: int): string =
@@ -5572,56 +5639,60 @@ proc g_regex_match(self: ptr Regex00; string: cstring; matchOptions: RegexMatchF
     importc, libprag.}
 
 proc match*(self: Regex; string: cstring; matchOptions: RegexMatchFlags;
-    matchInfo: var MatchInfo): bool =
-  fnew(matchInfo, gBoxedFreeGMatchInfo)
-  toBool(g_regex_match(cast[ptr Regex00](self.impl), string, matchOptions, cast[var ptr MatchInfo00](addr matchInfo.impl)))
+    matchInfo: var MatchInfo = cast[var MatchInfo](nil)): bool =
+  if addr(matchInfo) != nil:
+    fnew(matchInfo, gBoxedFreeGMatchInfo)
+  toBool(g_regex_match(cast[ptr Regex00](self.impl), string, matchOptions, cast[var ptr MatchInfo00](if addr(matchInfo) == nil: nil else: addr matchInfo.impl)))
 
 proc g_regex_match_all(self: ptr Regex00; string: cstring; matchOptions: RegexMatchFlags;
     matchInfo: var ptr MatchInfo00): gboolean {.
     importc, libprag.}
 
 proc matchAll*(self: Regex; string: cstring; matchOptions: RegexMatchFlags;
-    matchInfo: var MatchInfo): bool =
-  fnew(matchInfo, gBoxedFreeGMatchInfo)
-  toBool(g_regex_match_all(cast[ptr Regex00](self.impl), string, matchOptions, cast[var ptr MatchInfo00](addr matchInfo.impl)))
+    matchInfo: var MatchInfo = cast[var MatchInfo](nil)): bool =
+  if addr(matchInfo) != nil:
+    fnew(matchInfo, gBoxedFreeGMatchInfo)
+  toBool(g_regex_match_all(cast[ptr Regex00](self.impl), string, matchOptions, cast[var ptr MatchInfo00](if addr(matchInfo) == nil: nil else: addr matchInfo.impl)))
 
-proc g_regex_match_all_full(self: ptr Regex00; string: cstringArray; stringLen: int64;
+proc g_regex_match_all_full(self: ptr Regex00; string: ptr cstring; stringLen: int64;
     startPosition: int32; matchOptions: RegexMatchFlags; matchInfo: var ptr MatchInfo00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc matchAllFull*(self: Regex; string: openArray[string]; stringLen: int64;
-    startPosition: int; matchOptions: RegexMatchFlags; matchInfo: var MatchInfo): bool =
+    startPosition: int; matchOptions: RegexMatchFlags; matchInfo: var MatchInfo = cast[var MatchInfo](nil)): bool =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
-  fnew(matchInfo, gBoxedFreeGMatchInfo)
+  if addr(matchInfo) != nil:
+    fnew(matchInfo, gBoxedFreeGMatchInfo)
   var gerror: ptr glib.Error
-  let resul0 = g_regex_match_all_full(cast[ptr Regex00](self.impl), seq2CstringArray(string, fs469n23), stringLen, int32(startPosition), matchOptions, cast[var ptr MatchInfo00](addr matchInfo.impl), addr gerror)
+  let resul0 = g_regex_match_all_full(cast[ptr Regex00](self.impl), seq2CstringArray(string, fs469n23), stringLen, int32(startPosition), matchOptions, cast[var ptr MatchInfo00](if addr(matchInfo) == nil: nil else: addr matchInfo.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_regex_match_full(self: ptr Regex00; string: cstringArray; stringLen: int64;
+proc g_regex_match_full(self: ptr Regex00; string: ptr cstring; stringLen: int64;
     startPosition: int32; matchOptions: RegexMatchFlags; matchInfo: var ptr MatchInfo00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc matchFull*(self: Regex; string: openArray[string]; stringLen: int64;
-    startPosition: int; matchOptions: RegexMatchFlags; matchInfo: var MatchInfo): bool =
+    startPosition: int; matchOptions: RegexMatchFlags; matchInfo: var MatchInfo = cast[var MatchInfo](nil)): bool =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
-  fnew(matchInfo, gBoxedFreeGMatchInfo)
+  if addr(matchInfo) != nil:
+    fnew(matchInfo, gBoxedFreeGMatchInfo)
   var gerror: ptr glib.Error
-  let resul0 = g_regex_match_full(cast[ptr Regex00](self.impl), seq2CstringArray(string, fs469n23), stringLen, int32(startPosition), matchOptions, cast[var ptr MatchInfo00](addr matchInfo.impl), addr gerror)
+  let resul0 = g_regex_match_full(cast[ptr Regex00](self.impl), seq2CstringArray(string, fs469n23), stringLen, int32(startPosition), matchOptions, cast[var ptr MatchInfo00](if addr(matchInfo) == nil: nil else: addr matchInfo.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc g_regex_replace(self: ptr Regex00; string: cstringArray; stringLen: int64;
+proc g_regex_replace(self: ptr Regex00; string: ptr cstring; stringLen: int64;
     startPosition: int32; replacement: cstring; matchOptions: RegexMatchFlags;
     error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
@@ -5639,7 +5710,7 @@ proc replace*(self: Regex; string: openArray[string]; stringLen: int64;
   result = $resul0
   cogfree(resul0)
 
-proc g_regex_replace_literal(self: ptr Regex00; string: cstringArray; stringLen: int64;
+proc g_regex_replace_literal(self: ptr Regex00; string: ptr cstring; stringLen: int64;
     startPosition: int32; replacement: cstring; matchOptions: RegexMatchFlags;
     error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
@@ -5657,7 +5728,7 @@ proc replaceLiteral*(self: Regex; string: openArray[string]; stringLen: int64;
   result = $resul0
   cogfree(resul0)
 
-proc g_regex_split(self: ptr Regex00; string: cstring; matchOptions: RegexMatchFlags): cstringArray {.
+proc g_regex_split(self: ptr Regex00; string: cstring; matchOptions: RegexMatchFlags): ptr cstring {.
     importc, libprag.}
 
 proc split*(self: Regex; string: cstring; matchOptions: RegexMatchFlags): seq[string] =
@@ -5665,9 +5736,9 @@ proc split*(self: Regex; string: cstring; matchOptions: RegexMatchFlags): seq[st
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
-proc g_regex_split_full(self: ptr Regex00; string: cstringArray; stringLen: int64;
+proc g_regex_split_full(self: ptr Regex00; string: ptr cstring; stringLen: int64;
     startPosition: int32; matchOptions: RegexMatchFlags; maxTokens: int32;
-    error: ptr ptr glib.Error = nil): cstringArray {.
+    error: ptr ptr glib.Error = nil): ptr cstring {.
     importc, libprag.}
 
 proc splitFull*(self: Regex; string: openArray[string]; stringLen: int64;
@@ -5763,7 +5834,7 @@ proc matchSimple*(pattern: cstring; string: cstring; compileOptions: RegexCompil
   toBool(g_regex_match_simple(pattern, string, compileOptions, matchOptions))
 
 proc g_regex_split_simple(pattern: cstring; string: cstring; compileOptions: RegexCompileFlags;
-    matchOptions: RegexMatchFlags): cstringArray {.
+    matchOptions: RegexMatchFlags): ptr cstring {.
     importc, libprag.}
 
 proc splitSimple*(pattern: cstring; string: cstring; compileOptions: RegexCompileFlags;
@@ -5779,58 +5850,57 @@ type
     ignoreFinalizer*: bool
 
 type
-  Mutex00* {.pure, union.} = object
-  Mutex* = ref object
-    impl*: ptr Mutex00
-    ignoreFinalizer*: bool
+  Mutex* {.pure, byRef, union.} = object
+    p*: pointer
+    i*: array[2, uint32]
 
-proc g_mutex_clear(self: ptr Mutex00) {.
+proc g_mutex_clear(self: Mutex) {.
     importc, libprag.}
 
 proc clear*(self: Mutex) =
-  g_mutex_clear(cast[ptr Mutex00](self.impl))
+  g_mutex_clear(self)
 
-proc g_mutex_init(self: ptr Mutex00) {.
+proc g_mutex_init(self: Mutex) {.
     importc, libprag.}
 
 proc init*(self: Mutex) =
-  g_mutex_init(cast[ptr Mutex00](self.impl))
+  g_mutex_init(self)
 
-proc g_mutex_lock(self: ptr Mutex00) {.
+proc g_mutex_lock(self: Mutex) {.
     importc, libprag.}
 
 proc lock*(self: Mutex) =
-  g_mutex_lock(cast[ptr Mutex00](self.impl))
+  g_mutex_lock(self)
 
-proc g_mutex_trylock(self: ptr Mutex00): gboolean {.
+proc g_mutex_trylock(self: Mutex): gboolean {.
     importc, libprag.}
 
 proc trylock*(self: Mutex): bool =
-  toBool(g_mutex_trylock(cast[ptr Mutex00](self.impl)))
+  toBool(g_mutex_trylock(self))
 
-proc g_mutex_unlock(self: ptr Mutex00) {.
+proc g_mutex_unlock(self: Mutex) {.
     importc, libprag.}
 
 proc unlock*(self: Mutex) =
-  g_mutex_unlock(cast[ptr Mutex00](self.impl))
+  g_mutex_unlock(self)
 
-proc g_cond_wait(self: ptr Cond00; mutex: ptr Mutex00) {.
+proc g_cond_wait(self: Cond; mutex: Mutex) {.
     importc, libprag.}
 
 proc wait*(self: Cond; mutex: Mutex) =
-  g_cond_wait(cast[ptr Cond00](self.impl), cast[ptr Mutex00](mutex.impl))
+  g_cond_wait(self, mutex)
 
-proc g_cond_wait_until(self: ptr Cond00; mutex: ptr Mutex00; endTime: int64): gboolean {.
+proc g_cond_wait_until(self: Cond; mutex: Mutex; endTime: int64): gboolean {.
     importc, libprag.}
 
 proc waitUntil*(self: Cond; mutex: Mutex; endTime: int64): bool =
-  toBool(g_cond_wait_until(cast[ptr Cond00](self.impl), cast[ptr Mutex00](mutex.impl), endTime))
+  toBool(g_cond_wait_until(self, mutex, endTime))
 
-proc g_main_context_wait(self: ptr MainContext00; cond: ptr Cond00; mutex: ptr Mutex00): gboolean {.
+proc g_main_context_wait(self: ptr MainContext00; cond: Cond; mutex: Mutex): gboolean {.
     importc, libprag.}
 
 proc wait*(self: MainContext; cond: Cond; mutex: Mutex): bool =
-  toBool(g_main_context_wait(cast[ptr MainContext00](self.impl), cast[ptr Cond00](cond.impl), cast[ptr Mutex00](mutex.impl)))
+  toBool(g_main_context_wait(cast[ptr MainContext00](self.impl), cond, mutex))
 
 type
   Node00* {.pure.} = object
@@ -5936,10 +6006,15 @@ type
 const OPTION_REMAINING* = ""
 
 type
-  Once00* {.pure.} = object
-  Once* = ref object
-    impl*: ptr Once00
-    ignoreFinalizer*: bool
+  OnceStatus* {.size: sizeof(cint), pure.} = enum
+    notcalled = 0
+    progress = 1
+    ready = 2
+
+type
+  Once* {.pure, byRef.} = object
+    status*: OnceStatus
+    retval*: pointer
 
 proc g_once_init_enter(location: pointer): gboolean {.
     importc, libprag.}
@@ -5949,12 +6024,6 @@ proc initEnter*(location: pointer): bool =
 
 proc initLeave*(location: pointer; resu: uint64) {.
     importc: "g_once_init_leave", libprag.}
-
-type
-  OnceStatus* {.size: sizeof(cint), pure.} = enum
-    notcalled = 0
-    progress = 1
-    ready = 2
 
 type
   OptionArg* {.size: sizeof(cint), pure.} = enum
@@ -6038,7 +6107,7 @@ proc getSummary*(self: OptionContext): string =
 proc summary*(self: OptionContext): string =
   result = $g_option_context_get_summary(cast[ptr OptionContext00](self.impl))
 
-proc g_option_context_parse(self: ptr OptionContext00; argc: var int32; argv: var cstringArray;
+proc g_option_context_parse(self: ptr OptionContext00; argc: var int32; argv: var ptr cstring;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
@@ -6057,7 +6126,7 @@ proc parse*(self: OptionContext; argc: var int; argv: var seq[string]): bool =
   argc = int(argc_00)
   argv = cstringArrayToSeq(argv_00)
 
-proc g_option_context_parse_strv(self: ptr OptionContext00; arguments: var cstringArray;
+proc g_option_context_parse_strv(self: ptr OptionContext00; arguments: var ptr cstring;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
@@ -6130,16 +6199,20 @@ proc `translationDomain=`*(self: OptionContext; domain: cstring) =
   g_option_context_set_translation_domain(cast[ptr OptionContext00](self.impl), domain)
 
 type
-  OptionEntry00* {.pure.} = object
-  OptionEntry* = ref object
-    impl*: ptr OptionEntry00
-    ignoreFinalizer*: bool
+  OptionEntry* {.pure, byRef.} = object
+    longName*: cstring
+    shortName*: int8
+    flags*: int32
+    arg*: OptionArg
+    argData*: pointer
+    description*: cstring
+    argDescription*: cstring
 
-proc g_option_context_add_main_entries(self: ptr OptionContext00; entries: OptionEntry00Array;
+proc g_option_context_add_main_entries(self: ptr OptionContext00; entries: ptr OptionEntry;
     translationDomain: cstring) {.
     importc, libprag.}
 
-proc addMainEntries*(self: OptionContext; entries: OptionEntry00Array;
+proc addMainEntries*(self: OptionContext; entries: ptr OptionEntry;
     translationDomain: cstring = "") =
   g_option_context_add_main_entries(cast[ptr OptionContext00](self.impl), entries, safeStringToCString(translationDomain))
 
@@ -6149,7 +6222,7 @@ type
     impl*: ptr OptionGroup00
     ignoreFinalizer*: bool
 
-proc g_option_group_get_type*(): GType {.importc, libprag.}
+proc g_option_group_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGOptionGroup*(self: OptionGroup) =
   if not self.ignoreFinalizer:
@@ -6161,6 +6234,12 @@ when defined(gcDestructors):
       boxedFree(g_option_group_get_type(), cast[ptr OptionGroup00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var OptionGroup) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGOptionGroup)
+
 proc g_option_group_free(self: ptr OptionGroup00) {.
     importc, libprag.}
 
@@ -6171,10 +6250,10 @@ proc finalizerfree*(self: OptionGroup) =
   if not self.ignoreFinalizer:
     g_option_group_free(self.impl)
 
-proc g_option_group_add_entries(self: ptr OptionGroup00; entries: OptionEntry00Array) {.
+proc g_option_group_add_entries(self: ptr OptionGroup00; entries: ptr OptionEntry) {.
     importc, libprag.}
 
-proc addEntries*(self: OptionGroup; entries: OptionEntry00Array) =
+proc addEntries*(self: OptionGroup; entries: ptr OptionEntry) =
   g_option_group_add_entries(cast[ptr OptionGroup00](self.impl), entries)
 
 proc g_option_group_new(name: cstring; description: cstring; helpDescription: cstring;
@@ -6228,6 +6307,7 @@ proc g_option_context_add_group(self: ptr OptionContext00; group: ptr OptionGrou
     importc, libprag.}
 
 proc addGroup*(self: OptionContext; group: OptionGroup) =
+  group.ignoreFinalizer = true
   g_option_context_add_group(cast[ptr OptionContext00](self.impl), cast[ptr OptionGroup00](group.impl))
 
 proc g_option_context_get_help(self: ptr OptionContext00; mainHelp: gboolean;
@@ -6235,11 +6315,6 @@ proc g_option_context_get_help(self: ptr OptionContext00; mainHelp: gboolean;
     importc, libprag.}
 
 proc getHelp*(self: OptionContext; mainHelp: bool; group: OptionGroup = nil): string =
-  let resul0 = g_option_context_get_help(cast[ptr OptionContext00](self.impl), gboolean(mainHelp), if group.isNil: nil else: cast[ptr OptionGroup00](group.impl))
-  result = $resul0
-  cogfree(resul0)
-
-proc help*(self: OptionContext; mainHelp: bool; group: OptionGroup = nil): string =
   let resul0 = g_option_context_get_help(cast[ptr OptionContext00](self.impl), gboolean(mainHelp), if group.isNil: nil else: cast[ptr OptionGroup00](group.impl))
   result = $resul0
   cogfree(resul0)
@@ -6261,9 +6336,11 @@ proc g_option_context_set_main_group(self: ptr OptionContext00; group: ptr Optio
     importc, libprag.}
 
 proc setMainGroup*(self: OptionContext; group: OptionGroup) =
+  group.ignoreFinalizer = true
   g_option_context_set_main_group(cast[ptr OptionContext00](self.impl), cast[ptr OptionGroup00](group.impl))
 
 proc `mainGroup=`*(self: OptionContext; group: OptionGroup) =
+  group.ignoreFinalizer = true
   g_option_context_set_main_group(cast[ptr OptionContext00](self.impl), cast[ptr OptionGroup00](group.impl))
 
 type
@@ -6343,7 +6420,7 @@ proc equal*(self: PatternSpec; pspec2: PatternSpec): bool =
   toBool(g_pattern_spec_equal(cast[ptr PatternSpec00](self.impl), cast[ptr PatternSpec00](pspec2.impl)))
 
 type
-  PollFunc* = proc (ufds: ptr PollFD00; nfsd: uint32; timeout: int32): int32 {.cdecl.}
+  PollFunc* = proc (ufds: PollFD; nfsd: uint32; timeout: int32): int32 {.cdecl.}
 
 type
   PrintFunc* = proc (string: cstring) {.cdecl.}
@@ -6354,7 +6431,7 @@ type
     impl*: ptr PtrArray00
     ignoreFinalizer*: bool
 
-proc g_ptr_array_get_type*(): GType {.importc, libprag.}
+proc g_ptr_array_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGPtrArray*(self: PtrArray) =
   if not self.ignoreFinalizer:
@@ -6365,6 +6442,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_ptr_array_get_type(), cast[ptr PtrArray00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var PtrArray) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGPtrArray)
 
 type
   Queue00* {.pure.} = object
@@ -6506,58 +6589,57 @@ proc reverse*(self: Queue) =
   g_queue_reverse(cast[ptr Queue00](self.impl))
 
 type
-  RWLock00* {.pure.} = object
-  RWLock* = ref object
-    impl*: ptr RWLock00
-    ignoreFinalizer*: bool
+  RWLock* {.pure, byRef.} = object
+    p*: pointer
+    i*: array[2, uint32]
 
-proc g_rw_lock_clear(self: ptr RWLock00) {.
+proc g_rw_lock_clear(self: RWLock) {.
     importc, libprag.}
 
 proc clear*(self: RWLock) =
-  g_rw_lock_clear(cast[ptr RWLock00](self.impl))
+  g_rw_lock_clear(self)
 
-proc g_rw_lock_init(self: ptr RWLock00) {.
+proc g_rw_lock_init(self: RWLock) {.
     importc, libprag.}
 
 proc init*(self: RWLock) =
-  g_rw_lock_init(cast[ptr RWLock00](self.impl))
+  g_rw_lock_init(self)
 
-proc g_rw_lock_reader_lock(self: ptr RWLock00) {.
+proc g_rw_lock_reader_lock(self: RWLock) {.
     importc, libprag.}
 
 proc readerLock*(self: RWLock) =
-  g_rw_lock_reader_lock(cast[ptr RWLock00](self.impl))
+  g_rw_lock_reader_lock(self)
 
-proc g_rw_lock_reader_trylock(self: ptr RWLock00): gboolean {.
+proc g_rw_lock_reader_trylock(self: RWLock): gboolean {.
     importc, libprag.}
 
 proc readerTrylock*(self: RWLock): bool =
-  toBool(g_rw_lock_reader_trylock(cast[ptr RWLock00](self.impl)))
+  toBool(g_rw_lock_reader_trylock(self))
 
-proc g_rw_lock_reader_unlock(self: ptr RWLock00) {.
+proc g_rw_lock_reader_unlock(self: RWLock) {.
     importc, libprag.}
 
 proc readerUnlock*(self: RWLock) =
-  g_rw_lock_reader_unlock(cast[ptr RWLock00](self.impl))
+  g_rw_lock_reader_unlock(self)
 
-proc g_rw_lock_writer_lock(self: ptr RWLock00) {.
+proc g_rw_lock_writer_lock(self: RWLock) {.
     importc, libprag.}
 
 proc writerLock*(self: RWLock) =
-  g_rw_lock_writer_lock(cast[ptr RWLock00](self.impl))
+  g_rw_lock_writer_lock(self)
 
-proc g_rw_lock_writer_trylock(self: ptr RWLock00): gboolean {.
+proc g_rw_lock_writer_trylock(self: RWLock): gboolean {.
     importc, libprag.}
 
 proc writerTrylock*(self: RWLock): bool =
-  toBool(g_rw_lock_writer_trylock(cast[ptr RWLock00](self.impl)))
+  toBool(g_rw_lock_writer_trylock(self))
 
-proc g_rw_lock_writer_unlock(self: ptr RWLock00) {.
+proc g_rw_lock_writer_unlock(self: RWLock) {.
     importc, libprag.}
 
 proc writerUnlock*(self: RWLock) =
-  g_rw_lock_writer_unlock(cast[ptr RWLock00](self.impl))
+  g_rw_lock_writer_unlock(self)
 
 type
   Rand00* {.pure.} = object
@@ -6621,40 +6703,39 @@ proc setSeedArray*(self: Rand; seed: ptr uint32; seedLength: int) =
   g_rand_set_seed_array(cast[ptr Rand00](self.impl), seed, uint32(seedLength))
 
 type
-  RecMutex00* {.pure.} = object
-  RecMutex* = ref object
-    impl*: ptr RecMutex00
-    ignoreFinalizer*: bool
+  RecMutex* {.pure, byRef.} = object
+    p*: pointer
+    i*: array[2, uint32]
 
-proc g_rec_mutex_clear(self: ptr RecMutex00) {.
+proc g_rec_mutex_clear(self: RecMutex) {.
     importc, libprag.}
 
 proc clear*(self: RecMutex) =
-  g_rec_mutex_clear(cast[ptr RecMutex00](self.impl))
+  g_rec_mutex_clear(self)
 
-proc g_rec_mutex_init(self: ptr RecMutex00) {.
+proc g_rec_mutex_init(self: RecMutex) {.
     importc, libprag.}
 
 proc init*(self: RecMutex) =
-  g_rec_mutex_init(cast[ptr RecMutex00](self.impl))
+  g_rec_mutex_init(self)
 
-proc g_rec_mutex_lock(self: ptr RecMutex00) {.
+proc g_rec_mutex_lock(self: RecMutex) {.
     importc, libprag.}
 
 proc lock*(self: RecMutex) =
-  g_rec_mutex_lock(cast[ptr RecMutex00](self.impl))
+  g_rec_mutex_lock(self)
 
-proc g_rec_mutex_trylock(self: ptr RecMutex00): gboolean {.
+proc g_rec_mutex_trylock(self: RecMutex): gboolean {.
     importc, libprag.}
 
 proc trylock*(self: RecMutex): bool =
-  toBool(g_rec_mutex_trylock(cast[ptr RecMutex00](self.impl)))
+  toBool(g_rec_mutex_trylock(self))
 
-proc g_rec_mutex_unlock(self: ptr RecMutex00) {.
+proc g_rec_mutex_unlock(self: RecMutex) {.
     importc, libprag.}
 
 proc unlock*(self: RecMutex) =
-  g_rec_mutex_unlock(cast[ptr RecMutex00](self.impl))
+  g_rec_mutex_unlock(self)
 
 type
   RegexError* {.size: sizeof(cint), pure.} = enum
@@ -6732,10 +6813,13 @@ const SIZEOF_SSIZE_T* = 8'i32
 const SIZEOF_VOID_P* = 8'i32
 
 type
-  SList00* {.pure.} = object
-  SList* = ref object
-    impl*: ptr SList00
-    ignoreFinalizer*: bool
+  SList* {.pure, byRef.} = object
+    data*: pointer
+    next*: ptr glib.SList
+
+proc g_slist_free*(list: ptr glib.SList) {.importc: "g_slist_free", libprag.}
+
+proc g_slist_prepend*(list: ptr glib.SList; data: pointer): ptr glib.SList  {.importc:  "g_slist_prepend", libprag.}
 
 const SOURCE_CONTINUE* = true
 
@@ -6831,9 +6915,6 @@ proc g_scanner_set_scope(self: ptr Scanner00; scopeId: uint32): uint32 {.
     importc, libprag.}
 
 proc setScope*(self: Scanner; scopeId: int): int =
-  int(g_scanner_set_scope(cast[ptr Scanner00](self.impl), uint32(scopeId)))
-
-proc `scope=`*(self: Scanner; scopeId: int): int =
   int(g_scanner_set_scope(cast[ptr Scanner00](self.impl), uint32(scopeId)))
 
 proc g_scanner_sync_file_offset(self: ptr Scanner00) {.
@@ -6945,191 +7026,131 @@ proc isEmpty*(self: Sequence): bool =
   toBool(g_sequence_is_empty(cast[ptr Sequence00](self.impl)))
 
 type
-  SequenceIter00* {.pure.} = object
-  SequenceIter* = ref object
-    impl*: ptr SequenceIter00
-    ignoreFinalizer*: bool
+  SequenceIter* {.pure, byRef.} = object
 
-proc g_sequence_iter_compare(self: ptr SequenceIter00; b: ptr SequenceIter00): int32 {.
+proc g_sequence_iter_compare(self: SequenceIter; b: SequenceIter): int32 {.
     importc, libprag.}
 
 proc compare*(self: SequenceIter; b: SequenceIter): int =
-  int(g_sequence_iter_compare(cast[ptr SequenceIter00](self.impl), cast[ptr SequenceIter00](b.impl)))
+  int(g_sequence_iter_compare(self, b))
 
-proc g_sequence_iter_get_position(self: ptr SequenceIter00): int32 {.
+proc g_sequence_iter_get_position(self: SequenceIter): int32 {.
     importc, libprag.}
 
 proc getPosition*(self: SequenceIter): int =
-  int(g_sequence_iter_get_position(cast[ptr SequenceIter00](self.impl)))
+  int(g_sequence_iter_get_position(self))
 
 proc position*(self: SequenceIter): int =
-  int(g_sequence_iter_get_position(cast[ptr SequenceIter00](self.impl)))
+  int(g_sequence_iter_get_position(self))
 
-proc g_sequence_iter_get_sequence(self: ptr SequenceIter00): ptr Sequence00 {.
+proc g_sequence_iter_get_sequence(self: SequenceIter): ptr Sequence00 {.
     importc, libprag.}
 
 proc getSequence*(self: SequenceIter): Sequence =
   fnew(result, finalizerfree)
-  result.impl = g_sequence_iter_get_sequence(cast[ptr SequenceIter00](self.impl))
+  result.impl = g_sequence_iter_get_sequence(self)
   result.ignoreFinalizer = true
 
 proc sequence*(self: SequenceIter): Sequence =
   fnew(result, finalizerfree)
-  result.impl = g_sequence_iter_get_sequence(cast[ptr SequenceIter00](self.impl))
+  result.impl = g_sequence_iter_get_sequence(self)
   result.ignoreFinalizer = true
 
-proc g_sequence_iter_is_begin(self: ptr SequenceIter00): gboolean {.
+proc g_sequence_iter_is_begin(self: SequenceIter): gboolean {.
     importc, libprag.}
 
 proc isBegin*(self: SequenceIter): bool =
-  toBool(g_sequence_iter_is_begin(cast[ptr SequenceIter00](self.impl)))
+  toBool(g_sequence_iter_is_begin(self))
 
-proc g_sequence_iter_is_end(self: ptr SequenceIter00): gboolean {.
+proc g_sequence_iter_is_end(self: SequenceIter): gboolean {.
     importc, libprag.}
 
 proc isEnd*(self: SequenceIter): bool =
-  toBool(g_sequence_iter_is_end(cast[ptr SequenceIter00](self.impl)))
+  toBool(g_sequence_iter_is_end(self))
 
-proc g_sequence_iter_move(self: ptr SequenceIter00; delta: int32): ptr SequenceIter00 {.
+proc g_sequence_iter_move(self: SequenceIter; delta: int32): ptr SequenceIter {.
     importc, libprag.}
 
-proc move*(self: SequenceIter; delta: int): SequenceIter =
-  new(result)
-  result.impl = g_sequence_iter_move(cast[ptr SequenceIter00](self.impl), int32(delta))
-  result.ignoreFinalizer = true
+proc move*(self: SequenceIter; delta: int): ptr SequenceIter =
+  g_sequence_iter_move(self, int32(delta))
 
-proc g_sequence_iter_next(self: ptr SequenceIter00): ptr SequenceIter00 {.
+proc g_sequence_iter_next(self: SequenceIter): ptr SequenceIter {.
     importc, libprag.}
 
-proc next*(self: SequenceIter): SequenceIter =
-  new(result)
-  result.impl = g_sequence_iter_next(cast[ptr SequenceIter00](self.impl))
-  result.ignoreFinalizer = true
+proc next*(self: SequenceIter): ptr SequenceIter =
+  g_sequence_iter_next(self)
 
-proc g_sequence_iter_prev(self: ptr SequenceIter00): ptr SequenceIter00 {.
+proc g_sequence_iter_prev(self: SequenceIter): ptr SequenceIter {.
     importc, libprag.}
 
-proc prev*(self: SequenceIter): SequenceIter =
-  new(result)
-  result.impl = g_sequence_iter_prev(cast[ptr SequenceIter00](self.impl))
-  result.ignoreFinalizer = true
+proc prev*(self: SequenceIter): ptr SequenceIter =
+  g_sequence_iter_prev(self)
 
-proc g_sequence_append(self: ptr Sequence00; data: pointer): ptr SequenceIter00 {.
+proc g_sequence_append(self: ptr Sequence00; data: pointer): ptr SequenceIter {.
     importc, libprag.}
 
-proc append*(self: Sequence; data: pointer): SequenceIter =
-  new(result)
-  result.impl = g_sequence_append(cast[ptr Sequence00](self.impl), data)
-  result.ignoreFinalizer = true
+proc append*(self: Sequence; data: pointer): ptr SequenceIter =
+  g_sequence_append(cast[ptr Sequence00](self.impl), data)
 
-proc g_sequence_get_begin_iter(self: ptr Sequence00): ptr SequenceIter00 {.
+proc g_sequence_get_begin_iter(self: ptr Sequence00): ptr SequenceIter {.
     importc, libprag.}
 
-proc getBeginIter*(self: Sequence): SequenceIter =
-  new(result)
-  result.impl = g_sequence_get_begin_iter(cast[ptr Sequence00](self.impl))
-  result.ignoreFinalizer = true
+proc getBeginIter*(self: Sequence): ptr SequenceIter =
+  g_sequence_get_begin_iter(cast[ptr Sequence00](self.impl))
 
-proc beginIter*(self: Sequence): SequenceIter =
-  new(result)
-  result.impl = g_sequence_get_begin_iter(cast[ptr Sequence00](self.impl))
-  result.ignoreFinalizer = true
+proc beginIter*(self: Sequence): ptr SequenceIter =
+  g_sequence_get_begin_iter(cast[ptr Sequence00](self.impl))
 
-proc g_sequence_get_end_iter(self: ptr Sequence00): ptr SequenceIter00 {.
+proc g_sequence_get_end_iter(self: ptr Sequence00): ptr SequenceIter {.
     importc, libprag.}
 
-proc getEndIter*(self: Sequence): SequenceIter =
-  new(result)
-  result.impl = g_sequence_get_end_iter(cast[ptr Sequence00](self.impl))
-  result.ignoreFinalizer = true
+proc getEndIter*(self: Sequence): ptr SequenceIter =
+  g_sequence_get_end_iter(cast[ptr Sequence00](self.impl))
 
-proc endIter*(self: Sequence): SequenceIter =
-  new(result)
-  result.impl = g_sequence_get_end_iter(cast[ptr Sequence00](self.impl))
-  result.ignoreFinalizer = true
+proc endIter*(self: Sequence): ptr SequenceIter =
+  g_sequence_get_end_iter(cast[ptr Sequence00](self.impl))
 
-proc g_sequence_get_iter_at_pos(self: ptr Sequence00; pos: int32): ptr SequenceIter00 {.
+proc g_sequence_get_iter_at_pos(self: ptr Sequence00; pos: int32): ptr SequenceIter {.
     importc, libprag.}
 
-proc getIterAtPos*(self: Sequence; pos: int): SequenceIter =
-  new(result)
-  result.impl = g_sequence_get_iter_at_pos(cast[ptr Sequence00](self.impl), int32(pos))
-  result.ignoreFinalizer = true
+proc getIterAtPos*(self: Sequence; pos: int): ptr SequenceIter =
+  g_sequence_get_iter_at_pos(cast[ptr Sequence00](self.impl), int32(pos))
 
-proc iterAtPos*(self: Sequence; pos: int): SequenceIter =
-  new(result)
-  result.impl = g_sequence_get_iter_at_pos(cast[ptr Sequence00](self.impl), int32(pos))
-  result.ignoreFinalizer = true
-
-proc g_sequence_prepend(self: ptr Sequence00; data: pointer): ptr SequenceIter00 {.
+proc g_sequence_prepend(self: ptr Sequence00; data: pointer): ptr SequenceIter {.
     importc, libprag.}
 
-proc prepend*(self: Sequence; data: pointer): SequenceIter =
-  new(result)
-  result.impl = g_sequence_prepend(cast[ptr Sequence00](self.impl), data)
-  result.ignoreFinalizer = true
+proc prepend*(self: Sequence; data: pointer): ptr SequenceIter =
+  g_sequence_prepend(cast[ptr Sequence00](self.impl), data)
 
-proc g_sequence_get(iter: ptr SequenceIter00): pointer {.
-    importc, libprag.}
+proc getSequence*(iter: SequenceIter): pointer {.
+    importc: "g_sequence_get", libprag.}
 
-proc getSequence*(iter: SequenceIter): pointer =
-  g_sequence_get(cast[ptr SequenceIter00](iter.impl))
+proc insertBefore*(iter: SequenceIter; data: pointer): ptr SequenceIter {.
+    importc: "g_sequence_insert_before", libprag.}
 
-proc g_sequence_insert_before(iter: ptr SequenceIter00; data: pointer): ptr SequenceIter00 {.
-    importc, libprag.}
+proc move*(src: SequenceIter; dest: SequenceIter) {.
+    importc: "g_sequence_move", libprag.}
 
-proc insertBefore*(iter: SequenceIter; data: pointer): SequenceIter =
-  new(result)
-  result.impl = g_sequence_insert_before(cast[ptr SequenceIter00](iter.impl), data)
-  result.ignoreFinalizer = true
+proc moveRange*(dest: SequenceIter; begin: SequenceIter; `end`: SequenceIter) {.
+    importc: "g_sequence_move_range", libprag.}
 
-proc g_sequence_move(src: ptr SequenceIter00; dest: ptr SequenceIter00) {.
-    importc, libprag.}
+proc rangeGetMidpoint*(begin: SequenceIter; `end`: SequenceIter): ptr SequenceIter {.
+    importc: "g_sequence_range_get_midpoint", libprag.}
 
-proc move*(src: SequenceIter; dest: SequenceIter) =
-  g_sequence_move(cast[ptr SequenceIter00](src.impl), cast[ptr SequenceIter00](dest.impl))
+proc remove*(iter: SequenceIter) {.
+    importc: "g_sequence_remove", libprag.}
 
-proc g_sequence_move_range(dest: ptr SequenceIter00; begin: ptr SequenceIter00;
-    `end`: ptr SequenceIter00) {.
-    importc, libprag.}
+proc removeRange*(begin: SequenceIter; `end`: SequenceIter) {.
+    importc: "g_sequence_remove_range", libprag.}
 
-proc moveRange*(dest: SequenceIter; begin: SequenceIter; `end`: SequenceIter) =
-  g_sequence_move_range(cast[ptr SequenceIter00](dest.impl), cast[ptr SequenceIter00](begin.impl), cast[ptr SequenceIter00](`end`.impl))
+proc set*(iter: SequenceIter; data: pointer) {.
+    importc: "g_sequence_set", libprag.}
 
-proc g_sequence_range_get_midpoint(begin: ptr SequenceIter00; `end`: ptr SequenceIter00): ptr SequenceIter00 {.
-    importc, libprag.}
-
-proc rangeGetMidpoint*(begin: SequenceIter; `end`: SequenceIter): SequenceIter =
-  new(result)
-  result.impl = g_sequence_range_get_midpoint(cast[ptr SequenceIter00](begin.impl), cast[ptr SequenceIter00](`end`.impl))
-  result.ignoreFinalizer = true
-
-proc g_sequence_remove(iter: ptr SequenceIter00) {.
-    importc, libprag.}
-
-proc remove*(iter: SequenceIter) =
-  g_sequence_remove(cast[ptr SequenceIter00](iter.impl))
-
-proc g_sequence_remove_range(begin: ptr SequenceIter00; `end`: ptr SequenceIter00) {.
-    importc, libprag.}
-
-proc removeRange*(begin: SequenceIter; `end`: SequenceIter) =
-  g_sequence_remove_range(cast[ptr SequenceIter00](begin.impl), cast[ptr SequenceIter00](`end`.impl))
-
-proc g_sequence_set(iter: ptr SequenceIter00; data: pointer) {.
-    importc, libprag.}
-
-proc set*(iter: SequenceIter; data: pointer) =
-  g_sequence_set(cast[ptr SequenceIter00](iter.impl), data)
-
-proc g_sequence_swap(a: ptr SequenceIter00; b: ptr SequenceIter00) {.
-    importc, libprag.}
-
-proc swap*(a: SequenceIter; b: SequenceIter) =
-  g_sequence_swap(cast[ptr SequenceIter00](a.impl), cast[ptr SequenceIter00](b.impl))
+proc swap*(a: SequenceIter; b: SequenceIter) {.
+    importc: "g_sequence_swap", libprag.}
 
 type
-  SequenceIterCompareFunc* = proc (a: ptr SequenceIter00; b: ptr SequenceIter00; data: pointer): int32 {.cdecl.}
+  SequenceIterCompareFunc* = proc (a: SequenceIter; b: SequenceIter; data: pointer): int32 {.cdecl.}
 
 type
   ShellError* {.size: sizeof(cint), pure.} = enum
@@ -7212,10 +7233,7 @@ type
   SpawnFlags* {.size: sizeof(cint).} = set[SpawnFlag]
 
 type
-  StatBuf00* {.pure.} = object
-  StatBuf* = ref object
-    impl*: ptr StatBuf00
-    ignoreFinalizer*: bool
+  StatBuf* {.pure, byRef.} = object
 
 type
   StringChunk00* {.pure.} = object
@@ -7424,7 +7442,7 @@ type
     impl*: ptr Thread00
     ignoreFinalizer*: bool
 
-proc g_thread_get_type*(): GType {.importc, libprag.}
+proc g_thread_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGThread*(self: Thread) =
   if not self.ignoreFinalizer:
@@ -7436,6 +7454,12 @@ when defined(gcDestructors):
       boxedFree(g_thread_get_type(), cast[ptr Thread00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var Thread) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGThread)
+
 proc g_thread_unref(self: ptr Thread00) {.
     importc, libprag.}
 
@@ -7446,18 +7470,18 @@ proc finalizerunref*(self: Thread) =
   if not self.ignoreFinalizer:
     g_thread_unref(self.impl)
 
+proc g_thread_join(self: ptr Thread00): pointer {.
+    importc, libprag.}
+
+proc join*(self: Thread): pointer =
+  g_thread_join(cast[ptr Thread00](self.impl))
+
 proc g_thread_ref(self: ptr Thread00): ptr Thread00 {.
     importc, libprag.}
 
 proc `ref`*(self: Thread): Thread =
   fnew(result, gBoxedFreeGThread)
   result.impl = g_thread_ref(cast[ptr Thread00](self.impl))
-
-proc g_thread_join(self: ptr Thread00): pointer {.
-    importc, libprag.}
-
-proc join*(self: Thread): pointer =
-  g_thread_join(cast[ptr Thread00](self.impl))
 
 proc exit*(retval: pointer) {.
     importc: "g_thread_exit", libprag.}
@@ -7468,6 +7492,7 @@ proc g_thread_self(): ptr Thread00 {.
 proc self*(): Thread =
   fnew(result, gBoxedFreeGThread)
   result.impl = g_thread_self()
+  result.ignoreFinalizer = true
 
 proc `yield`*() {.
     importc: "g_thread_yield", libprag.}
@@ -7478,6 +7503,58 @@ type
 
 type
   ThreadFunc* = proc (data: pointer): pointer {.cdecl.}
+
+proc g_thread_try_new(name: cstring; `func`: ThreadFunc; data: pointer; error: ptr ptr glib.Error = nil): ptr Thread00 {.
+    importc, libprag.}
+
+proc tryNew*(name: cstring = ""; `func`: ThreadFunc; data: pointer): Thread =
+  var gerror: ptr glib.Error
+  let impl0 = g_thread_try_new(safeStringToCString(name), `func`, data, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  fnew(result, gBoxedFreeGThread)
+  result.impl = impl0
+
+proc tryNew*(tdesc: typedesc; name: cstring = ""; `func`: ThreadFunc; data: pointer): tdesc =
+  var gerror: ptr glib.Error
+  assert(result is Thread)
+  let impl0 = g_thread_try_new(safeStringToCString(name), `func`, data, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  fnew(result, gBoxedFreeGThread)
+  result.impl = impl0
+
+proc tryNew*[T](result: var T; name: cstring = ""; `func`: ThreadFunc; data: pointer) {.deprecated.} =
+  var gerror: ptr glib.Error
+  assert(result is Thread)
+  let impl0 = g_thread_try_new(safeStringToCString(name), `func`, data, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  fnew(result, gBoxedFreeGThread)
+  result.impl = impl0
+
+proc g_thread_new(name: cstring; `func`: ThreadFunc; data: pointer): ptr Thread00 {.
+    importc, libprag.}
+
+proc newThread*(name: cstring = ""; `func`: ThreadFunc; data: pointer): Thread =
+  fnew(result, gBoxedFreeGThread)
+  result.impl = g_thread_new(safeStringToCString(name), `func`, data)
+
+proc newThread*(tdesc: typedesc; name: cstring = ""; `func`: ThreadFunc; data: pointer): tdesc =
+  assert(result is Thread)
+  fnew(result, gBoxedFreeGThread)
+  result.impl = g_thread_new(safeStringToCString(name), `func`, data)
+
+proc initThread*[T](result: var T; name: cstring = ""; `func`: ThreadFunc; data: pointer) {.deprecated.} =
+  assert(result is Thread)
+  fnew(result, gBoxedFreeGThread)
+  result.impl = g_thread_new(safeStringToCString(name), `func`, data)
 
 type
   ThreadPool00* {.pure.} = object
@@ -7540,15 +7617,6 @@ proc setMaxThreads*(self: ThreadPool; maxThreads: int): bool =
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc `maxThreads=`*(self: ThreadPool; maxThreads: int): bool =
-  var gerror: ptr glib.Error
-  let resul0 = g_thread_pool_set_max_threads(cast[ptr ThreadPool00](self.impl), int32(maxThreads), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
 proc g_thread_pool_unprocessed(self: ptr ThreadPool00): uint32 {.
     importc, libprag.}
 
@@ -7561,16 +7629,10 @@ proc g_thread_pool_get_max_idle_time(): uint32 {.
 proc getMaxIdleTime*(): int =
   int(g_thread_pool_get_max_idle_time())
 
-proc maxIdleTime*(): int =
-  int(g_thread_pool_get_max_idle_time())
-
 proc g_thread_pool_get_max_unused_threads(): int32 {.
     importc, libprag.}
 
 proc getMaxUnusedThreads*(): int =
-  int(g_thread_pool_get_max_unused_threads())
-
-proc maxUnusedThreads*(): int =
   int(g_thread_pool_get_max_unused_threads())
 
 proc g_thread_pool_get_num_unused_threads(): uint32 {.
@@ -7579,26 +7641,17 @@ proc g_thread_pool_get_num_unused_threads(): uint32 {.
 proc getNumUnusedThreads*(): int =
   int(g_thread_pool_get_num_unused_threads())
 
-proc numUnusedThreads*(): int =
-  int(g_thread_pool_get_num_unused_threads())
-
 proc g_thread_pool_set_max_idle_time(interval: uint32) {.
     importc, libprag.}
 
 proc setMaxIdleTime*(interval: int) =
   g_thread_pool_set_max_idle_time(uint32(interval))
 
-proc `maxIdleTime=`*(interval: uint32) {.
-    importc: "g_thread_pool_set_max_idle_time", libprag.}
-
 proc g_thread_pool_set_max_unused_threads(maxThreads: int32) {.
     importc, libprag.}
 
 proc setMaxUnusedThreads*(maxThreads: int) =
   g_thread_pool_set_max_unused_threads(int32(maxThreads))
-
-proc `maxUnusedThreads=`*(maxThreads: int32) {.
-    importc: "g_thread_pool_set_max_unused_threads", libprag.}
 
 proc stopUnusedThreads*() {.
     importc: "g_thread_pool_stop_unused_threads", libprag.}
@@ -7760,8 +7813,8 @@ proc g_tree_lookup_extended(self: ptr Tree00; lookupKey: pointer; origKey: var p
     value: var pointer): gboolean {.
     importc, libprag.}
 
-proc lookupExtended*(self: Tree; lookupKey: pointer; origKey: var pointer;
-    value: var pointer): bool =
+proc lookupExtended*(self: Tree; lookupKey: pointer; origKey: var pointer = cast[var pointer](nil);
+    value: var pointer = cast[var pointer](nil)): bool =
   toBool(g_tree_lookup_extended(cast[ptr Tree00](self.impl), lookupKey, origKey, value))
 
 proc g_tree_nnodes(self: ptr Tree00): int32 {.
@@ -8004,6 +8057,10 @@ type
     nandinagari = 150
     nyiakengPuachueHmong = 151
     wancho = 152
+    chorasmian = 153
+    divesAkuru = 154
+    khitanSmallScript = 155
+    yezidi = 156
 
 type
   UnicodeType* {.size: sizeof(cint), pure.} = enum
@@ -8040,6 +8097,544 @@ type
 
 type
   UnixFDSourceFunc* = proc (fd: int32; condition: IOCondition; userData: pointer): gboolean {.cdecl.}
+
+type
+  Uri00* {.pure.} = object
+  Uri* = ref object
+    impl*: ptr Uri00
+    ignoreFinalizer*: bool
+
+proc g_uri_get_type*(): GType {.importc, gobjectlibprag.}
+
+proc gBoxedFreeGUri*(self: Uri) =
+  if not self.ignoreFinalizer:
+    boxedFree(g_uri_get_type(), cast[ptr Uri00](self.impl))
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(Uri()[])) =
+    if not self.ignoreFinalizer and self.impl != nil:
+      boxedFree(g_uri_get_type(), cast[ptr Uri00](self.impl))
+      self.impl = nil
+
+proc newWithFinalizer*(x: var Uri) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGUri)
+
+proc g_uri_get_auth_params(self: ptr Uri00): cstring {.
+    importc, libprag.}
+
+proc getAuthParams*(self: Uri): string =
+  let resul0 = g_uri_get_auth_params(cast[ptr Uri00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc authParams*(self: Uri): string =
+  let resul0 = g_uri_get_auth_params(cast[ptr Uri00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc g_uri_get_fragment(self: ptr Uri00): cstring {.
+    importc, libprag.}
+
+proc getFragment*(self: Uri): string =
+  let resul0 = g_uri_get_fragment(cast[ptr Uri00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc fragment*(self: Uri): string =
+  let resul0 = g_uri_get_fragment(cast[ptr Uri00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc g_uri_get_host(self: ptr Uri00): cstring {.
+    importc, libprag.}
+
+proc getHost*(self: Uri): string =
+  result = $g_uri_get_host(cast[ptr Uri00](self.impl))
+
+proc host*(self: Uri): string =
+  result = $g_uri_get_host(cast[ptr Uri00](self.impl))
+
+proc g_uri_get_password(self: ptr Uri00): cstring {.
+    importc, libprag.}
+
+proc getPassword*(self: Uri): string =
+  let resul0 = g_uri_get_password(cast[ptr Uri00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc password*(self: Uri): string =
+  let resul0 = g_uri_get_password(cast[ptr Uri00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc g_uri_get_path(self: ptr Uri00): cstring {.
+    importc, libprag.}
+
+proc getPath*(self: Uri): string =
+  result = $g_uri_get_path(cast[ptr Uri00](self.impl))
+
+proc path*(self: Uri): string =
+  result = $g_uri_get_path(cast[ptr Uri00](self.impl))
+
+proc g_uri_get_port(self: ptr Uri00): int32 {.
+    importc, libprag.}
+
+proc getPort*(self: Uri): int =
+  int(g_uri_get_port(cast[ptr Uri00](self.impl)))
+
+proc port*(self: Uri): int =
+  int(g_uri_get_port(cast[ptr Uri00](self.impl)))
+
+proc g_uri_get_query(self: ptr Uri00): cstring {.
+    importc, libprag.}
+
+proc getQuery*(self: Uri): string =
+  let resul0 = g_uri_get_query(cast[ptr Uri00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc query*(self: Uri): string =
+  let resul0 = g_uri_get_query(cast[ptr Uri00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc g_uri_get_scheme(self: ptr Uri00): cstring {.
+    importc, libprag.}
+
+proc getScheme*(self: Uri): string =
+  result = $g_uri_get_scheme(cast[ptr Uri00](self.impl))
+
+proc scheme*(self: Uri): string =
+  result = $g_uri_get_scheme(cast[ptr Uri00](self.impl))
+
+proc g_uri_get_user(self: ptr Uri00): cstring {.
+    importc, libprag.}
+
+proc getUser*(self: Uri): string =
+  let resul0 = g_uri_get_user(cast[ptr Uri00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc user*(self: Uri): string =
+  let resul0 = g_uri_get_user(cast[ptr Uri00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc g_uri_get_userinfo(self: ptr Uri00): cstring {.
+    importc, libprag.}
+
+proc getUserinfo*(self: Uri): string =
+  let resul0 = g_uri_get_userinfo(cast[ptr Uri00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc userinfo*(self: Uri): string =
+  let resul0 = g_uri_get_userinfo(cast[ptr Uri00](self.impl))
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc g_uri_to_string(self: ptr Uri00): cstring {.
+    importc, libprag.}
+
+proc toString*(self: Uri): string =
+  let resul0 = g_uri_to_string(cast[ptr Uri00](self.impl))
+  result = $resul0
+  cogfree(resul0)
+
+proc g_uri_escape_bytes(unescaped: ptr uint8; length: uint64; reservedCharsAllowed: cstring): cstring {.
+    importc, libprag.}
+
+proc escapeBytes*(unescaped: seq[uint8] | string; reservedCharsAllowed: cstring = ""): string =
+  let length = uint64(unescaped.len)
+  let resul0 = g_uri_escape_bytes(cast[ptr uint8](unsafeaddr(unescaped[0])), length, safeStringToCString(reservedCharsAllowed))
+  result = $resul0
+  cogfree(resul0)
+
+proc g_uri_escape_string(unescaped: cstring; reservedCharsAllowed: cstring;
+    allowUtf8: gboolean): cstring {.
+    importc, libprag.}
+
+proc escapeString*(unescaped: cstring; reservedCharsAllowed: cstring = "";
+    allowUtf8: bool): string =
+  let resul0 = g_uri_escape_string(unescaped, safeStringToCString(reservedCharsAllowed), gboolean(allowUtf8))
+  result = $resul0
+  cogfree(resul0)
+
+proc g_uri_list_extract_uris(uriList: cstring): ptr cstring {.
+    importc, libprag.}
+
+proc listExtractUris*(uriList: cstring): seq[string] =
+  let resul0 = g_uri_list_extract_uris(uriList)
+  result = cstringArrayToSeq(resul0)
+  g_strfreev(resul0)
+
+proc g_uri_parse_scheme(uri: cstring): cstring {.
+    importc, libprag.}
+
+proc parseScheme*(uri: cstring): string =
+  let resul0 = g_uri_parse_scheme(uri)
+  if resul0.isNil:
+    return
+  result = $resul0
+  cogfree(resul0)
+
+proc g_uri_peek_scheme(uri: cstring): cstring {.
+    importc, libprag.}
+
+proc peekScheme*(uri: cstring): string =
+  let resul0 = g_uri_peek_scheme(uri)
+  if resul0.isNil:
+    return
+  result = $resul0
+
+proc g_uri_unescape_bytes(escapedString: cstring; length: int64; illegalCharacters: cstring;
+    error: ptr ptr glib.Error = nil): ptr Bytes00 {.
+    importc, libprag.}
+
+proc unescapeBytes*(escapedString: cstring; length: int64; illegalCharacters: cstring = ""): Bytes =
+  var gerror: ptr glib.Error
+  let impl0 = g_uri_unescape_bytes(escapedString, length, safeStringToCString(illegalCharacters), addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  fnew(result, gBoxedFreeGBytes)
+  result.impl = impl0
+
+proc g_uri_unescape_segment(escapedString: cstring; escapedStringEnd: cstring;
+    illegalCharacters: cstring): cstring {.
+    importc, libprag.}
+
+proc unescapeSegment*(escapedString: cstring = ""; escapedStringEnd: cstring = "";
+    illegalCharacters: cstring = ""): string =
+  let resul0 = g_uri_unescape_segment(safeStringToCString(escapedString), safeStringToCString(escapedStringEnd), safeStringToCString(illegalCharacters))
+  result = $resul0
+  cogfree(resul0)
+
+proc g_uri_unescape_string(escapedString: cstring; illegalCharacters: cstring): cstring {.
+    importc, libprag.}
+
+proc unescapeString*(escapedString: cstring; illegalCharacters: cstring = ""): string =
+  let resul0 = g_uri_unescape_string(escapedString, safeStringToCString(illegalCharacters))
+  result = $resul0
+  cogfree(resul0)
+
+type
+  UriHideFlag* {.size: sizeof(cint), pure.} = enum
+    userinfo = 0
+    password = 1
+    authParams = 2
+    query = 3
+    fragment = 4
+
+  UriHideFlags* {.size: sizeof(cint).} = set[UriHideFlag]
+
+proc g_uri_to_string_partial(self: ptr Uri00; flags: UriHideFlags): cstring {.
+    importc, libprag.}
+
+proc toStringPartial*(self: Uri; flags: UriHideFlags): string =
+  let resul0 = g_uri_to_string_partial(cast[ptr Uri00](self.impl), flags)
+  result = $resul0
+  cogfree(resul0)
+
+type
+  UriParamsFlag* {.size: sizeof(cint), pure.} = enum
+    caseInsensitive = 0
+    wwwForm = 1
+    parseRelaxed = 2
+
+  UriParamsFlags* {.size: sizeof(cint).} = set[UriParamsFlag]
+
+proc parseParams*(params: cstring; length: int64; separators: cstring;
+    flags: UriParamsFlags; error: ptr ptr glib.Error = nil): ptr HashTable00 {.
+    importc: "g_uri_parse_params", libprag.}
+
+type
+  UriFlag* {.size: sizeof(cint), pure.} = enum
+    parseRelaxed = 0
+    hasPassword = 1
+    hasAuthParams = 2
+    encoded = 3
+    nonDns = 4
+    encodedQuery = 5
+    encodedPath = 6
+    encodedFragment = 7
+
+  UriFlags* {.size: sizeof(cint).} = set[UriFlag]
+
+proc g_uri_get_flags(self: ptr Uri00): UriFlags {.
+    importc, libprag.}
+
+proc getFlags*(self: Uri): UriFlags =
+  g_uri_get_flags(cast[ptr Uri00](self.impl))
+
+proc flags*(self: Uri): UriFlags =
+  g_uri_get_flags(cast[ptr Uri00](self.impl))
+
+proc g_uri_parse_relative(self: ptr Uri00; uriRef: cstring; flags: UriFlags;
+    error: ptr ptr glib.Error = nil): ptr Uri00 {.
+    importc, libprag.}
+
+proc parseRelative*(self: Uri; uriRef: cstring; flags: UriFlags): Uri =
+  var gerror: ptr glib.Error
+  let impl0 = g_uri_parse_relative(cast[ptr Uri00](self.impl), uriRef, flags, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  fnew(result, gBoxedFreeGUri)
+  result.impl = impl0
+
+proc g_uri_build(flags: UriFlags; scheme: cstring; userinfo: cstring; host: cstring;
+    port: int32; path: cstring; query: cstring; fragment: cstring): ptr Uri00 {.
+    importc, libprag.}
+
+proc build*(flags: UriFlags; scheme: cstring; userinfo: cstring = "";
+    host: cstring = ""; port: int; path: cstring; query: cstring = ""; fragment: cstring = ""): Uri =
+  fnew(result, gBoxedFreeGUri)
+  result.impl = g_uri_build(flags, scheme, safeStringToCString(userinfo), safeStringToCString(host), int32(port), path, safeStringToCString(query), safeStringToCString(fragment))
+
+proc g_uri_build_with_user(flags: UriFlags; scheme: cstring; user: cstring;
+    password: cstring; authParams: cstring; host: cstring; port: int32; path: cstring;
+    query: cstring; fragment: cstring): ptr Uri00 {.
+    importc, libprag.}
+
+proc buildWithUser*(flags: UriFlags; scheme: cstring; user: cstring = "";
+    password: cstring = ""; authParams: cstring = ""; host: cstring = ""; port: int;
+    path: cstring; query: cstring = ""; fragment: cstring = ""): Uri =
+  fnew(result, gBoxedFreeGUri)
+  result.impl = g_uri_build_with_user(flags, scheme, safeStringToCString(user), safeStringToCString(password), safeStringToCString(authParams), safeStringToCString(host), int32(port), path, safeStringToCString(query), safeStringToCString(fragment))
+
+proc g_uri_is_valid(uriString: cstring; flags: UriFlags; error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc isValid*(uriString: cstring; flags: UriFlags): bool =
+  var gerror: ptr glib.Error
+  let resul0 = g_uri_is_valid(uriString, flags, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+
+proc g_uri_join(flags: UriFlags; scheme: cstring; userinfo: cstring; host: cstring;
+    port: int32; path: cstring; query: cstring; fragment: cstring): cstring {.
+    importc, libprag.}
+
+proc join*(flags: UriFlags; scheme: cstring = ""; userinfo: cstring = "";
+    host: cstring = ""; port: int; path: cstring; query: cstring = ""; fragment: cstring = ""): string =
+  let resul0 = g_uri_join(flags, safeStringToCString(scheme), safeStringToCString(userinfo), safeStringToCString(host), int32(port), path, safeStringToCString(query), safeStringToCString(fragment))
+  result = $resul0
+  cogfree(resul0)
+
+proc g_uri_join_with_user(flags: UriFlags; scheme: cstring; user: cstring;
+    password: cstring; authParams: cstring; host: cstring; port: int32; path: cstring;
+    query: cstring; fragment: cstring): cstring {.
+    importc, libprag.}
+
+proc joinWithUser*(flags: UriFlags; scheme: cstring = ""; user: cstring = "";
+    password: cstring = ""; authParams: cstring = ""; host: cstring = ""; port: int;
+    path: cstring; query: cstring = ""; fragment: cstring = ""): string =
+  let resul0 = g_uri_join_with_user(flags, safeStringToCString(scheme), safeStringToCString(user), safeStringToCString(password), safeStringToCString(authParams), safeStringToCString(host), int32(port), path, safeStringToCString(query), safeStringToCString(fragment))
+  result = $resul0
+  cogfree(resul0)
+
+proc g_uri_parse(uriString: cstring; flags: UriFlags; error: ptr ptr glib.Error = nil): ptr Uri00 {.
+    importc, libprag.}
+
+proc parse*(uriString: cstring; flags: UriFlags): Uri =
+  var gerror: ptr glib.Error
+  let impl0 = g_uri_parse(uriString, flags, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  fnew(result, gBoxedFreeGUri)
+  result.impl = impl0
+
+proc g_uri_resolve_relative(baseUriString: cstring; uriRef: cstring; flags: UriFlags;
+    error: ptr ptr glib.Error = nil): cstring {.
+    importc, libprag.}
+
+proc resolveRelative*(baseUriString: cstring = ""; uriRef: cstring;
+    flags: UriFlags): string =
+  var gerror: ptr glib.Error
+  let resul0 = g_uri_resolve_relative(safeStringToCString(baseUriString), uriRef, flags, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = $resul0
+  cogfree(resul0)
+
+proc g_uri_split(uriRef: cstring; flags: UriFlags; scheme: var cstring; userinfo: var cstring;
+    host: var cstring; port: var int32; path: var cstring; query: var cstring;
+    fragment: var cstring; error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc split*(uriRef: cstring; flags: UriFlags; scheme: var string = cast[var string](nil);
+    userinfo: var string = cast[var string](nil); host: var string = cast[var string](nil);
+    port: var int = cast[var int](nil); path: var string = cast[var string](nil);
+    query: var string = cast[var string](nil); fragment: var string = cast[var string](nil)): bool =
+  var gerror: ptr glib.Error
+  var path_00: cstring
+  var query_00: cstring
+  var fragment_00: cstring
+  var port_00: int32
+  var userinfo_00: cstring
+  var host_00: cstring
+  var scheme_00: cstring
+  let resul0 = g_uri_split(uriRef, flags, scheme_00, userinfo_00, host_00, port_00, path_00, query_00, fragment_00, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+  if path.addr != nil:
+    path = $(path_00)
+  if query.addr != nil:
+    query = $(query_00)
+  if fragment.addr != nil:
+    fragment = $(fragment_00)
+  if port.addr != nil:
+    port = int(port_00)
+  if userinfo.addr != nil:
+    userinfo = $(userinfo_00)
+  if host.addr != nil:
+    host = $(host_00)
+  if scheme.addr != nil:
+    scheme = $(scheme_00)
+
+proc g_uri_split_network(uriString: cstring; flags: UriFlags; scheme: var cstring;
+    host: var cstring; port: var int32; error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc splitNetwork*(uriString: cstring; flags: UriFlags; scheme: var string = cast[var string](nil);
+    host: var string = cast[var string](nil); port: var int = cast[var int](nil)): bool =
+  var gerror: ptr glib.Error
+  var port_00: int32
+  var host_00: cstring
+  var scheme_00: cstring
+  let resul0 = g_uri_split_network(uriString, flags, scheme_00, host_00, port_00, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+  if port.addr != nil:
+    port = int(port_00)
+  if host.addr != nil:
+    host = $(host_00)
+  if scheme.addr != nil:
+    scheme = $(scheme_00)
+
+proc g_uri_split_with_user(uriRef: cstring; flags: UriFlags; scheme: var cstring;
+    user: var cstring; password: var cstring; authParams: var cstring; host: var cstring;
+    port: var int32; path: var cstring; query: var cstring; fragment: var cstring;
+    error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc splitWithUser*(uriRef: cstring; flags: UriFlags; scheme: var string = cast[var string](nil);
+    user: var string = cast[var string](nil); password: var string = cast[var string](nil);
+    authParams: var string = cast[var string](nil); host: var string = cast[var string](nil);
+    port: var int = cast[var int](nil); path: var string = cast[var string](nil);
+    query: var string = cast[var string](nil); fragment: var string = cast[var string](nil)): bool =
+  var gerror: ptr glib.Error
+  var path_00: cstring
+  var query_00: cstring
+  var user_00: cstring
+  var fragment_00: cstring
+  var authParams_00: cstring
+  var password_00: cstring
+  var port_00: int32
+  var host_00: cstring
+  var scheme_00: cstring
+  let resul0 = g_uri_split_with_user(uriRef, flags, scheme_00, user_00, password_00, authParams_00, host_00, port_00, path_00, query_00, fragment_00, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+  if path.addr != nil:
+    path = $(path_00)
+  if query.addr != nil:
+    query = $(query_00)
+  if user.addr != nil:
+    user = $(user_00)
+  if fragment.addr != nil:
+    fragment = $(fragment_00)
+  if authParams.addr != nil:
+    authParams = $(authParams_00)
+  if password.addr != nil:
+    password = $(password_00)
+  if port.addr != nil:
+    port = int(port_00)
+  if host.addr != nil:
+    host = $(host_00)
+  if scheme.addr != nil:
+    scheme = $(scheme_00)
+
+type
+  UriError* {.size: sizeof(cint), pure.} = enum
+    failed = 0
+    badScheme = 1
+    badUser = 2
+    badPassword = 3
+    badAuthParams = 4
+    badHost = 5
+    badPort = 6
+    badPath = 7
+    badQuery = 8
+    badFragment = 9
+
+type
+  UriParamsIter00* {.pure.} = object
+  UriParamsIter* = ref object
+    impl*: ptr UriParamsIter00
+    ignoreFinalizer*: bool
+
+proc g_uri_params_iter_init(self: ptr UriParamsIter00; params: cstring; length: int64;
+    separators: cstring; flags: UriParamsFlags) {.
+    importc, libprag.}
+
+proc init*(self: UriParamsIter; params: cstring; length: int64;
+    separators: cstring; flags: UriParamsFlags) =
+  g_uri_params_iter_init(cast[ptr UriParamsIter00](self.impl), params, length, separators, flags)
+
+proc g_uri_params_iter_next(self: ptr UriParamsIter00; attribute: var cstring;
+    value: var cstring; error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc next*(self: UriParamsIter; attribute: var string = cast[var string](nil);
+    value: var string = cast[var string](nil)): bool =
+  var gerror: ptr glib.Error
+  var attribute_00: cstring
+  var value_00: cstring
+  let resul0 = g_uri_params_iter_next(cast[ptr UriParamsIter00](self.impl), attribute_00, value_00, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+  if attribute.addr != nil:
+    attribute = $(attribute_00)
+  if value.addr != nil:
+    value = $(value_00)
 
 type
   UserDirectory* {.size: sizeof(cint), pure.} = enum
@@ -8119,27 +8714,27 @@ proc initVariantByte*[T](result: var T; value: uint8) {.deprecated.} =
   result.impl = g_variant_new_byte(value)
   result.ignoreFinalizer = true
 
-proc g_variant_new_bytestring(string: uint8Array): ptr Variant00 {.
+proc g_variant_new_bytestring(string: ptr uint8): ptr Variant00 {.
     importc, libprag.}
 
 proc newVariantBytestring*(string: seq[uint8] | string): Variant =
   fnew(result, finalizerunref)
-  result.impl = g_variant_new_bytestring(unsafeaddr(string[0]))
+  result.impl = g_variant_new_bytestring(cast[ptr uint8](unsafeaddr(string[0])))
   result.ignoreFinalizer = true
 
 proc newVariantBytestring*(tdesc: typedesc; string: seq[uint8] | string): tdesc =
   assert(result is Variant)
   fnew(result, finalizerunref)
-  result.impl = g_variant_new_bytestring(unsafeaddr(string[0]))
+  result.impl = g_variant_new_bytestring(cast[ptr uint8](unsafeaddr(string[0])))
   result.ignoreFinalizer = true
 
 proc initVariantBytestring*[T](result: var T; string: seq[uint8] | string) {.deprecated.} =
   assert(result is Variant)
   fnew(result, finalizerunref)
-  result.impl = g_variant_new_bytestring(unsafeaddr(string[0]))
+  result.impl = g_variant_new_bytestring(cast[ptr uint8](unsafeaddr(string[0])))
   result.ignoreFinalizer = true
 
-proc g_variant_new_bytestring_array(strv: cstringArray; length: int64): ptr Variant00 {.
+proc g_variant_new_bytestring_array(strv: ptr cstring; length: int64): ptr Variant00 {.
     importc, libprag.}
 
 proc newVariantBytestringArray*(strv: openArray[string]; length: int64): Variant =
@@ -8305,7 +8900,7 @@ proc initVariantObjectPath*[T](result: var T; objectPath: cstring) {.deprecated.
   result.impl = g_variant_new_object_path(objectPath)
   result.ignoreFinalizer = true
 
-proc g_variant_new_objv(strv: cstringArray; length: int64): ptr Variant00 {.
+proc g_variant_new_objv(strv: ptr cstring; length: int64): ptr Variant00 {.
     importc, libprag.}
 
 proc newVariantObjv*(strv: openArray[string]; length: int64): Variant =
@@ -8371,7 +8966,7 @@ proc initVariantString*[T](result: var T; string: cstring) {.deprecated.} =
   result.impl = g_variant_new_string(string)
   result.ignoreFinalizer = true
 
-proc g_variant_new_strv(strv: cstringArray; length: int64): ptr Variant00 {.
+proc g_variant_new_strv(strv: ptr cstring; length: int64): ptr Variant00 {.
     importc, libprag.}
 
 proc newVariantStrv*(strv: openArray[string]; length: int64): Variant =
@@ -8397,21 +8992,21 @@ proc initVariantStrv*[T](result: var T; strv: openArray[string]; length: int64) 
   result.impl = g_variant_new_strv(seq2CstringArray(strv, fs469n23), length)
   result.ignoreFinalizer = true
 
-proc g_variant_new_tuple(children: ptr Variant00Array; nChildren: uint64): ptr Variant00 {.
+proc g_variant_new_tuple(children: ptr ptr Variant00; nChildren: uint64): ptr Variant00 {.
     importc, libprag.}
 
-proc newVariantTuple*(children: ptr Variant00Array; nChildren: uint64): Variant =
+proc newVariantTuple*(children: ptr ptr Variant00; nChildren: uint64): Variant =
   fnew(result, finalizerunref)
   result.impl = g_variant_new_tuple(children, nChildren)
   result.ignoreFinalizer = true
 
-proc newVariantTuple*(tdesc: typedesc; children: ptr Variant00Array; nChildren: uint64): tdesc =
+proc newVariantTuple*(tdesc: typedesc; children: ptr ptr Variant00; nChildren: uint64): tdesc =
   assert(result is Variant)
   fnew(result, finalizerunref)
   result.impl = g_variant_new_tuple(children, nChildren)
   result.ignoreFinalizer = true
 
-proc initVariantTuple*[T](result: var T; children: ptr Variant00Array; nChildren: uint64) {.deprecated.} =
+proc initVariantTuple*[T](result: var T; children: ptr ptr Variant00; nChildren: uint64) {.deprecated.} =
   assert(result is Variant)
   fnew(result, finalizerunref)
   result.impl = g_variant_new_tuple(children, nChildren)
@@ -8518,26 +9113,26 @@ proc g_variant_compare(self: ptr Variant00; two: ptr Variant00): int32 {.
 proc compare*(self: Variant; two: Variant): int =
   int(g_variant_compare(cast[ptr Variant00](self.impl), cast[ptr Variant00](two.impl)))
 
-proc g_variant_dup_bytestring(self: ptr Variant00; length: var uint64): uint8Array {.
+proc g_variant_dup_bytestring(self: ptr Variant00; length: var uint64): ptr uint8 {.
     importc, libprag.}
 
-proc dupBytestring*(self: Variant; length: var uint64): seq[uint8] =
+proc dupBytestring*(self: Variant; length: var uint64 = cast[var uint64](nil)): seq[uint8] =
   let resul0 = g_variant_dup_bytestring(cast[ptr Variant00](self.impl), length)
   result = uint8ArrayZT2seq(resul0)
   cogfree(resul0)
 
-proc g_variant_dup_bytestring_array(self: ptr Variant00; length: var uint64): cstringArray {.
+proc g_variant_dup_bytestring_array(self: ptr Variant00; length: var uint64): ptr cstring {.
     importc, libprag.}
 
-proc dupBytestringArray*(self: Variant; length: var uint64): seq[string] =
+proc dupBytestringArray*(self: Variant; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = g_variant_dup_bytestring_array(cast[ptr Variant00](self.impl), length)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
-proc g_variant_dup_objv(self: ptr Variant00; length: var uint64): cstringArray {.
+proc g_variant_dup_objv(self: ptr Variant00; length: var uint64): ptr cstring {.
     importc, libprag.}
 
-proc dupObjv*(self: Variant; length: var uint64): seq[string] =
+proc dupObjv*(self: Variant; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = g_variant_dup_objv(cast[ptr Variant00](self.impl), length)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
@@ -8550,10 +9145,10 @@ proc dupString*(self: Variant; length: var uint64): string =
   result = $resul0
   cogfree(resul0)
 
-proc g_variant_dup_strv(self: ptr Variant00; length: var uint64): cstringArray {.
+proc g_variant_dup_strv(self: ptr Variant00; length: var uint64): ptr cstring {.
     importc, libprag.}
 
-proc dupStrv*(self: Variant; length: var uint64): seq[string] =
+proc dupStrv*(self: Variant; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = g_variant_dup_strv(cast[ptr Variant00](self.impl), length)
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
@@ -8582,7 +9177,7 @@ proc getByte*(self: Variant): uint8 =
 proc byte*(self: Variant): uint8 =
   g_variant_get_byte(cast[ptr Variant00](self.impl))
 
-proc g_variant_get_bytestring(self: ptr Variant00): uint8Array {.
+proc g_variant_get_bytestring(self: ptr Variant00): ptr uint8 {.
     importc, libprag.}
 
 proc getBytestring*(self: Variant): seq[uint8] =
@@ -8591,23 +9186,16 @@ proc getBytestring*(self: Variant): seq[uint8] =
 proc bytestring*(self: Variant): seq[uint8] =
   result = uint8ArrayZT2seq(g_variant_get_bytestring(cast[ptr Variant00](self.impl)))
 
-proc g_variant_get_bytestring_array(self: ptr Variant00; length: var uint64): cstringArray {.
+proc g_variant_get_bytestring_array(self: ptr Variant00; length: var uint64): ptr cstring {.
     importc, libprag.}
 
-proc getBytestringArray*(self: Variant; length: var uint64): seq[string] =
-  cstringArrayToSeq(g_variant_get_bytestring_array(cast[ptr Variant00](self.impl), length))
-
-proc bytestringArray*(self: Variant; length: var uint64): seq[string] =
+proc getBytestringArray*(self: Variant; length: var uint64 = cast[var uint64](nil)): seq[string] =
   cstringArrayToSeq(g_variant_get_bytestring_array(cast[ptr Variant00](self.impl), length))
 
 proc g_variant_get_child_value(self: ptr Variant00; index: uint64): ptr Variant00 {.
     importc, libprag.}
 
 proc getChildValue*(self: Variant; index: uint64): Variant =
-  fnew(result, finalizerunref)
-  result.impl = g_variant_get_child_value(cast[ptr Variant00](self.impl), index)
-
-proc childValue*(self: Variant; index: uint64): Variant =
   fnew(result, finalizerunref)
   result.impl = g_variant_get_child_value(cast[ptr Variant00](self.impl), index)
 
@@ -8692,13 +9280,10 @@ proc normalForm*(self: Variant): Variant =
   fnew(result, finalizerunref)
   result.impl = g_variant_get_normal_form(cast[ptr Variant00](self.impl))
 
-proc g_variant_get_objv(self: ptr Variant00; length: var uint64): cstringArray {.
+proc g_variant_get_objv(self: ptr Variant00; length: var uint64): ptr cstring {.
     importc, libprag.}
 
-proc getObjv*(self: Variant; length: var uint64): seq[string] =
-  cstringArrayToSeq(g_variant_get_objv(cast[ptr Variant00](self.impl), length))
-
-proc objv*(self: Variant; length: var uint64): seq[string] =
+proc getObjv*(self: Variant; length: var uint64 = cast[var uint64](nil)): seq[string] =
   cstringArrayToSeq(g_variant_get_objv(cast[ptr Variant00](self.impl), length))
 
 proc g_variant_get_size(self: ptr Variant00): uint64 {.
@@ -8713,16 +9298,13 @@ proc size*(self: Variant): uint64 =
 proc g_variant_get_string(self: ptr Variant00; length: var uint64): cstring {.
     importc, libprag.}
 
-proc getString*(self: Variant; length: var uint64): string =
+proc getString*(self: Variant; length: var uint64 = cast[var uint64](nil)): string =
   result = $g_variant_get_string(cast[ptr Variant00](self.impl), length)
 
-proc g_variant_get_strv(self: ptr Variant00; length: var uint64): cstringArray {.
+proc g_variant_get_strv(self: ptr Variant00; length: var uint64): ptr cstring {.
     importc, libprag.}
 
-proc getStrv*(self: Variant; length: var uint64): seq[string] =
-  cstringArrayToSeq(g_variant_get_strv(cast[ptr Variant00](self.impl), length))
-
-proc strv*(self: Variant; length: var uint64): seq[string] =
+proc getStrv*(self: Variant; length: var uint64 = cast[var uint64](nil)): seq[string] =
   cstringArrayToSeq(g_variant_get_strv(cast[ptr Variant00](self.impl), length))
 
 proc g_variant_get_type_string(self: ptr Variant00): cstring {.
@@ -8893,7 +9475,7 @@ type
     impl*: ptr VariantType00
     ignoreFinalizer*: bool
 
-proc g_variant_type_get_gtype*(): GType {.importc, libprag.}
+proc g_variant_type_get_gtype*(): GType {.importc, gobjectlibprag.}
 
 proc g_variant_type_free(self: ptr VariantType00) {.
     importc, libprag.}
@@ -8962,19 +9544,19 @@ proc initVariantTypeMaybe*[T](result: var T; element: VariantType) {.deprecated.
   fnew(result, finalizerfree)
   result.impl = g_variant_type_new_maybe(cast[ptr VariantType00](element.impl))
 
-proc g_variant_type_new_tuple(items: ptr VariantType00Array; length: int32): ptr VariantType00 {.
+proc g_variant_type_new_tuple(items: ptr ptr VariantType00; length: int32): ptr VariantType00 {.
     importc, libprag.}
 
-proc newVariantTypeTuple*(items: ptr VariantType00Array; length: int): VariantType =
+proc newVariantTypeTuple*(items: ptr ptr VariantType00; length: int): VariantType =
   fnew(result, finalizerfree)
   result.impl = g_variant_type_new_tuple(items, int32(length))
 
-proc newVariantTypeTuple*(tdesc: typedesc; items: ptr VariantType00Array; length: int): tdesc =
+proc newVariantTypeTuple*(tdesc: typedesc; items: ptr ptr VariantType00; length: int): tdesc =
   assert(result is VariantType)
   fnew(result, finalizerfree)
   result.impl = g_variant_type_new_tuple(items, int32(length))
 
-proc initVariantTypeTuple*[T](result: var T; items: ptr VariantType00Array; length: int) {.deprecated.} =
+proc initVariantTypeTuple*[T](result: var T; items: ptr ptr VariantType00; length: int) {.deprecated.} =
   assert(result is VariantType)
   fnew(result, finalizerfree)
   result.impl = g_variant_type_new_tuple(items, int32(length))
@@ -9141,10 +9723,11 @@ proc stringIsValid*(typeString: cstring): bool =
 proc g_variant_type_string_scan(string: cstring; limit: cstring; endptr: var cstring): gboolean {.
     importc, libprag.}
 
-proc stringScan*(string: cstring; limit: cstring = ""; endptr: var string): bool =
-  var endptr_00 = cstring(endptr)
+proc stringScan*(string: cstring; limit: cstring = ""; endptr: var string = cast[var string](nil)): bool =
+  var endptr_00: cstring
   result = toBool(g_variant_type_string_scan(string, safeStringToCString(limit), endptr_00))
-  endptr = $(endptr_00)
+  if endptr.addr != nil:
+    endptr = $(endptr_00)
 
 proc g_variant_new_fixed_array(elementType: ptr VariantType00; elements: pointer;
     nElements: uint64; elementSize: uint64): ptr Variant00 {.
@@ -9191,7 +9774,7 @@ proc initVariantFromBytes*[T](result: var T; `type`: VariantType; bytes: Bytes; 
   result.impl = g_variant_new_from_bytes(cast[ptr VariantType00](`type`.impl), cast[ptr Bytes00](bytes.impl), gboolean(trusted))
   result.ignoreFinalizer = true
 
-proc g_variant_new_from_data(`type`: ptr VariantType00; data: uint8Array;
+proc g_variant_new_from_data(`type`: ptr VariantType00; data: ptr uint8;
     size: uint64; trusted: gboolean; notify: DestroyNotify; userData: pointer): ptr Variant00 {.
     importc, libprag.}
 
@@ -9199,7 +9782,7 @@ proc newVariantFromData*(`type`: VariantType; data: seq[uint8] | string;
     trusted: bool; notify: DestroyNotify; userData: pointer): Variant =
   let size = uint64(data.len)
   fnew(result, finalizerunref)
-  result.impl = g_variant_new_from_data(cast[ptr VariantType00](`type`.impl), unsafeaddr(data[0]), size, gboolean(trusted), notify, userData)
+  result.impl = g_variant_new_from_data(cast[ptr VariantType00](`type`.impl), cast[ptr uint8](unsafeaddr(data[0])), size, gboolean(trusted), notify, userData)
   result.ignoreFinalizer = true
 
 proc newVariantFromData*(tdesc: typedesc; `type`: VariantType; data: seq[uint8] | string;
@@ -9207,7 +9790,7 @@ proc newVariantFromData*(tdesc: typedesc; `type`: VariantType; data: seq[uint8] 
   let size = uint64(data.len)
   assert(result is Variant)
   fnew(result, finalizerunref)
-  result.impl = g_variant_new_from_data(cast[ptr VariantType00](`type`.impl), unsafeaddr(data[0]), size, gboolean(trusted), notify, userData)
+  result.impl = g_variant_new_from_data(cast[ptr VariantType00](`type`.impl), cast[ptr uint8](unsafeaddr(data[0])), size, gboolean(trusted), notify, userData)
   result.ignoreFinalizer = true
 
 proc initVariantFromData*[T](result: var T; `type`: VariantType; data: seq[uint8] | string;
@@ -9215,7 +9798,7 @@ proc initVariantFromData*[T](result: var T; `type`: VariantType; data: seq[uint8
   let size = uint64(data.len)
   assert(result is Variant)
   fnew(result, finalizerunref)
-  result.impl = g_variant_new_from_data(cast[ptr VariantType00](`type`.impl), unsafeaddr(data[0]), size, gboolean(trusted), notify, userData)
+  result.impl = g_variant_new_from_data(cast[ptr VariantType00](`type`.impl), cast[ptr uint8](unsafeaddr(data[0])), size, gboolean(trusted), notify, userData)
   result.ignoreFinalizer = true
 
 proc g_variant_new_maybe(childType: ptr VariantType00; child: ptr Variant00): ptr Variant00 {.
@@ -9259,24 +9842,24 @@ proc lookupValue*(self: Variant; key: cstring; expectedType: VariantType = nil):
   fnew(result, finalizerunref)
   result.impl = g_variant_lookup_value(cast[ptr Variant00](self.impl), key, if expectedType.isNil: nil else: cast[ptr VariantType00](expectedType.impl))
 
-proc g_variant_new_array(childType: ptr VariantType00; children: ptr Variant00Array;
+proc g_variant_new_array(childType: ptr VariantType00; children: ptr ptr Variant00;
     nChildren: uint64): ptr Variant00 {.
     importc, libprag.}
 
-proc newVariantArray*(childType: VariantType = nil; children: ptr Variant00Array;
+proc newVariantArray*(childType: VariantType = nil; children: ptr ptr Variant00;
     nChildren: uint64): Variant =
   fnew(result, finalizerunref)
   result.impl = g_variant_new_array(if childType.isNil: nil else: cast[ptr VariantType00](childType.impl), children, nChildren)
   result.ignoreFinalizer = true
 
-proc newVariantArray*(tdesc: typedesc; childType: VariantType = nil; children: ptr Variant00Array;
+proc newVariantArray*(tdesc: typedesc; childType: VariantType = nil; children: ptr ptr Variant00;
     nChildren: uint64): tdesc =
   assert(result is Variant)
   fnew(result, finalizerunref)
   result.impl = g_variant_new_array(if childType.isNil: nil else: cast[ptr VariantType00](childType.impl), children, nChildren)
   result.ignoreFinalizer = true
 
-proc initVariantArray*[T](result: var T; childType: VariantType = nil; children: ptr Variant00Array;
+proc initVariantArray*[T](result: var T; childType: VariantType = nil; children: ptr ptr Variant00;
     nChildren: uint64) {.deprecated.} =
   assert(result is Variant)
   fnew(result, finalizerunref)
@@ -9304,7 +9887,7 @@ type
     impl*: ptr VariantBuilder00
     ignoreFinalizer*: bool
 
-proc g_variant_builder_get_type*(): GType {.importc, libprag.}
+proc g_variant_builder_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGVariantBuilder*(self: VariantBuilder) =
   if not self.ignoreFinalizer:
@@ -9315,6 +9898,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_variant_builder_get_type(), cast[ptr VariantBuilder00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var VariantBuilder) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGVariantBuilder)
 
 proc g_variant_builder_unref(self: ptr VariantBuilder00) {.
     importc, libprag.}
@@ -9382,7 +9971,7 @@ type
     impl*: ptr VariantDict00
     ignoreFinalizer*: bool
 
-proc g_variant_dict_get_type*(): GType {.importc, libprag.}
+proc g_variant_dict_get_type*(): GType {.importc, gobjectlibprag.}
 
 proc gBoxedFreeGVariantDict*(self: VariantDict) =
   if not self.ignoreFinalizer:
@@ -9393,6 +9982,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_variant_dict_get_type(), cast[ptr VariantDict00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var VariantDict) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGVariantDict)
 
 proc g_variant_dict_unref(self: ptr VariantDict00) {.
     importc, libprag.}
@@ -9541,7 +10136,7 @@ proc g_ascii_string_to_signed(str: cstring; base: uint32; min: int64; max: int64
     importc, libprag.}
 
 proc asciiStringToSigned*(str: cstring; base: int; min: int64; max: int64;
-    outNum: var int64): bool =
+    outNum: var int64 = cast[var int64](nil)): bool =
   var gerror: ptr glib.Error
   let resul0 = g_ascii_string_to_signed(str, uint32(base), min, max, outNum, addr gerror)
   if gerror != nil:
@@ -9555,7 +10150,7 @@ proc g_ascii_string_to_unsigned(str: cstring; base: uint32; min: uint64;
     importc, libprag.}
 
 proc asciiStringToUnsigned*(str: cstring; base: int; min: uint64; max: uint64;
-    outNum: var uint64): bool =
+    outNum: var uint64 = cast[var uint64](nil)): bool =
   var gerror: ptr glib.Error
   let resul0 = g_ascii_string_to_unsigned(str, uint32(base), min, max, outNum, addr gerror)
   if gerror != nil:
@@ -9573,26 +10168,31 @@ proc asciiStrncasecmp*(s1: cstring; s2: cstring; n: uint64): int =
 proc g_ascii_strtod(nptr: cstring; endptr: var cstring): cdouble {.
     importc, libprag.}
 
-proc asciiStrtod*(nptr: cstring; endptr: var string): cdouble =
-  var endptr_00 = cstring(endptr)
+proc asciiStrtod*(nptr: cstring; endptr: var string = cast[var string](nil)): cdouble =
+  var endptr_00: cstring
   result = g_ascii_strtod(nptr, endptr_00)
-  endptr = $(endptr_00)
+  if endptr.addr != nil:
+    endptr = $(endptr_00)
 
 proc g_ascii_strtoll(nptr: cstring; endptr: var cstring; base: uint32): int64 {.
     importc, libprag.}
 
-proc asciiStrtoll*(nptr: cstring; endptr: var string; base: int): int64 =
-  var endptr_00 = cstring(endptr)
+proc asciiStrtoll*(nptr: cstring; endptr: var string = cast[var string](nil);
+    base: int): int64 =
+  var endptr_00: cstring
   result = g_ascii_strtoll(nptr, endptr_00, uint32(base))
-  endptr = $(endptr_00)
+  if endptr.addr != nil:
+    endptr = $(endptr_00)
 
 proc g_ascii_strtoull(nptr: cstring; endptr: var cstring; base: uint32): uint64 {.
     importc, libprag.}
 
-proc asciiStrtoull*(nptr: cstring; endptr: var string; base: int): uint64 =
-  var endptr_00 = cstring(endptr)
+proc asciiStrtoull*(nptr: cstring; endptr: var string = cast[var string](nil);
+    base: int): uint64 =
+  var endptr_00: cstring
   result = g_ascii_strtoull(nptr, endptr_00, uint32(base))
-  endptr = $(endptr_00)
+  if endptr.addr != nil:
+    endptr = $(endptr_00)
 
 proc g_ascii_strup(str: cstring; len: int64): cstring {.
     importc, libprag.}
@@ -9774,20 +10374,20 @@ proc atomicRefCountInc*(arc: ptr int32) {.
 proc atomicRefCountInit*(arc: ptr int32) {.
     importc: "g_atomic_ref_count_init", libprag.}
 
-proc g_base64_decode(text: cstring; outLen: var uint64): uint8Array {.
+proc g_base64_decode(text: cstring; outLen: var uint64): ptr uint8 {.
     importc, libprag.}
 
 proc base64Decode*(text: cstring; outLen: var uint64): seq[uint8] =
   let resul0 = g_base64_decode(text, outLen)
-  result = uint8ArrayZT2seq(resul0)
+  result = uint8ArrayToSeq(resul0, outLen.int)
   cogfree(resul0)
 
-proc g_base64_encode(data: uint8Array; len: uint64): cstring {.
+proc g_base64_encode(data: ptr uint8; len: uint64): cstring {.
     importc, libprag.}
 
 proc base64Encode*(data: seq[uint8] | string): string =
   let len = uint64(data.len)
-  let resul0 = g_base64_encode(unsafeaddr(data[0]), len)
+  let resul0 = g_base64_encode(cast[ptr uint8](unsafeaddr(data[0])), len)
   result = $resul0
   cogfree(resul0)
 
@@ -9833,7 +10433,7 @@ proc g_bit_unlock(address: ptr int32; lockBit: int32) {.
 proc bitUnlock*(address: ptr int32; lockBit: int) =
   g_bit_unlock(address, int32(lockBit))
 
-proc g_build_filenamev(args: cstringArray): cstring {.
+proc g_build_filenamev(args: ptr cstring): cstring {.
     importc, libprag.}
 
 proc buildFilenamev*(args: varargs[string, `$`]): string =
@@ -9843,7 +10443,7 @@ proc buildFilenamev*(args: varargs[string, `$`]): string =
   result = $resul0
   cogfree(resul0)
 
-proc g_build_pathv(separator: cstring; args: cstringArray): cstring {.
+proc g_build_pathv(separator: cstring; args: ptr cstring): cstring {.
     importc, libprag.}
 
 proc buildPathv*(separator: cstring; args: varargs[string, `$`]): string =
@@ -9884,7 +10484,7 @@ proc childWatchAdd*(priority: int; pid: int; function: ChildWatchFunc;
 proc g_child_watch_source_new(pid: int32): ptr Source00 {.
     importc, libprag.}
 
-proc childWatchSourceNew*(pid: int): Source =
+proc newChildWatchSource*(pid: int): Source =
   fnew(result, gBoxedFreeGSource)
   result.impl = g_child_watch_source_new(int32(pid))
 
@@ -9911,13 +10511,13 @@ proc computeChecksumForBytes*(checksumType: ChecksumType; data: Bytes): string =
   result = $resul0
   cogfree(resul0)
 
-proc g_compute_checksum_for_data(checksumType: ChecksumType; data: uint8Array;
+proc g_compute_checksum_for_data(checksumType: ChecksumType; data: ptr uint8;
     length: uint64): cstring {.
     importc, libprag.}
 
 proc computeChecksumForData*(checksumType: ChecksumType; data: seq[uint8] | string): string =
   let length = uint64(data.len)
-  let resul0 = g_compute_checksum_for_data(checksumType, unsafeaddr(data[0]), length)
+  let resul0 = g_compute_checksum_for_data(checksumType, cast[ptr uint8](unsafeaddr(data[0])), length)
   result = $resul0
   cogfree(resul0)
 
@@ -9940,31 +10540,31 @@ proc computeHmacForBytes*(digestType: ChecksumType; key: Bytes; data: Bytes): st
   result = $resul0
   cogfree(resul0)
 
-proc g_compute_hmac_for_string(digestType: ChecksumType; key: uint8Array;
+proc g_compute_hmac_for_string(digestType: ChecksumType; key: ptr uint8;
     keyLen: uint64; str: cstring; length: int64): cstring {.
     importc, libprag.}
 
 proc computeHmacForString*(digestType: ChecksumType; key: seq[uint8] | string;
     str: cstring; length: int64): string =
   let keyLen = uint64(key.len)
-  let resul0 = g_compute_hmac_for_string(digestType, unsafeaddr(key[0]), keyLen, str, length)
+  let resul0 = g_compute_hmac_for_string(digestType, cast[ptr uint8](unsafeaddr(key[0])), keyLen, str, length)
   result = $resul0
   cogfree(resul0)
 
-proc g_convert(str: uint8Array; len: int64; toCodeset: cstring; fromCodeset: cstring;
-    bytesRead: var uint64; bytesWritten: var uint64; error: ptr ptr glib.Error = nil): uint8Array {.
+proc g_convert(str: ptr uint8; len: int64; toCodeset: cstring; fromCodeset: cstring;
+    bytesRead: var uint64; bytesWritten: var uint64; error: ptr ptr glib.Error = nil): ptr uint8 {.
     importc, libprag.}
 
 proc convert*(str: seq[uint8] | string; toCodeset: cstring; fromCodeset: cstring;
-    bytesRead: var uint64; bytesWritten: var uint64): seq[uint8] =
+    bytesRead: var uint64 = cast[var uint64](nil); bytesWritten: var uint64 = cast[var uint64](nil)): seq[uint8] =
   let len = int64(str.len)
   var gerror: ptr glib.Error
-  let resul0 = g_convert(unsafeaddr(str[0]), len, toCodeset, fromCodeset, bytesRead, bytesWritten, addr gerror)
+  let resul0 = g_convert(cast[ptr uint8](unsafeaddr(str[0])), len, toCodeset, fromCodeset, bytesRead, bytesWritten, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = uint8ArrayZT2seq(resul0)
+  result = uint8ArrayToSeq(resul0, len.int)
   cogfree(resul0)
 
 proc g_convert_error_quark(): uint32 {.
@@ -9973,58 +10573,53 @@ proc g_convert_error_quark(): uint32 {.
 proc convertErrorQuark*(): int =
   int(g_convert_error_quark())
 
-proc g_convert_with_fallback(str: uint8Array; len: int64; toCodeset: cstring;
+proc g_convert_with_fallback(str: ptr uint8; len: int64; toCodeset: cstring;
     fromCodeset: cstring; fallback: cstring; bytesRead: var uint64; bytesWritten: var uint64;
-    error: ptr ptr glib.Error = nil): uint8Array {.
+    error: ptr ptr glib.Error = nil): ptr uint8 {.
     importc, libprag.}
 
 proc convertWithFallback*(str: seq[uint8] | string; toCodeset: cstring;
-    fromCodeset: cstring; fallback: cstring; bytesRead: var uint64; bytesWritten: var uint64): seq[uint8] =
+    fromCodeset: cstring; fallback: cstring; bytesRead: var uint64 = cast[var uint64](nil);
+    bytesWritten: var uint64 = cast[var uint64](nil)): seq[uint8] =
   let len = int64(str.len)
   var gerror: ptr glib.Error
-  let resul0 = g_convert_with_fallback(unsafeaddr(str[0]), len, toCodeset, fromCodeset, fallback, bytesRead, bytesWritten, addr gerror)
+  let resul0 = g_convert_with_fallback(cast[ptr uint8](unsafeaddr(str[0])), len, toCodeset, fromCodeset, fallback, bytesRead, bytesWritten, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = uint8ArrayZT2seq(resul0)
+  result = uint8ArrayToSeq(resul0, len.int)
   cogfree(resul0)
 
-proc g_datalist_foreach(datalist: ptr Data00; `func`: DataForeachFunc; userData: pointer) {.
-    importc, libprag.}
+proc datalistForeach*(datalist: Data; `func`: DataForeachFunc; userData: pointer) {.
+    importc: "g_datalist_foreach", libprag.}
 
-proc datalistForeach*(datalist: Data; `func`: DataForeachFunc; userData: pointer) =
-  g_datalist_foreach(cast[ptr Data00](datalist.impl), `func`, userData)
+proc datalistGetData*(datalist: Data; key: cstring): pointer {.
+    importc: "g_datalist_get_data", libprag.}
 
-proc g_datalist_get_data(datalist: ptr Data00; key: cstring): pointer {.
-    importc, libprag.}
-
-proc datalistGetData*(datalist: Data; key: cstring): pointer =
-  g_datalist_get_data(cast[ptr Data00](datalist.impl), key)
-
-proc g_datalist_get_flags(datalist: ptr Data00): uint32 {.
+proc g_datalist_get_flags(datalist: Data): uint32 {.
     importc, libprag.}
 
 proc datalistGetFlags*(datalist: Data): int =
-  int(g_datalist_get_flags(cast[ptr Data00](datalist.impl)))
+  int(g_datalist_get_flags(datalist))
 
-proc g_datalist_id_get_data(datalist: ptr Data00; keyId: uint32): pointer {.
+proc g_datalist_id_get_data(datalist: Data; keyId: uint32): pointer {.
     importc, libprag.}
 
 proc datalistIdGetData*(datalist: Data; keyId: int): pointer =
-  g_datalist_id_get_data(cast[ptr Data00](datalist.impl), uint32(keyId))
+  g_datalist_id_get_data(datalist, uint32(keyId))
 
-proc g_datalist_set_flags(datalist: ptr Data00; flags: uint32) {.
+proc g_datalist_set_flags(datalist: Data; flags: uint32) {.
     importc, libprag.}
 
 proc datalistSetFlags*(datalist: Data; flags: int) =
-  g_datalist_set_flags(cast[ptr Data00](datalist.impl), uint32(flags))
+  g_datalist_set_flags(datalist, uint32(flags))
 
-proc g_datalist_unset_flags(datalist: ptr Data00; flags: uint32) {.
+proc g_datalist_unset_flags(datalist: Data; flags: uint32) {.
     importc, libprag.}
 
 proc datalistUnsetFlags*(datalist: Data; flags: int) =
-  g_datalist_unset_flags(cast[ptr Data00](datalist.impl), uint32(flags))
+  g_datalist_unset_flags(datalist, uint32(flags))
 
 proc datasetDestroy*(datasetLocation: pointer) {.
     importc: "g_dataset_destroy", libprag.}
@@ -10094,7 +10689,7 @@ proc g_dpgettext2(domain: cstring; context: cstring; msgid: cstring): cstring {.
 proc dpgettext2*(domain: cstring = ""; context: cstring; msgid: cstring): string =
   result = $g_dpgettext2(safeStringToCString(domain), context, msgid)
 
-proc g_environ_getenv(envp: cstringArray; variable: cstring): cstring {.
+proc g_environ_getenv(envp: ptr cstring; variable: cstring): cstring {.
     importc, libprag.}
 
 proc environGetenv*(envp: openArray[string]; variable: cstring): string =
@@ -10102,8 +10697,8 @@ proc environGetenv*(envp: openArray[string]; variable: cstring): string =
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   result = $g_environ_getenv(seq2CstringArray(envp, fs469n23), variable)
 
-proc g_environ_setenv(envp: cstringArray; variable: cstring; value: cstring;
-    overwrite: gboolean): cstringArray {.
+proc g_environ_setenv(envp: ptr cstring; variable: cstring; value: cstring;
+    overwrite: gboolean): ptr cstring {.
     importc, libprag.}
 
 proc environSetenv*(envp: openArray[string]; variable: cstring; value: cstring;
@@ -10114,7 +10709,7 @@ proc environSetenv*(envp: openArray[string]; variable: cstring; value: cstring;
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
-proc g_environ_unsetenv(envp: cstringArray; variable: cstring): cstringArray {.
+proc g_environ_unsetenv(envp: ptr cstring; variable: cstring): ptr cstring {.
     importc, libprag.}
 
 proc environUnsetenv*(envp: openArray[string]; variable: cstring): seq[string] =
@@ -10141,14 +10736,15 @@ proc g_file_open_tmp(tmpl: cstring; nameUsed: var cstring; error: ptr ptr glib.E
 
 proc fileOpenTmp*(tmpl: cstring = ""; nameUsed: var string): int =
   var gerror: ptr glib.Error
-  var nameUsed_00 = cstring(nameUsed)
+  var nameUsed_00: cstring
   let resul0 = g_file_open_tmp(safeStringToCString(tmpl), nameUsed_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = int(resul0)
-  nameUsed = $(nameUsed_00)
+  if nameUsed.addr != nil:
+    nameUsed = $(nameUsed_00)
 
 proc g_file_read_link(filename: cstring; error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
@@ -10163,14 +10759,29 @@ proc fileReadLink*(filename: cstring): string =
   result = $resul0
   cogfree(resul0)
 
-proc g_file_set_contents(filename: cstring; contents: uint8Array; length: int64;
+proc g_file_set_contents(filename: cstring; contents: ptr uint8; length: int64;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc fileSetContents*(filename: cstring; contents: seq[uint8] | string): bool =
   let length = int64(contents.len)
   var gerror: ptr glib.Error
-  let resul0 = g_file_set_contents(filename, unsafeaddr(contents[0]), length, addr gerror)
+  let resul0 = g_file_set_contents(filename, cast[ptr uint8](unsafeaddr(contents[0])), length, addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+
+proc g_file_set_contents_full(filename: cstring; contents: ptr uint8; length: int64;
+    flags: FileSetContentsFlags; mode: int32; error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc fileSetContentsFull*(filename: cstring; contents: seq[uint8] | string;
+    flags: FileSetContentsFlags; mode: int): bool =
+  let length = int64(contents.len)
+  var gerror: ptr glib.Error
+  let resul0 = g_file_set_contents_full(filename, cast[ptr uint8](unsafeaddr(contents[0])), length, flags, int32(mode), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10202,9 +10813,9 @@ proc filenameDisplayName*(filename: cstring): string =
 proc g_filename_from_uri(uri: cstring; hostname: var cstring; error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
 
-proc filenameFromUri*(uri: cstring; hostname: var string): string =
+proc filenameFromUri*(uri: cstring; hostname: var string = cast[var string](nil)): string =
   var gerror: ptr glib.Error
-  var hostname_00 = cstring(hostname)
+  var hostname_00: cstring
   let resul0 = g_filename_from_uri(uri, hostname_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
@@ -10212,14 +10823,15 @@ proc filenameFromUri*(uri: cstring; hostname: var string): string =
     raise newException(GException, msg)
   result = $resul0
   cogfree(resul0)
-  hostname = $(hostname_00)
+  if hostname.addr != nil:
+    hostname = $(hostname_00)
 
 proc g_filename_from_utf8(utf8string: cstring; len: int64; bytesRead: var uint64;
     bytesWritten: var uint64; error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
 
-proc filenameFromUtf8*(utf8string: cstring; len: int64; bytesRead: var uint64;
-    bytesWritten: var uint64): string =
+proc filenameFromUtf8*(utf8string: cstring; len: int64; bytesRead: var uint64 = cast[var uint64](nil);
+    bytesWritten: var uint64 = cast[var uint64](nil)): string =
   var gerror: ptr glib.Error
   let resul0 = g_filename_from_utf8(utf8string, len, bytesRead, bytesWritten, addr gerror)
   if gerror != nil:
@@ -10246,8 +10858,8 @@ proc g_filename_to_utf8(opsysstring: cstring; len: int64; bytesRead: var uint64;
     bytesWritten: var uint64; error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
 
-proc filenameToUtf8*(opsysstring: cstring; len: int64; bytesRead: var uint64;
-    bytesWritten: var uint64): string =
+proc filenameToUtf8*(opsysstring: cstring; len: int64; bytesRead: var uint64 = cast[var uint64](nil);
+    bytesWritten: var uint64 = cast[var uint64](nil)): string =
   var gerror: ptr glib.Error
   let resul0 = g_filename_to_utf8(opsysstring, len, bytesRead, bytesWritten, addr gerror)
   if gerror != nil:
@@ -10306,24 +10918,20 @@ proc getApplicationName*(): string =
     return
   result = $resul0
 
-proc applicationName*(): string =
-  let resul0 = g_get_application_name()
-  if resul0.isNil:
-    return
-  result = $resul0
-
 proc g_get_charset(charset: var cstring): gboolean {.
     importc, libprag.}
 
-proc getCharset*(charset: var string): bool =
-  var charset_00 = cstring(charset)
+proc getCharset*(charset: var string = cast[var string](nil)): bool =
+  var charset_00: cstring
   result = toBool(g_get_charset(charset_00))
-  charset = $(charset_00)
+  if charset.addr != nil:
+    charset = $(charset_00)
 
-proc charset*(charset: var string): bool =
-  var charset_00 = cstring(charset)
+proc charset*(charset: var string = cast[var string](nil)): bool =
+  var charset_00: cstring
   result = toBool(g_get_charset(charset_00))
-  charset = $(charset_00)
+  if charset.addr != nil:
+    charset = $(charset_00)
 
 proc g_get_codeset(): cstring {.
     importc, libprag.}
@@ -10333,23 +10941,20 @@ proc getCodeset*(): string =
   result = $resul0
   cogfree(resul0)
 
-proc codeset*(): string =
-  let resul0 = g_get_codeset()
-  result = $resul0
-  cogfree(resul0)
-
 proc g_get_console_charset(charset: var cstring): gboolean {.
     importc, libprag.}
 
-proc getConsoleCharset*(charset: var string): bool =
-  var charset_00 = cstring(charset)
+proc getConsoleCharset*(charset: var string = cast[var string](nil)): bool =
+  var charset_00: cstring
   result = toBool(g_get_console_charset(charset_00))
-  charset = $(charset_00)
+  if charset.addr != nil:
+    charset = $(charset_00)
 
-proc consoleCharset*(charset: var string): bool =
-  var charset_00 = cstring(charset)
+proc consoleCharset*(charset: var string = cast[var string](nil)): bool =
+  var charset_00: cstring
   result = toBool(g_get_console_charset(charset_00))
-  charset = $(charset_00)
+  if charset.addr != nil:
+    charset = $(charset_00)
 
 proc g_get_current_dir(): cstring {.
     importc, libprag.}
@@ -10359,15 +10964,10 @@ proc getCurrentDir*(): string =
   result = $resul0
   cogfree(resul0)
 
-proc currentDir*(): string =
-  let resul0 = g_get_current_dir()
-  result = $resul0
-  cogfree(resul0)
-
 proc getCurrentTime*(resu: TimeVal) {.
     importc: "g_get_current_time", libprag.}
 
-proc g_get_environ(): cstringArray {.
+proc g_get_environ(): ptr cstring {.
     importc, libprag.}
 
 proc getEnviron*(): seq[string] =
@@ -10375,12 +10975,7 @@ proc getEnviron*(): seq[string] =
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
-proc environ*(): seq[string] =
-  let resul0 = g_get_environ()
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc g_get_filename_charsets(filenameCharsets: var cstringArray): gboolean {.
+proc g_get_filename_charsets(filenameCharsets: var ptr cstring): gboolean {.
     importc, libprag.}
 
 proc getFilenameCharsets*(filenameCharsets: var seq[string]): bool =
@@ -10388,22 +10983,21 @@ proc getFilenameCharsets*(filenameCharsets: var seq[string]): bool =
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var filenameCharsets_00 = seq2CstringArray(filenameCharsets, fs469n23)
   result = toBool(g_get_filename_charsets(filenameCharsets_00))
-  filenameCharsets = cstringArrayToSeq(filenameCharsets_00)
+  if filenameCharsets.addr != nil:
+    filenameCharsets = cstringArrayToSeq(filenameCharsets_00)
 
 proc filenameCharsets*(filenameCharsets: var seq[string]): bool =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var filenameCharsets_00 = seq2CstringArray(filenameCharsets, fs469n23)
   result = toBool(g_get_filename_charsets(filenameCharsets_00))
-  filenameCharsets = cstringArrayToSeq(filenameCharsets_00)
+  if filenameCharsets.addr != nil:
+    filenameCharsets = cstringArrayToSeq(filenameCharsets_00)
 
 proc g_get_home_dir(): cstring {.
     importc, libprag.}
 
 proc getHomeDir*(): string =
-  result = $g_get_home_dir()
-
-proc homeDir*(): string =
   result = $g_get_home_dir()
 
 proc g_get_host_name(): cstring {.
@@ -10412,19 +11006,13 @@ proc g_get_host_name(): cstring {.
 proc getHostName*(): string =
   result = $g_get_host_name()
 
-proc hostName*(): string =
-  result = $g_get_host_name()
-
-proc g_get_language_names(): cstringArray {.
+proc g_get_language_names(): ptr cstring {.
     importc, libprag.}
 
 proc getLanguageNames*(): seq[string] =
   cstringArrayToSeq(g_get_language_names())
 
-proc languageNames*(): seq[string] =
-  cstringArrayToSeq(g_get_language_names())
-
-proc g_get_language_names_with_category(categoryName: cstring): cstringArray {.
+proc g_get_language_names_with_category(categoryName: cstring): ptr cstring {.
     importc, libprag.}
 
 proc getLanguageNamesWithCategory*(categoryName: cstring): seq[string] =
@@ -10433,7 +11021,7 @@ proc getLanguageNamesWithCategory*(categoryName: cstring): seq[string] =
 proc languageNamesWithCategory*(categoryName: cstring): seq[string] =
   cstringArrayToSeq(g_get_language_names_with_category(categoryName))
 
-proc g_get_locale_variants(locale: cstring): cstringArray {.
+proc g_get_locale_variants(locale: cstring): ptr cstring {.
     importc, libprag.}
 
 proc getLocaleVariants*(locale: cstring): seq[string] =
@@ -10449,16 +11037,10 @@ proc localeVariants*(locale: cstring): seq[string] =
 proc getMonotonicTime*(): int64 {.
     importc: "g_get_monotonic_time", libprag.}
 
-proc monotonicTime*(): int64 {.
-    importc: "g_get_monotonic_time", libprag.}
-
 proc g_get_num_processors(): uint32 {.
     importc, libprag.}
 
 proc getNumProcessors*(): int =
-  int(g_get_num_processors())
-
-proc numProcessors*(): int =
   int(g_get_num_processors())
 
 proc g_get_os_info(keyName: cstring): cstring {.
@@ -10487,43 +11069,25 @@ proc getPrgname*(): string =
     return
   result = $resul0
 
-proc prgname*(): string =
-  let resul0 = g_get_prgname()
-  if resul0.isNil:
-    return
-  result = $resul0
-
 proc g_get_real_name(): cstring {.
     importc, libprag.}
 
 proc getRealName*(): string =
   result = $g_get_real_name()
 
-proc realName*(): string =
-  result = $g_get_real_name()
-
 proc getRealTime*(): int64 {.
     importc: "g_get_real_time", libprag.}
 
-proc realTime*(): int64 {.
-    importc: "g_get_real_time", libprag.}
-
-proc g_get_system_config_dirs(): cstringArray {.
+proc g_get_system_config_dirs(): ptr cstring {.
     importc, libprag.}
 
 proc getSystemConfigDirs*(): seq[string] =
   cstringArrayToSeq(g_get_system_config_dirs())
 
-proc systemConfigDirs*(): seq[string] =
-  cstringArrayToSeq(g_get_system_config_dirs())
-
-proc g_get_system_data_dirs(): cstringArray {.
+proc g_get_system_data_dirs(): ptr cstring {.
     importc, libprag.}
 
 proc getSystemDataDirs*(): seq[string] =
-  cstringArrayToSeq(g_get_system_data_dirs())
-
-proc systemDataDirs*(): seq[string] =
   cstringArrayToSeq(g_get_system_data_dirs())
 
 proc g_get_tmp_dir(): cstring {.
@@ -10532,16 +11096,10 @@ proc g_get_tmp_dir(): cstring {.
 proc getTmpDir*(): string =
   result = $g_get_tmp_dir()
 
-proc tmpDir*(): string =
-  result = $g_get_tmp_dir()
-
 proc g_get_user_cache_dir(): cstring {.
     importc, libprag.}
 
 proc getUserCacheDir*(): string =
-  result = $g_get_user_cache_dir()
-
-proc userCacheDir*(): string =
   result = $g_get_user_cache_dir()
 
 proc g_get_user_config_dir(): cstring {.
@@ -10550,16 +11108,10 @@ proc g_get_user_config_dir(): cstring {.
 proc getUserConfigDir*(): string =
   result = $g_get_user_config_dir()
 
-proc userConfigDir*(): string =
-  result = $g_get_user_config_dir()
-
 proc g_get_user_data_dir(): cstring {.
     importc, libprag.}
 
 proc getUserDataDir*(): string =
-  result = $g_get_user_data_dir()
-
-proc userDataDir*(): string =
   result = $g_get_user_data_dir()
 
 proc g_get_user_name(): cstring {.
@@ -10568,16 +11120,10 @@ proc g_get_user_name(): cstring {.
 proc getUserName*(): string =
   result = $g_get_user_name()
 
-proc userName*(): string =
-  result = $g_get_user_name()
-
 proc g_get_user_runtime_dir(): cstring {.
     importc, libprag.}
 
 proc getUserRuntimeDir*(): string =
-  result = $g_get_user_runtime_dir()
-
-proc userRuntimeDir*(): string =
   result = $g_get_user_runtime_dir()
 
 proc g_get_user_special_dir(directory: UserDirectory): cstring {.
@@ -10649,7 +11195,7 @@ proc idleRemoveByData*(data: pointer): bool =
 proc g_idle_source_new(): ptr Source00 {.
     importc, libprag.}
 
-proc idleSourceNew*(): Source =
+proc newIdleSource*(): Source =
   fnew(result, gBoxedFreeGSource)
   result.impl = g_idle_source_new()
 
@@ -10689,7 +11235,7 @@ proc g_intern_string(string: cstring): cstring {.
 proc internString*(string: cstring = ""): string =
   result = $g_intern_string(safeStringToCString(string))
 
-proc g_io_add_watch_full(channel: ptr IOChannel00; priority: int32; condition: IOCondition;
+proc g_io_add_watch_full*(channel: ptr IOChannel00; priority: int32; condition: IOCondition;
     `func`: IOFunc; userData: pointer; notify: DestroyNotify): uint32 {.
     importc, libprag.}
 
@@ -10704,7 +11250,7 @@ proc ioCreateWatch*(channel: IOChannel; condition: IOCondition): Source =
   fnew(result, gBoxedFreeGSource)
   result.impl = g_io_create_watch(cast[ptr IOChannel00](channel.impl), condition)
 
-proc g_listenv(): cstringArray {.
+proc g_listenv(): ptr cstring {.
     importc, libprag.}
 
 proc listenv*(): seq[string] =
@@ -10713,29 +11259,29 @@ proc listenv*(): seq[string] =
   g_strfreev(resul0)
 
 proc g_locale_from_utf8(utf8string: cstring; len: int64; bytesRead: var uint64;
-    bytesWritten: var uint64; error: ptr ptr glib.Error = nil): uint8Array {.
+    bytesWritten: var uint64; error: ptr ptr glib.Error = nil): ptr uint8 {.
     importc, libprag.}
 
-proc localeFromUtf8*(utf8string: cstring; len: int64; bytesRead: var uint64;
-    bytesWritten: var uint64): seq[uint8] =
+proc localeFromUtf8*(utf8string: cstring; len: int64; bytesRead: var uint64 = cast[var uint64](nil);
+    bytesWritten: var uint64 = cast[var uint64](nil)): seq[uint8] =
   var gerror: ptr glib.Error
   let resul0 = g_locale_from_utf8(utf8string, len, bytesRead, bytesWritten, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
-  result = uint8ArrayZT2seq(resul0)
+  result = uint8ArrayToSeq(resul0, bytesWritten.int)
   cogfree(resul0)
 
-proc g_locale_to_utf8(opsysstring: uint8Array; len: int64; bytesRead: var uint64;
+proc g_locale_to_utf8(opsysstring: ptr uint8; len: int64; bytesRead: var uint64;
     bytesWritten: var uint64; error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
 
-proc localeToUtf8*(opsysstring: seq[uint8] | string; bytesRead: var uint64;
-    bytesWritten: var uint64): string =
+proc localeToUtf8*(opsysstring: seq[uint8] | string; bytesRead: var uint64 = cast[var uint64](nil);
+    bytesWritten: var uint64 = cast[var uint64](nil)): string =
   let len = int64(opsysstring.len)
   var gerror: ptr glib.Error
-  let resul0 = g_locale_to_utf8(unsafeaddr(opsysstring[0]), len, bytesRead, bytesWritten, addr gerror)
+  let resul0 = g_locale_to_utf8(cast[ptr uint8](unsafeaddr(opsysstring[0])), len, bytesRead, bytesWritten, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -10770,7 +11316,7 @@ proc logSetHandler*(logDomain: cstring = ""; logLevels: LogLevelFlags;
 proc logSetWriterFunc*(`func`: LogWriterFunc; userData: pointer; userDataFree: DestroyNotify) {.
     importc: "g_log_set_writer_func", libprag.}
 
-proc logStructuredArray*(logLevel: LogLevelFlags; fields: LogField00Array;
+proc logStructuredArray*(logLevel: LogLevelFlags; fields: ptr LogField;
     nFields: uint64) {.
     importc: "g_log_structured_array", libprag.}
 
@@ -10780,15 +11326,15 @@ proc g_log_variant(logDomain: cstring; logLevel: LogLevelFlags; fields: ptr Vari
 proc logVariant*(logDomain: cstring = ""; logLevel: LogLevelFlags; fields: Variant) =
   g_log_variant(safeStringToCString(logDomain), logLevel, cast[ptr Variant00](fields.impl))
 
-proc logWriterDefault*(logLevel: LogLevelFlags; fields: LogField00Array;
+proc logWriterDefault*(logLevel: LogLevelFlags; fields: ptr LogField;
     nFields: uint64; userData: pointer): LogWriterOutput {.
     importc: "g_log_writer_default", libprag.}
 
-proc g_log_writer_format_fields(logLevel: LogLevelFlags; fields: LogField00Array;
+proc g_log_writer_format_fields(logLevel: LogLevelFlags; fields: ptr LogField;
     nFields: uint64; useColor: gboolean): cstring {.
     importc, libprag.}
 
-proc logWriterFormatFields*(logLevel: LogLevelFlags; fields: LogField00Array;
+proc logWriterFormatFields*(logLevel: LogLevelFlags; fields: ptr LogField;
     nFields: uint64; useColor: bool): string =
   let resul0 = g_log_writer_format_fields(logLevel, fields, nFields, gboolean(useColor))
   result = $resul0
@@ -10800,11 +11346,11 @@ proc g_log_writer_is_journald(outputFd: int32): gboolean {.
 proc logWriterIsJournald*(outputFd: int): bool =
   toBool(g_log_writer_is_journald(int32(outputFd)))
 
-proc logWriterJournald*(logLevel: LogLevelFlags; fields: LogField00Array;
+proc logWriterJournald*(logLevel: LogLevelFlags; fields: ptr LogField;
     nFields: uint64; userData: pointer): LogWriterOutput {.
     importc: "g_log_writer_journald", libprag.}
 
-proc logWriterStandardStreams*(logLevel: LogLevelFlags; fields: LogField00Array;
+proc logWriterStandardStreams*(logLevel: LogLevelFlags; fields: ptr LogField;
     nFields: uint64; userData: pointer): LogWriterOutput {.
     importc: "g_log_writer_standard_streams", libprag.}
 
@@ -10902,10 +11448,10 @@ proc g_option_error_quark(): uint32 {.
 proc optionErrorQuark*(): int =
   int(g_option_error_quark())
 
-proc g_parse_debug_string(string: cstring; keys: DebugKey00Array; nkeys: uint32): uint32 {.
+proc g_parse_debug_string(string: cstring; keys: ptr DebugKey; nkeys: uint32): uint32 {.
     importc, libprag.}
 
-proc parseDebugString*(string: cstring = ""; keys: DebugKey00Array; nkeys: int): int =
+proc parseDebugString*(string: cstring = ""; keys: ptr DebugKey; nkeys: int): int =
   int(g_parse_debug_string(safeStringToCString(string), keys, uint32(nkeys)))
 
 proc g_path_get_basename(fileName: cstring): cstring {.
@@ -10977,11 +11523,11 @@ proc g_pointer_bit_unlock(address: pointer; lockBit: int32) {.
 proc pointerBitUnlock*(address: pointer; lockBit: int) =
   g_pointer_bit_unlock(address, int32(lockBit))
 
-proc g_poll(fds: ptr PollFD00; nfds: uint32; timeout: int32): int32 {.
+proc g_poll(fds: PollFD; nfds: uint32; timeout: int32): int32 {.
     importc, libprag.}
 
 proc poll*(fds: PollFD; nfds: int; timeout: int): int =
-  int(g_poll(cast[ptr PollFD00](fds.impl), uint32(nfds), int32(timeout)))
+  int(g_poll(fds, uint32(nfds), int32(timeout)))
 
 proc propagateError*(dest: var ptr glib.Error; src: ptr glib.Error) {.
     importc: "g_propagate_error", libprag.}
@@ -11129,21 +11675,15 @@ proc rmdir*(filename: cstring): int =
 proc setApplicationName*(applicationName: cstring) {.
     importc: "g_set_application_name", libprag.}
 
-proc `applicationName=`*(applicationName: cstring) {.
-    importc: "g_set_application_name", libprag.}
-
 proc g_set_error_literal(err: var ptr glib.Error; domain: uint32; code: int32;
     message: cstring) {.
     importc, libprag.}
 
-proc setErrorLiteral*(err: var ptr glib.Error; domain: int; code: int;
-    message: cstring) =
+proc setErrorLiteral*(err: var ptr glib.Error = cast[var ptr glib.Error](nil);
+    domain: int; code: int; message: cstring) =
   g_set_error_literal(err, uint32(domain), int32(code), message)
 
 proc setPrgname*(prgname: cstring) {.
-    importc: "g_set_prgname", libprag.}
-
-proc `prgname=`*(prgname: cstring) {.
     importc: "g_set_prgname", libprag.}
 
 proc g_setenv(variable: cstring; value: cstring; overwrite: gboolean): gboolean {.
@@ -11158,24 +11698,27 @@ proc g_shell_error_quark(): uint32 {.
 proc shellErrorQuark*(): int =
   int(g_shell_error_quark())
 
-proc g_shell_parse_argv(commandLine: cstring; argcp: var int32; argvp: var cstringArray;
+proc g_shell_parse_argv(commandLine: cstring; argcp: var int32; argvp: var ptr cstring;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc shellParseArgv*(commandLine: cstring; argcp: var int; argvp: var seq[string]): bool =
+proc shellParseArgv*(commandLine: cstring; argcp: var int = cast[var int](nil);
+    argvp: var seq[string] = cast[var seq[string]](nil)): bool =
   var gerror: ptr glib.Error
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var argvp_00 = seq2CstringArray(argvp, fs469n23)
-  var argcp_00 = int32(argcp)
+  var argcp_00: int32
   let resul0 = g_shell_parse_argv(commandLine, argcp_00, argvp_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  argvp = cstringArrayToSeq(argvp_00)
-  argcp = int(argcp_00)
+  if argvp.addr != nil:
+    argvp = cstringArrayToSeq(argvp_00)
+  if argcp.addr != nil:
+    argcp = int(argcp_00)
 
 proc g_shell_quote(unquotedString: cstring): cstring {.
     importc, libprag.}
@@ -11229,80 +11772,87 @@ proc g_spaced_primes_closest(num: uint32): uint32 {.
 proc spacedPrimesClosest*(num: int): int =
   int(g_spaced_primes_closest(uint32(num)))
 
-proc g_spawn_async(workingDirectory: cstring; argv: cstringArray; envp: cstringArray;
+proc g_spawn_async(workingDirectory: cstring; argv: ptr cstring; envp: ptr cstring;
     flags: SpawnFlags; childSetup: SpawnChildSetupFunc; userData: pointer;
     childPid: var int32; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc spawnAsync*(workingDirectory: cstring = ""; argv: openArray[string];
     envp: openArray[string]; flags: SpawnFlags; childSetup: SpawnChildSetupFunc;
-    userData: pointer; childPid: var int): bool =
+    userData: pointer; childPid: var int = cast[var int](nil)): bool =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var fs469n232x: array[256, pointer]
   var fs469n232: cstringArray = cast[cstringArray](addr fs469n232x)
   var gerror: ptr glib.Error
-  var childPid_00 = int32(childPid)
+  var childPid_00: int32
   let resul0 = g_spawn_async(safeStringToCString(workingDirectory), seq2CstringArray(argv, fs469n23), seq2CstringArray(envp, fs469n232), flags, childSetup, userData, childPid_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  childPid = int(childPid_00)
+  if childPid.addr != nil:
+    childPid = int(childPid_00)
 
-proc g_spawn_async_with_fds(workingDirectory: cstring; argv: cstringArray;
-    envp: cstringArray; flags: SpawnFlags; childSetup: SpawnChildSetupFunc;
+proc g_spawn_async_with_fds(workingDirectory: cstring; argv: ptr cstring;
+    envp: ptr cstring; flags: SpawnFlags; childSetup: SpawnChildSetupFunc;
     userData: pointer; childPid: var int32; stdinFd: int32; stdoutFd: int32;
     stderrFd: int32; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc spawnAsyncWithFds*(workingDirectory: cstring = ""; argv: openArray[string];
     envp: openArray[string]; flags: SpawnFlags; childSetup: SpawnChildSetupFunc;
-    userData: pointer; childPid: var int; stdinFd: int; stdoutFd: int; stderrFd: int): bool =
+    userData: pointer; childPid: var int = cast[var int](nil); stdinFd: int;
+    stdoutFd: int; stderrFd: int): bool =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var fs469n232x: array[256, pointer]
   var fs469n232: cstringArray = cast[cstringArray](addr fs469n232x)
   var gerror: ptr glib.Error
-  var childPid_00 = int32(childPid)
+  var childPid_00: int32
   let resul0 = g_spawn_async_with_fds(safeStringToCString(workingDirectory), seq2CstringArray(argv, fs469n23), seq2CstringArray(envp, fs469n232), flags, childSetup, userData, childPid_00, int32(stdinFd), int32(stdoutFd), int32(stderrFd), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  childPid = int(childPid_00)
+  if childPid.addr != nil:
+    childPid = int(childPid_00)
 
-proc g_spawn_async_with_pipes(workingDirectory: cstring; argv: cstringArray;
-    envp: cstringArray; flags: SpawnFlags; childSetup: SpawnChildSetupFunc;
+proc g_spawn_async_with_pipes(workingDirectory: cstring; argv: ptr cstring;
+    envp: ptr cstring; flags: SpawnFlags; childSetup: SpawnChildSetupFunc;
     userData: pointer; childPid: var int32; standardInput: var int32; standardOutput: var int32;
     standardError: var int32; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc spawnAsyncWithPipes*(workingDirectory: cstring = ""; argv: openArray[string];
     envp: openArray[string]; flags: SpawnFlags; childSetup: SpawnChildSetupFunc;
-    userData: pointer; childPid: var int; standardInput: var int; standardOutput: var int;
-    standardError: var int): bool =
+    userData: pointer; childPid: var int = cast[var int](nil); standardInput: var int = cast[var int](nil);
+    standardOutput: var int = cast[var int](nil); standardError: var int = cast[var int](nil)): bool =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var fs469n232x: array[256, pointer]
   var fs469n232: cstringArray = cast[cstringArray](addr fs469n232x)
   var gerror: ptr glib.Error
-  var childPid_00 = int32(childPid)
-  var standardInput_00 = int32(standardInput)
-  var standardOutput_00 = int32(standardOutput)
-  var standardError_00 = int32(standardError)
+  var childPid_00: int32
+  var standardInput_00: int32
+  var standardOutput_00: int32
+  var standardError_00: int32
   let resul0 = g_spawn_async_with_pipes(safeStringToCString(workingDirectory), seq2CstringArray(argv, fs469n23), seq2CstringArray(envp, fs469n232), flags, childSetup, userData, childPid_00, standardInput_00, standardOutput_00, standardError_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  childPid = int(childPid_00)
-  standardInput = int(standardInput_00)
-  standardOutput = int(standardOutput_00)
-  standardError = int(standardError_00)
+  if childPid.addr != nil:
+    childPid = int(childPid_00)
+  if standardInput.addr != nil:
+    standardInput = int(standardInput_00)
+  if standardOutput.addr != nil:
+    standardOutput = int(standardOutput_00)
+  if standardError.addr != nil:
+    standardError = int(standardError_00)
 
 proc g_spawn_check_exit_status(exitStatus: int32; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
@@ -11398,7 +11948,7 @@ proc strToAscii*(str: cstring; fromLocale: cstring = ""): string =
   result = $resul0
   cogfree(resul0)
 
-proc g_str_tokenize_and_fold(string: cstring; translitLocale: cstring; asciiAlternates: var cstringArray): cstringArray {.
+proc g_str_tokenize_and_fold(string: cstring; translitLocale: cstring; asciiAlternates: var ptr cstring): ptr cstring {.
     importc, libprag.}
 
 proc strTokenizeAndFold*(string: cstring; translitLocale: cstring = "";
@@ -11408,7 +11958,8 @@ proc strTokenizeAndFold*(string: cstring; translitLocale: cstring = "";
   var asciiAlternates_00 = seq2CstringArray(asciiAlternates, fs469n23)
   let resul0 = g_str_tokenize_and_fold(string, safeStringToCString(translitLocale), asciiAlternates_00)
   result = cstringArrayToSeq(resul0)
-  asciiAlternates = cstringArrayToSeq(asciiAlternates_00)
+  if asciiAlternates.addr != nil:
+    asciiAlternates = cstringArrayToSeq(asciiAlternates_00)
 
 proc g_strcanon(string: cstring; validChars: cstring; substitutor: int8): cstring {.
     importc, libprag.}
@@ -11584,10 +12135,11 @@ proc strstrLen*(haystack: cstring; haystackLen: int64; needle: cstring): string 
 proc g_strtod(nptr: cstring; endptr: var cstring): cdouble {.
     importc, libprag.}
 
-proc strtod*(nptr: cstring; endptr: var string): cdouble =
-  var endptr_00 = cstring(endptr)
+proc strtod*(nptr: cstring; endptr: var string = cast[var string](nil)): cdouble =
+  var endptr_00: cstring
   result = g_strtod(nptr, endptr_00)
-  endptr = $(endptr_00)
+  if endptr.addr != nil:
+    endptr = $(endptr_00)
 
 proc g_strup(string: cstring): cstring {.
     importc, libprag.}
@@ -11612,13 +12164,11 @@ proc strvEqual*(strv1: cstring; strv2: cstring): bool =
 proc strvGetType*(): GType {.
     importc: "g_strv_get_type", libprag.}
 
-proc g_strv_length(strArray: cstringArray): uint32 {.
+proc g_strv_length(strArray: cstring): uint32 {.
     importc, libprag.}
 
-proc strvLength*(strArray: varargs[string, `$`]): int =
-  var fs469n23x: array[256, pointer]
-  var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
-  int(g_strv_length(seq2CstringArray(strArray, fs469n23)))
+proc strvLength*(strArray: cstring): int =
+  int(g_strv_length(strArray))
 
 proc testAddDataFunc*(testpath: cstring; testData: pointer; testFunc: TestDataFunc) {.
     importc: "g_test_add_data_func", libprag.}
@@ -11779,7 +12329,7 @@ proc timeoutAddSeconds*(priority: int; interval: int; function: SourceFunc;
 proc g_timeout_source_new(interval: uint32): ptr Source00 {.
     importc, libprag.}
 
-proc timeoutSourceNew*(interval: int): Source =
+proc newTimeoutSource*(interval: int): Source =
   fnew(result, gBoxedFreeGSource)
   result.impl = g_timeout_source_new(uint32(interval))
 
@@ -11816,8 +12366,8 @@ proc g_ucs4_to_utf8(str: ptr gunichar; len: int64; itemsRead: var int64;
     itemsWritten: var int64; error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
 
-proc ucs4ToUtf8*(str: ptr gunichar; len: int64; itemsRead: var int64;
-    itemsWritten: var int64): string =
+proc ucs4ToUtf8*(str: ptr gunichar; len: int64; itemsRead: var int64 = cast[var int64](nil);
+    itemsWritten: var int64 = cast[var int64](nil)): string =
   var gerror: ptr glib.Error
   let resul0 = g_ucs4_to_utf8(str, len, itemsRead, itemsWritten, addr gerror)
   if gerror != nil:
@@ -11858,7 +12408,7 @@ proc g_unichar_fully_decompose(ch: gunichar; compat: gboolean; resu: var gunicha
     resultLen: uint64): uint64 {.
     importc, libprag.}
 
-proc unicharFullyDecompose*(ch: gunichar; compat: bool; resu: var gunichar;
+proc unicharFullyDecompose*(ch: gunichar; compat: bool; resu: var gunichar = cast[var gunichar](nil);
     resultLen: uint64): uint64 =
   g_unichar_fully_decompose(ch, gboolean(compat), resu, resultLen)
 
@@ -11976,10 +12526,11 @@ proc unicharIszerowidth*(c: gunichar): bool =
 proc g_unichar_to_utf8(c: gunichar; outbuf: var cstring): int32 {.
     importc, libprag.}
 
-proc unicharToUtf8*(c: gunichar; outbuf: var string): int =
-  var outbuf_00 = cstring(outbuf)
+proc unicharToUtf8*(c: gunichar; outbuf: var string = cast[var string](nil)): int =
+  var outbuf_00: cstring
   result = int(g_unichar_to_utf8(c, outbuf_00))
-  outbuf = $(outbuf_00)
+  if outbuf.addr != nil:
+    outbuf = $(outbuf_00)
 
 proc unicharTolower*(c: gunichar): gunichar {.
     importc: "g_unichar_tolower", libprag.}
@@ -12040,7 +12591,7 @@ proc unixFdAddFull*(priority: int; fd: int; condition: IOCondition; function: Un
 proc g_unix_fd_source_new(fd: int32; condition: IOCondition): ptr Source00 {.
     importc, libprag.}
 
-proc unixFdSourceNew*(fd: int; condition: IOCondition): Source =
+proc newUnixFdSource*(fd: int; condition: IOCondition): Source =
   fnew(result, gBoxedFreeGSource)
   result.impl = g_unix_fd_source_new(int32(fd), condition)
 
@@ -12082,7 +12633,7 @@ proc unixSignalAdd*(priority: int; signum: int; handler: SourceFunc;
 proc g_unix_signal_source_new(signum: int32): ptr Source00 {.
     importc, libprag.}
 
-proc unixSignalSourceNew*(signum: int): Source =
+proc newUnixSignalSource*(signum: int): Source =
   fnew(result, gBoxedFreeGSource)
   result.impl = g_unix_signal_source_new(int32(signum))
 
@@ -12095,50 +12646,6 @@ proc unlink*(filename: cstring): int =
 proc unsetenv*(variable: cstring) {.
     importc: "g_unsetenv", libprag.}
 
-proc g_uri_escape_string(unescaped: cstring; reservedCharsAllowed: cstring;
-    allowUtf8: gboolean): cstring {.
-    importc, libprag.}
-
-proc uriEscapeString*(unescaped: cstring; reservedCharsAllowed: cstring = "";
-    allowUtf8: bool): string =
-  let resul0 = g_uri_escape_string(unescaped, safeStringToCString(reservedCharsAllowed), gboolean(allowUtf8))
-  result = $resul0
-  cogfree(resul0)
-
-proc g_uri_list_extract_uris(uriList: cstring): cstringArray {.
-    importc, libprag.}
-
-proc uriListExtractUris*(uriList: cstring): seq[string] =
-  let resul0 = g_uri_list_extract_uris(uriList)
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc g_uri_parse_scheme(uri: cstring): cstring {.
-    importc, libprag.}
-
-proc uriParseScheme*(uri: cstring): string =
-  let resul0 = g_uri_parse_scheme(uri)
-  result = $resul0
-  cogfree(resul0)
-
-proc g_uri_unescape_segment(escapedString: cstring; escapedStringEnd: cstring;
-    illegalCharacters: cstring): cstring {.
-    importc, libprag.}
-
-proc uriUnescapeSegment*(escapedString: cstring = ""; escapedStringEnd: cstring = "";
-    illegalCharacters: cstring = ""): string =
-  let resul0 = g_uri_unescape_segment(safeStringToCString(escapedString), safeStringToCString(escapedStringEnd), safeStringToCString(illegalCharacters))
-  result = $resul0
-  cogfree(resul0)
-
-proc g_uri_unescape_string(escapedString: cstring; illegalCharacters: cstring): cstring {.
-    importc, libprag.}
-
-proc uriUnescapeString*(escapedString: cstring; illegalCharacters: cstring = ""): string =
-  let resul0 = g_uri_unescape_string(escapedString, safeStringToCString(illegalCharacters))
-  result = $resul0
-  cogfree(resul0)
-
 proc usleep*(microseconds: uint64) {.
     importc: "g_usleep", libprag.}
 
@@ -12150,7 +12657,8 @@ proc g_utf16_to_utf8(str: ptr uint16; len: int64; itemsRead: var int64; itemsWri
     error: ptr ptr glib.Error = nil): cstring {.
     importc, libprag.}
 
-proc utf16ToUtf8*(str: ptr uint16; len: int64; itemsRead: var int64; itemsWritten: var int64): string =
+proc utf16ToUtf8*(str: ptr uint16; len: int64; itemsRead: var int64 = cast[var int64](nil);
+    itemsWritten: var int64 = cast[var int64](nil)): string =
   var gerror: ptr glib.Error
   let resul0 = g_utf16_to_utf8(str, len, itemsRead, itemsWritten, addr gerror)
   if gerror != nil:
@@ -12317,23 +12825,25 @@ proc utf8ToUtf16*(str: cstring; len: int64; itemsRead: var int64; itemsWritten: 
     error: ptr ptr glib.Error = nil): ptr uint16 {.
     importc: "g_utf8_to_utf16", libprag.}
 
-proc g_utf8_validate(str: uint8Array; maxLen: int64; `end`: var cstring): gboolean {.
+proc g_utf8_validate(str: ptr uint8; maxLen: int64; `end`: var cstring): gboolean {.
     importc, libprag.}
 
-proc utf8Validate*(str: seq[uint8] | string; `end`: var string): bool =
+proc utf8Validate*(str: seq[uint8] | string; `end`: var string = cast[var string](nil)): bool =
   let maxLen = int64(str.len)
-  var end_00 = cstring(`end`)
-  result = toBool(g_utf8_validate(unsafeaddr(str[0]), maxLen, end_00))
-  `end` = $(end_00)
+  var end_00: cstring
+  result = toBool(g_utf8_validate(cast[ptr uint8](unsafeaddr(str[0])), maxLen, end_00))
+  if `end`.addr != nil:
+    `end` = $(end_00)
 
-proc g_utf8_validate_len(str: uint8Array; maxLen: uint64; `end`: var cstring): gboolean {.
+proc g_utf8_validate_len(str: ptr uint8; maxLen: uint64; `end`: var cstring): gboolean {.
     importc, libprag.}
 
-proc utf8ValidateLen*(str: seq[uint8] | string; `end`: var string): bool =
+proc utf8ValidateLen*(str: seq[uint8] | string; `end`: var string = cast[var string](nil)): bool =
   let maxLen = uint64(str.len)
-  var end_00 = cstring(`end`)
-  result = toBool(g_utf8_validate_len(unsafeaddr(str[0]), maxLen, end_00))
-  `end` = $(end_00)
+  var end_00: cstring
+  result = toBool(g_utf8_validate_len(cast[ptr uint8](unsafeaddr(str[0])), maxLen, end_00))
+  if `end`.addr != nil:
+    `end` = $(end_00)
 
 proc g_uuid_string_is_valid(str: cstring): gboolean {.
     importc, libprag.}
@@ -12352,3 +12862,13 @@ proc uuidStringRandom*(): string =
 proc variantGetGtype*(): GType {.
     importc: "g_variant_get_gtype", libprag.}
 # === remaining symbols:
+
+when not declared(g_thread_new):
+  proc g_thread_new(name: cstring; fn: ThreadFunc; data:pointer): ptr Thread00 {.importc, libprag.}
+
+  proc newThread*(name: string; fn: ThreadFunc; data:pointer): Thread =
+    fnew(result, finalizerunref)
+    result.impl = g_thread_new(name, fn, data)
+
+#include gimplglib will not work as glib does not import gobject
+

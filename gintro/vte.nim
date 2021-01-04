@@ -2,6 +2,7 @@
 # xlib-2.0
 # GLib-2.0
 # Gdk-3.0
+# HarfBuzz-0.0
 # GdkPixbuf-2.0
 # cairo-1.0
 # Gtk-3.0
@@ -17,14 +18,9 @@
 # libraries:
 # libvte-2.91.so.0
 {.warning[UnusedImport]: off.}
-import xlib, glib, gdk, gdkpixbuf, cairo, gtk, gobject, pango, gio, gmodule, atk
+import xlib, glib, gdk, harfbuzz, gdkpixbuf, cairo, gtk, gobject, pango, gio, gmodule, atk
 const Lib = "libvte-2.91.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
-
-type
-  uint8Array* = pointer
-  Regex00Array* = pointer
-
 import glib
 
 
@@ -59,15 +55,23 @@ type
     tty = 4
 
 type
+  FeatureFlags* {.size: sizeof(cint), pure.} = enum
+    flagsMask = -1
+    flagBidi = 1
+    flagIcu = 2
+    flagSystemd = 4
+    flagSixel = 8
+
+type
   Format* {.size: sizeof(cint), pure.} = enum
     text = 1
     html = 2
 
 const MAJOR_VERSION* = 0'i32
 
-const MICRO_VERSION* = 3'i32
+const MICRO_VERSION* = 1'i32
 
-const MINOR_VERSION* = 60'i32
+const MINOR_VERSION* = 62'i32
 
 type
   Pty* = ref object of gobject.Object
@@ -181,31 +185,20 @@ proc vte_pty_get_size(self: ptr Pty00; rows: var int32; columns: var int32;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc getSize*(self: Pty; rows: var int; columns: var int): bool =
+proc getSize*(self: Pty; rows: var int = cast[var int](nil); columns: var int = cast[var int](nil)): bool =
   var gerror: ptr glib.Error
-  var rows_00 = int32(rows)
-  var columns_00 = int32(columns)
+  var rows_00: int32
+  var columns_00: int32
   let resul0 = vte_pty_get_size(cast[ptr Pty00](self.impl), rows_00, columns_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  rows = int(rows_00)
-  columns = int(columns_00)
-
-proc size*(self: Pty; rows: var int; columns: var int): bool =
-  var gerror: ptr glib.Error
-  var rows_00 = int32(rows)
-  var columns_00 = int32(columns)
-  let resul0 = vte_pty_get_size(cast[ptr Pty00](self.impl), rows_00, columns_00, addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-  rows = int(rows_00)
-  columns = int(columns_00)
+  if rows.addr != nil:
+    rows = int(rows_00)
+  if columns.addr != nil:
+    columns = int(columns_00)
 
 proc vte_pty_set_size(self: ptr Pty00; rows: int32; columns: int32; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
@@ -231,17 +224,8 @@ proc setUtf8*(self: Pty; utf8: bool = true): bool =
     raise newException(GException, msg)
   result = toBool(resul0)
 
-proc `utf8=`*(self: Pty; utf8: bool): bool =
-  var gerror: ptr glib.Error
-  let resul0 = vte_pty_set_utf8(cast[ptr Pty00](self.impl), gboolean(utf8), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc vte_pty_spawn_async(self: ptr Pty00; workingDirectory: cstring; argv: cstringArray;
-    envv: cstringArray; spawnFlags: glib.SpawnFlags; childSetup: SpawnChildSetupFunc;
+proc vte_pty_spawn_async(self: ptr Pty00; workingDirectory: cstring; argv: ptr cstring;
+    envv: ptr cstring; spawnFlags: glib.SpawnFlags; childSetup: SpawnChildSetupFunc;
     childSetupData: pointer; childSetupDataDestroy: DestroyNotify; timeout: int32;
     cancellable: ptr gio.Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
     importc, libprag.}
@@ -260,16 +244,36 @@ proc vte_pty_spawn_finish(self: ptr Pty00; resu: ptr gio.AsyncResult00; childPid
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc spawnFinish*(self: Pty; resu: gio.AsyncResult; childPid: var int): bool =
+proc spawnFinish*(self: Pty; resu: gio.AsyncResult; childPid: var int = cast[var int](nil)): bool =
   var gerror: ptr glib.Error
-  var childPid_00 = int32(childPid)
+  var childPid_00: int32
   let resul0 = vte_pty_spawn_finish(cast[ptr Pty00](self.impl), cast[ptr gio.AsyncResult00](resu.impl), childPid_00, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  childPid = int(childPid_00)
+  if childPid.addr != nil:
+    childPid = int(childPid_00)
+
+proc vte_pty_spawn_with_fds_async(self: ptr Pty00; workingDirectory: cstring;
+    argv: ptr cstring; envv: ptr cstring; fds: ptr int32; nFds: int32; mapFds: ptr int32;
+    nMapFds: int32; spawnFlags: glib.SpawnFlags; childSetup: SpawnChildSetupFunc;
+    childSetupData: pointer; childSetupDataDestroy: DestroyNotify; timeout: int32;
+    cancellable: ptr gio.Cancellable00; callback: AsyncReadyCallback; userData: pointer) {.
+    importc, libprag.}
+
+proc spawnWithFdsAsync*(self: Pty; workingDirectory: cstring = "";
+    argv: openArray[string]; envv: openArray[string]; fds: seq[int32]; nFds: int;
+    mapFds: seq[int32]; spawnFlags: glib.SpawnFlags; childSetup: SpawnChildSetupFunc;
+    childSetupData: pointer; childSetupDataDestroy: DestroyNotify; timeout: int;
+    cancellable: gio.Cancellable = nil; callback: AsyncReadyCallback; userData: pointer) =
+  let nMapFds = int(map_fds.len)
+  var fs469n23x: array[256, pointer]
+  var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
+  var fs469n232x: array[256, pointer]
+  var fs469n232: cstringArray = cast[cstringArray](addr fs469n232x)
+  vte_pty_spawn_with_fds_async(cast[ptr Pty00](self.impl), safeStringToCString(workingDirectory), seq2CstringArray(argv, fs469n23), seq2CstringArray(envv, fs469n232), cast[ptr int32](unsafeaddr(fds[0])), int32(nFds), cast[ptr int32](unsafeaddr(mapFds[0])), int32(nMapFds), spawnFlags, childSetup, childSetupData, childSetupDataDestroy, int32(timeout), if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), callback, userData)
 
 type
   PtyFlag* {.size: sizeof(cint), pure.} = enum
@@ -379,6 +383,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(vte_regex_get_type(), cast[ptr Regex00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var Regex) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeVteRegex)
 
 proc vte_regex_unref*(self: ptr Regex00): ptr Regex00 {.
     importc, libprag.}
@@ -683,52 +693,53 @@ proc copyPrimary*(self: Terminal) =
   vte_terminal_copy_primary(cast[ptr Terminal00](self.impl))
 
 proc vte_terminal_event_check_gregex_simple(self: ptr Terminal00; event: ptr gdk.Event00;
-    regexes: ptr glib.Regex00Array; nRegexes: var uint64; matchFlags: glib.RegexMatchFlags;
-    matches: var cstringArray): gboolean {.
+    regexes: ptr ptr glib.Regex00; nRegexes: var uint64; matchFlags: glib.RegexMatchFlags;
+    matches: var ptr cstring): gboolean {.
     importc, libprag.}
 
 proc eventCheckGregexSimple*(self: Terminal; event: gdk.Event;
-    regexes: ptr glib.Regex00Array; nRegexes: var uint64; matchFlags: glib.RegexMatchFlags;
+    regexes: ptr ptr glib.Regex00; nRegexes: var uint64; matchFlags: glib.RegexMatchFlags;
     matches: var seq[string]): bool =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var matches_00 = seq2CstringArray(matches, fs469n23)
   result = toBool(vte_terminal_event_check_gregex_simple(cast[ptr Terminal00](self.impl), cast[ptr gdk.Event00](event.impl), regexes, nRegexes, matchFlags, matches_00))
-  matches = cstringArrayToSeq(matches_00)
+  if matches.addr != nil:
+    matches = cstringArrayToSeq(matches_00)
 
-proc vte_terminal_event_check_regex_simple(self: ptr Terminal00; event: ptr gdk.Event00;
-    regexes: ptr Regex00Array; nRegexes: var uint64; matchFlags: uint32; matches: var cstringArray): gboolean {.
+proc vte_terminal_event_check_regex_array(self: ptr Terminal00; event: ptr gdk.Event00;
+    regexes: ptr ptr Regex00; nRegexes: uint64; matchFlags: uint32; nMatches: var uint64): ptr cstring {.
     importc, libprag.}
 
 proc eventCheckRegexSimple*(self: Terminal; event: gdk.Event;
-    regexes: ptr Regex00Array; nRegexes: var uint64; matchFlags: int; matches: var seq[string]): bool =
-  var fs469n23x: array[256, pointer]
-  var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
-  var matches_00 = seq2CstringArray(matches, fs469n23)
-  result = toBool(vte_terminal_event_check_regex_simple(cast[ptr Terminal00](self.impl), cast[ptr gdk.Event00](event.impl), regexes, nRegexes, uint32(matchFlags), matches_00))
-  matches = cstringArrayToSeq(matches_00)
+    regexes: ptr ptr Regex00; nRegexes: uint64; matchFlags: int; nMatches: var uint64 = cast[var uint64](nil)): seq[string] =
+  let resul0 = vte_terminal_event_check_regex_array(cast[ptr Terminal00](self.impl), cast[ptr gdk.Event00](event.impl), regexes, nRegexes, uint32(matchFlags), nMatches)
+  if resul0.isNil:
+    return
+  result = cstringArrayToSeq(resul0)
+  g_strfreev(resul0)
 
-proc vte_terminal_feed(self: ptr Terminal00; data: uint8Array; length: int64) {.
+proc vte_terminal_feed(self: ptr Terminal00; data: ptr uint8; length: int64) {.
     importc, libprag.}
 
 proc feed*(self: Terminal; data: seq[uint8] | string) =
   let length = int64(data.len)
-  vte_terminal_feed(cast[ptr Terminal00](self.impl), unsafeaddr(data[0]), length)
+  vte_terminal_feed(cast[ptr Terminal00](self.impl), cast[ptr uint8](unsafeaddr(data[0])), length)
 
-proc vte_terminal_feed_child(self: ptr Terminal00; text: uint8Array; length: int64) {.
+proc vte_terminal_feed_child(self: ptr Terminal00; text: ptr uint8; length: int64) {.
     importc, libprag.}
 
 proc feedChild*(self: Terminal; text: seq[uint8] | string) =
   let length = int64(text.len)
-  vte_terminal_feed_child(cast[ptr Terminal00](self.impl), unsafeaddr(text[0]), length)
+  vte_terminal_feed_child(cast[ptr Terminal00](self.impl), cast[ptr uint8](unsafeaddr(text[0])), length)
 
-proc vte_terminal_feed_child_binary(self: ptr Terminal00; data: uint8Array;
+proc vte_terminal_feed_child_binary(self: ptr Terminal00; data: ptr uint8;
     length: uint64) {.
     importc, libprag.}
 
 proc feedChildBinary*(self: Terminal; data: seq[uint8] | string) =
   let length = uint64(data.len)
-  vte_terminal_feed_child_binary(cast[ptr Terminal00](self.impl), unsafeaddr(data[0]), length)
+  vte_terminal_feed_child_binary(cast[ptr Terminal00](self.impl), cast[ptr uint8](unsafeaddr(data[0])), length)
 
 proc vte_terminal_get_allow_bold(self: ptr Terminal00): gboolean {.
     importc, libprag.}
@@ -869,8 +880,8 @@ proc vte_terminal_get_cursor_position(self: ptr Terminal00; column: var int64;
     row: var int64) {.
     importc, libprag.}
 
-proc getCursorPosition*(self: Terminal; column: var int64;
-    row: var int64) =
+proc getCursorPosition*(self: Terminal; column: var int64 = cast[var int64](nil);
+    row: var int64 = cast[var int64](nil)) =
   vte_terminal_get_cursor_position(cast[ptr Terminal00](self.impl), column, row)
 
 proc vte_terminal_get_cursor_shape(self: ptr Terminal00): CursorShape {.
@@ -899,6 +910,15 @@ proc getEnableShaping*(self: Terminal): bool =
 
 proc enableShaping*(self: Terminal): bool =
   toBool(vte_terminal_get_enable_shaping(cast[ptr Terminal00](self.impl)))
+
+proc vte_terminal_get_enable_sixel(self: ptr Terminal00): gboolean {.
+    importc, libprag.}
+
+proc getEnableSixel*(self: Terminal): bool =
+  toBool(vte_terminal_get_enable_sixel(cast[ptr Terminal00](self.impl)))
+
+proc enableSixel*(self: Terminal): bool =
+  toBool(vte_terminal_get_enable_sixel(cast[ptr Terminal00](self.impl)))
 
 proc vte_terminal_get_encoding(self: ptr Terminal00): cstring {.
     importc, libprag.}
@@ -1126,27 +1146,29 @@ proc vte_terminal_match_check(self: ptr Terminal00; column: int64; row: int64;
     importc, libprag.}
 
 proc matchCheck*(self: Terminal; column: int64; row: int64;
-    tag: var int): string =
-  var tag_00 = int32(tag)
+    tag: var int = cast[var int](nil)): string =
+  var tag_00: int32
   let resul0 = vte_terminal_match_check(cast[ptr Terminal00](self.impl), column, row, tag_00)
   if resul0.isNil:
     return
   result = $resul0
   cogfree(resul0)
-  tag = int(tag_00)
+  if tag.addr != nil:
+    tag = int(tag_00)
 
 proc vte_terminal_match_check_event(self: ptr Terminal00; event: ptr gdk.Event00;
     tag: var int32): cstring {.
     importc, libprag.}
 
-proc matchCheckEvent*(self: Terminal; event: gdk.Event; tag: var int): string =
-  var tag_00 = int32(tag)
+proc matchCheckEvent*(self: Terminal; event: gdk.Event; tag: var int = cast[var int](nil)): string =
+  var tag_00: int32
   let resul0 = vte_terminal_match_check_event(cast[ptr Terminal00](self.impl), cast[ptr gdk.Event00](event.impl), tag_00)
   if resul0.isNil:
     return
   result = $resul0
   cogfree(resul0)
-  tag = int(tag_00)
+  if tag.addr != nil:
+    tag = int(tag_00)
 
 proc vte_terminal_match_remove(self: ptr Terminal00; tag: int32) {.
     importc, libprag.}
@@ -1378,28 +1400,28 @@ proc `colorBackground=`*(self: Terminal; background: gdk.RGBA) =
 proc vte_terminal_set_color_bold(self: ptr Terminal00; bold: gdk.RGBA) {.
     importc, libprag.}
 
-proc setColorBold*(self: Terminal; bold: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc setColorBold*(self: Terminal; bold: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   vte_terminal_set_color_bold(cast[ptr Terminal00](self.impl), bold)
 
-proc `colorBold=`*(self: Terminal; bold: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc `colorBold=`*(self: Terminal; bold: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   vte_terminal_set_color_bold(cast[ptr Terminal00](self.impl), bold)
 
 proc vte_terminal_set_color_cursor(self: ptr Terminal00; cursorBackground: gdk.RGBA) {.
     importc, libprag.}
 
-proc setColorCursor*(self: Terminal; cursorBackground: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc setColorCursor*(self: Terminal; cursorBackground: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   vte_terminal_set_color_cursor(cast[ptr Terminal00](self.impl), cursorBackground)
 
-proc `colorCursor=`*(self: Terminal; cursorBackground: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc `colorCursor=`*(self: Terminal; cursorBackground: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   vte_terminal_set_color_cursor(cast[ptr Terminal00](self.impl), cursorBackground)
 
 proc vte_terminal_set_color_cursor_foreground(self: ptr Terminal00; cursorForeground: gdk.RGBA) {.
     importc, libprag.}
 
-proc setColorCursorForeground*(self: Terminal; cursorForeground: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc setColorCursorForeground*(self: Terminal; cursorForeground: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   vte_terminal_set_color_cursor_foreground(cast[ptr Terminal00](self.impl), cursorForeground)
 
-proc `colorCursorForeground=`*(self: Terminal; cursorForeground: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc `colorCursorForeground=`*(self: Terminal; cursorForeground: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   vte_terminal_set_color_cursor_foreground(cast[ptr Terminal00](self.impl), cursorForeground)
 
 proc vte_terminal_set_color_foreground(self: ptr Terminal00; foreground: gdk.RGBA) {.
@@ -1414,27 +1436,27 @@ proc `colorForeground=`*(self: Terminal; foreground: gdk.RGBA) =
 proc vte_terminal_set_color_highlight(self: ptr Terminal00; highlightBackground: gdk.RGBA) {.
     importc, libprag.}
 
-proc setColorHighlight*(self: Terminal; highlightBackground: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc setColorHighlight*(self: Terminal; highlightBackground: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   vte_terminal_set_color_highlight(cast[ptr Terminal00](self.impl), highlightBackground)
 
-proc `colorHighlight=`*(self: Terminal; highlightBackground: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc `colorHighlight=`*(self: Terminal; highlightBackground: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   vte_terminal_set_color_highlight(cast[ptr Terminal00](self.impl), highlightBackground)
 
 proc vte_terminal_set_color_highlight_foreground(self: ptr Terminal00; highlightForeground: gdk.RGBA) {.
     importc, libprag.}
 
-proc setColorHighlightForeground*(self: Terminal; highlightForeground: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc setColorHighlightForeground*(self: Terminal; highlightForeground: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   vte_terminal_set_color_highlight_foreground(cast[ptr Terminal00](self.impl), highlightForeground)
 
-proc `colorHighlightForeground=`*(self: Terminal; highlightForeground: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]) =
+proc `colorHighlightForeground=`*(self: Terminal; highlightForeground: gdk.RGBA = cast[var gdk.RGBA](nil)) =
   vte_terminal_set_color_highlight_foreground(cast[ptr Terminal00](self.impl), highlightForeground)
 
 proc vte_terminal_set_colors(self: ptr Terminal00; foreground: gdk.RGBA;
-    background: gdk.RGBA; palette: gdk.RGBAArray; paletteSize: uint64) {.
+    background: gdk.RGBA; palette: ptr gdk.RGBA; paletteSize: uint64) {.
     importc, libprag.}
 
-proc setColors*(self: Terminal; foreground: gdk.RGBA = cast[ptr gdk.RGBA](nil)[];
-    background: gdk.RGBA = cast[ptr gdk.RGBA](nil)[]; palette: gdk.RGBAArray;
+proc setColors*(self: Terminal; foreground: gdk.RGBA = cast[var gdk.RGBA](nil);
+    background: gdk.RGBA = cast[var gdk.RGBA](nil); palette: ptr gdk.RGBA;
     paletteSize: uint64) =
   vte_terminal_set_colors(cast[ptr Terminal00](self.impl), foreground, background, palette, paletteSize)
 
@@ -1460,9 +1482,6 @@ proc vte_terminal_set_default_colors(self: ptr Terminal00) {.
     importc, libprag.}
 
 proc setDefaultColors*(self: Terminal) =
-  vte_terminal_set_default_colors(cast[ptr Terminal00](self.impl))
-
-proc `defaultColors=`*(self: Terminal) =
   vte_terminal_set_default_colors(cast[ptr Terminal00](self.impl))
 
 proc vte_terminal_set_delete_binding(self: ptr Terminal00; binding: EraseBinding) {.
@@ -1492,19 +1511,19 @@ proc setEnableShaping*(self: Terminal; enableShaping: bool = true) =
 proc `enableShaping=`*(self: Terminal; enableShaping: bool) =
   vte_terminal_set_enable_shaping(cast[ptr Terminal00](self.impl), gboolean(enableShaping))
 
+proc vte_terminal_set_enable_sixel(self: ptr Terminal00; enabled: gboolean) {.
+    importc, libprag.}
+
+proc setEnableSixel*(self: Terminal; enabled: bool = true) =
+  vte_terminal_set_enable_sixel(cast[ptr Terminal00](self.impl), gboolean(enabled))
+
+proc `enableSixel=`*(self: Terminal; enabled: bool) =
+  vte_terminal_set_enable_sixel(cast[ptr Terminal00](self.impl), gboolean(enabled))
+
 proc vte_terminal_set_encoding(self: ptr Terminal00; codeset: cstring; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc setEncoding*(self: Terminal; codeset: cstring = ""): bool =
-  var gerror: ptr glib.Error
-  let resul0 = vte_terminal_set_encoding(cast[ptr Terminal00](self.impl), safeStringToCString(codeset), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
-
-proc `encoding=`*(self: Terminal; codeset: cstring = ""): bool =
   var gerror: ptr glib.Error
   let resul0 = vte_terminal_set_encoding(cast[ptr Terminal00](self.impl), safeStringToCString(codeset), addr gerror)
   if gerror != nil:
@@ -1619,28 +1638,29 @@ proc `wordCharExceptions=`*(self: Terminal; exceptions: cstring) =
   vte_terminal_set_word_char_exceptions(cast[ptr Terminal00](self.impl), exceptions)
 
 proc vte_terminal_spawn_sync(self: ptr Terminal00; ptyFlags: PtyFlags; workingDirectory: cstring;
-    argv: cstringArray; envv: cstringArray; spawnFlags: glib.SpawnFlags; childSetup: SpawnChildSetupFunc;
+    argv: ptr cstring; envv: ptr cstring; spawnFlags: glib.SpawnFlags; childSetup: SpawnChildSetupFunc;
     childSetupData: pointer; childPid: var int32; cancellable: ptr gio.Cancellable00;
     error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc spawnSync*(self: Terminal; ptyFlags: PtyFlags; workingDirectory: cstring = "";
     argv: openArray[string]; envv: openArray[string]; spawnFlags: glib.SpawnFlags;
-    childSetup: SpawnChildSetupFunc; childSetupData: pointer; childPid: var int;
+    childSetup: SpawnChildSetupFunc; childSetupData: pointer; childPid: var int = cast[var int](nil);
     cancellable: gio.Cancellable = nil): bool =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var fs469n232x: array[256, pointer]
   var fs469n232: cstringArray = cast[cstringArray](addr fs469n232x)
   var gerror: ptr glib.Error
-  var childPid_00 = int32(childPid)
+  var childPid_00: int32
   let resul0 = vte_terminal_spawn_sync(cast[ptr Terminal00](self.impl), ptyFlags, safeStringToCString(workingDirectory), seq2CstringArray(argv, fs469n23), seq2CstringArray(envv, fs469n232), spawnFlags, childSetup, childSetupData, childPid_00, if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  childPid = int(childPid_00)
+  if childPid.addr != nil:
+    childPid = int(childPid_00)
 
 proc vte_terminal_unselect_all(self: ptr Terminal00) {.
     importc, libprag.}
@@ -1667,23 +1687,11 @@ proc getText*(self: Terminal; isSelected: SelectionFunc; userData: pointer;
   result = $resul0
   cogfree(resul0)
 
-proc text*(self: Terminal; isSelected: SelectionFunc; userData: pointer;
-    attributes: var ptr GArray00): string =
-  let resul0 = vte_terminal_get_text(cast[ptr Terminal00](self.impl), isSelected, userData, attributes)
-  result = $resul0
-  cogfree(resul0)
-
 proc vte_terminal_get_text_include_trailing_spaces(self: ptr Terminal00;
     isSelected: SelectionFunc; userData: pointer; attributes: var ptr GArray00): cstring {.
     importc, libprag.}
 
 proc getTextIncludeTrailingSpaces*(self: Terminal; isSelected: SelectionFunc;
-    userData: pointer; attributes: var ptr GArray00): string =
-  let resul0 = vte_terminal_get_text_include_trailing_spaces(cast[ptr Terminal00](self.impl), isSelected, userData, attributes)
-  result = $resul0
-  cogfree(resul0)
-
-proc textIncludeTrailingSpaces*(self: Terminal; isSelected: SelectionFunc;
     userData: pointer; attributes: var ptr GArray00): string =
   let resul0 = vte_terminal_get_text_include_trailing_spaces(cast[ptr Terminal00](self.impl), isSelected, userData, attributes)
   result = $resul0
@@ -1695,13 +1703,6 @@ proc vte_terminal_get_text_range(self: ptr Terminal00; startRow: int64; startCol
     importc, libprag.}
 
 proc getTextRange*(self: Terminal; startRow: int64; startCol: int64;
-    endRow: int64; endCol: int64; isSelected: SelectionFunc; userData: pointer;
-    attributes: var ptr GArray00): string =
-  let resul0 = vte_terminal_get_text_range(cast[ptr Terminal00](self.impl), startRow, startCol, endRow, endCol, isSelected, userData, attributes)
-  result = $resul0
-  cogfree(resul0)
-
-proc textRange*(self: Terminal; startRow: int64; startCol: int64;
     endRow: int64; endCol: int64; isSelected: SelectionFunc; userData: pointer;
     attributes: var ptr GArray00): string =
   let resul0 = vte_terminal_get_text_range(cast[ptr Terminal00](self.impl), startRow, startCol, endRow, endCol, isSelected, userData, attributes)
@@ -1759,7 +1760,7 @@ type
   TerminalSpawnAsyncCallback* = proc (terminal: ptr Terminal00; pid: int32; error: ptr glib.Error; userData: pointer) {.cdecl.}
 
 proc vte_terminal_spawn_async(self: ptr Terminal00; ptyFlags: PtyFlags; workingDirectory: cstring;
-    argv: cstringArray; envv: cstringArray; spawnFlags: glib.SpawnFlags; childSetup: SpawnChildSetupFunc;
+    argv: ptr cstring; envv: ptr cstring; spawnFlags: glib.SpawnFlags; childSetup: SpawnChildSetupFunc;
     childSetupData: pointer; childSetupDataDestroy: DestroyNotify; timeout: int32;
     cancellable: ptr gio.Cancellable00; callback: TerminalSpawnAsyncCallback;
     userData: pointer) {.
@@ -1776,6 +1777,27 @@ proc spawnAsync*(self: Terminal; ptyFlags: PtyFlags; workingDirectory: cstring =
   var fs469n232: cstringArray = cast[cstringArray](addr fs469n232x)
   vte_terminal_spawn_async(cast[ptr Terminal00](self.impl), ptyFlags, safeStringToCString(workingDirectory), seq2CstringArray(argv, fs469n23), seq2CstringArray(envv, fs469n232), spawnFlags, childSetup, childSetupData, childSetupDataDestroy, int32(timeout), if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), callback, userData)
 
+proc vte_terminal_spawn_with_fds_async(self: ptr Terminal00; ptyFlags: PtyFlags;
+    workingDirectory: cstring; argv: ptr cstring; envv: ptr cstring; fds: ptr int32;
+    nFds: int32; mapFds: ptr int32; nMapFds: int32; spawnFlags: glib.SpawnFlags;
+    childSetup: SpawnChildSetupFunc; childSetupData: pointer; childSetupDataDestroy: DestroyNotify;
+    timeout: int32; cancellable: ptr gio.Cancellable00; callback: TerminalSpawnAsyncCallback;
+    userData: pointer) {.
+    importc, libprag.}
+
+proc spawnWithFdsAsync*(self: Terminal; ptyFlags: PtyFlags;
+    workingDirectory: cstring = ""; argv: openArray[string]; envv: openArray[string];
+    fds: seq[int32]; nFds: int; mapFds: seq[int32]; spawnFlags: glib.SpawnFlags;
+    childSetup: SpawnChildSetupFunc; childSetupData: pointer; childSetupDataDestroy: DestroyNotify;
+    timeout: int; cancellable: gio.Cancellable = nil; callback: TerminalSpawnAsyncCallback;
+    userData: pointer) =
+  let nMapFds = int(map_fds.len)
+  var fs469n23x: array[256, pointer]
+  var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
+  var fs469n232x: array[256, pointer]
+  var fs469n232: cstringArray = cast[cstringArray](addr fs469n232x)
+  vte_terminal_spawn_with_fds_async(cast[ptr Terminal00](self.impl), ptyFlags, safeStringToCString(workingDirectory), seq2CstringArray(argv, fs469n23), seq2CstringArray(envv, fs469n232), cast[ptr int32](unsafeaddr(fds[0])), int32(nFds), cast[ptr int32](unsafeaddr(mapFds[0])), int32(nMapFds), spawnFlags, childSetup, childSetupData, childSetupDataDestroy, int32(timeout), if cancellable.isNil: nil else: cast[ptr gio.Cancellable00](cancellable.impl), callback, userData)
+
 proc vte_get_encoding_supported(encoding: cstring): gboolean {.
     importc, libprag.}
 
@@ -1785,7 +1807,7 @@ proc getEncodingSupported*(encoding: cstring): bool =
 proc encodingSupported*(encoding: cstring): bool =
   toBool(vte_get_encoding_supported(encoding))
 
-proc vte_get_encodings(includeAliases: gboolean): cstringArray {.
+proc vte_get_encodings(includeAliases: gboolean): ptr cstring {.
     importc, libprag.}
 
 proc getEncodings*(includeAliases: bool): seq[string] =
@@ -1798,13 +1820,13 @@ proc encodings*(includeAliases: bool): seq[string] =
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
+proc getFeatureFlags*(): FeatureFlags {.
+    importc: "vte_get_feature_flags", libprag.}
+
 proc vte_get_features(): cstring {.
     importc, libprag.}
 
 proc getFeatures*(): string =
-  result = $vte_get_features()
-
-proc features*(): string =
   result = $vte_get_features()
 
 proc vte_get_major_version(): uint32 {.
@@ -1813,16 +1835,10 @@ proc vte_get_major_version(): uint32 {.
 proc getMajorVersion*(): int =
   int(vte_get_major_version())
 
-proc majorVersion*(): int =
-  int(vte_get_major_version())
-
 proc vte_get_micro_version(): uint32 {.
     importc, libprag.}
 
 proc getMicroVersion*(): int =
-  int(vte_get_micro_version())
-
-proc microVersion*(): int =
   int(vte_get_micro_version())
 
 proc vte_get_minor_version(): uint32 {.
@@ -1831,18 +1847,10 @@ proc vte_get_minor_version(): uint32 {.
 proc getMinorVersion*(): int =
   int(vte_get_minor_version())
 
-proc minorVersion*(): int =
-  int(vte_get_minor_version())
-
 proc vte_get_user_shell(): cstring {.
     importc, libprag.}
 
 proc getUserShell*(): string =
-  let resul0 = vte_get_user_shell()
-  result = $resul0
-  cogfree(resul0)
-
-proc userShell*(): string =
   let resul0 = vte_get_user_shell()
   result = $resul0
   cogfree(resul0)

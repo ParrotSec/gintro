@@ -1,22 +1,21 @@
 # dependencies:
+# freetype2-2.0
+# GLib-2.0
+# HarfBuzz-0.0
+# cairo-1.0
 # PangoFc-1.0
+# GObject-2.0
 # fontconfig-2.0
 # Pango-1.0
-# cairo-1.0
-# GLib-2.0
-# freetype2-2.0
-# GObject-2.0
 # immediate dependencies:
 # freetype2-2.0
 # PangoFc-1.0
 # libraries:
 # libpangoft2-1.0.so.0
 {.warning[UnusedImport]: off.}
-import pangofc, fontconfig, pango, cairo, glib, freetype2, gobject
+import freetype2, glib, harfbuzz, cairo, pangofc, gobject, fontconfig, pango
 const Lib = "libpangoft2-1.0.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
-
-
 
 proc finalizeGObject*[T](o: ref T) =
   if not o.ignoreFinalizer:

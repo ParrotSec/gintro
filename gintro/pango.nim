@@ -2,27 +2,17 @@
 # GObject-2.0
 # cairo-1.0
 # GLib-2.0
+# HarfBuzz-0.0
 # immediate dependencies:
 # cairo-1.0
+# HarfBuzz-0.0
 # GObject-2.0
 # libraries:
 # libpango-1.0.so.0
 {.warning[UnusedImport]: off.}
-import gobject, cairo, glib
+import gobject, cairo, glib, harfbuzz
 const Lib = "libpango-1.0.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
-
-type
-  FontFamily00Array* = pointer
-  uint8Array* = pointer
-  FontDescription00Array* = pointer
-  ScriptArray* = pointer
-  LogAttr00Array* = pointer
-  FontFace00Array* = pointer
-  int32Array* = pointer
-
-type
-  GlyphInfo00Array* = pointer
 
 proc finalizeGObject*[T](o: ref T) =
   if not o.ignoreFinalizer:
@@ -34,7 +24,6 @@ const ANALYSIS_FLAG_IS_ELLIPSIS* = 2'i32
 
 const ANALYSIS_FLAG_NEED_HYPHEN* = 4'i32
 
-const ATTR_INDEX_FROM_TEXT_BEGINNING* = 0'i32
 
 type
   Alignment* {.size: sizeof(cint), pure.} = enum
@@ -65,6 +54,9 @@ type
 
 type
   Attribute00* {.pure.} = object
+    klass*: ptr AttrClass00
+    startIndex*: uint32
+    endIndex*: uint32
   Attribute* = ref object
     impl*: ptr Attribute00
     ignoreFinalizer*: bool
@@ -80,6 +72,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(pango_attribute_get_type(), cast[ptr Attribute00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var Attribute) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoAttribute)
 
 proc pango_attribute_copy(self: ptr Attribute00): ptr Attribute00 {.
     importc, libprag.}
@@ -138,6 +136,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(pango_font_description_get_type(), cast[ptr FontDescription00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var FontDescription) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoFontDescription)
 
 proc pango_font_description_free(self: ptr FontDescription00) {.
     importc, libprag.}
@@ -406,6 +410,12 @@ when defined(gcDestructors):
       boxedFree(pango_matrix_get_type(), cast[ptr Matrix00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var Matrix) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoMatrix)
+
 proc pango_matrix_free(self: ptr Matrix00) {.
     importc, libprag.}
 
@@ -445,8 +455,8 @@ proc pango_matrix_get_font_scale_factors(self: ptr Matrix00; xscale: var cdouble
     yscale: var cdouble) {.
     importc, libprag.}
 
-proc getFontScaleFactors*(self: Matrix; xscale: var cdouble;
-    yscale: var cdouble) =
+proc getFontScaleFactors*(self: Matrix; xscale: var cdouble = cast[var cdouble](nil);
+    yscale: var cdouble = cast[var cdouble](nil)) =
   pango_matrix_get_font_scale_factors(cast[ptr Matrix00](self.impl), xscale, yscale)
 
 proc pango_matrix_rotate(self: ptr Matrix00; degrees: cdouble) {.
@@ -499,13 +509,13 @@ type
 proc pango_matrix_transform_pixel_rectangle(self: ptr Matrix00; rect: var Rectangle) {.
     importc, libprag.}
 
-proc transformPixelRectangle*(self: Matrix; rect: var Rectangle = cast[ptr Rectangle](nil)[]) =
+proc transformPixelRectangle*(self: Matrix; rect: var Rectangle = cast[var Rectangle](nil)) =
   pango_matrix_transform_pixel_rectangle(cast[ptr Matrix00](self.impl), rect)
 
 proc pango_matrix_transform_rectangle(self: ptr Matrix00; rect: var Rectangle) {.
     importc, libprag.}
 
-proc transformRectangle*(self: Matrix; rect: var Rectangle = cast[ptr Rectangle](nil)[]) =
+proc transformRectangle*(self: Matrix; rect: var Rectangle = cast[var Rectangle](nil)) =
   pango_matrix_transform_rectangle(cast[ptr Matrix00](self.impl), rect)
 
 type
@@ -641,9 +651,6 @@ type
 proc getForScript*(script: Script; baseGravity: Gravity; hint: GravityHint): Gravity {.
     importc: "pango_gravity_get_for_script", libprag.}
 
-proc forScript*(script: Script; baseGravity: Gravity; hint: GravityHint): Gravity {.
-    importc: "pango_gravity_get_for_script", libprag.}
-
 proc pango_gravity_get_for_script_and_width(script: Script; wide: gboolean;
     baseGravity: Gravity; hint: GravityHint): Gravity {.
     importc, libprag.}
@@ -651,10 +658,6 @@ proc pango_gravity_get_for_script_and_width(script: Script; wide: gboolean;
 proc getForScriptAndWidth*(script: Script; wide: bool; baseGravity: Gravity;
     hint: GravityHint): Gravity =
   pango_gravity_get_for_script_and_width(script, gboolean(wide), baseGravity, hint)
-
-proc forScriptAndWidth*(script: Script; wide: gboolean;
-    baseGravity: Gravity; hint: GravityHint): Gravity {.
-    importc: "pango_gravity_get_for_script_and_width", libprag.}
 
 type
   Language00* {.pure.} = object
@@ -674,6 +677,12 @@ when defined(gcDestructors):
       boxedFree(pango_language_get_type(), cast[ptr Language00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var Language) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoLanguage)
+
 proc pango_language_get_sample_string(self: ptr Language00): cstring {.
     importc, libprag.}
 
@@ -683,24 +692,17 @@ proc getSampleString*(self: Language): string =
 proc sampleString*(self: Language): string =
   result = $pango_language_get_sample_string(cast[ptr Language00](self.impl))
 
-proc pango_language_get_scripts(self: ptr Language00; numScripts: var int32): ScriptArray {.
+proc pango_language_get_scripts(self: ptr Language00; numScripts: var int32): ptr Script {.
     importc, libprag.}
 
-proc getScripts*(self: Language; numScripts: var int): ScriptArray =
-  var numScripts_00 = int32(numScripts)
+proc getScripts*(self: Language; numScripts: var int = cast[var int](nil)): ptr Script =
+  var numScripts_00: int32
   let resul0 = pango_language_get_scripts(cast[ptr Language00](self.impl), numScripts_00)
   if resul0.isNil:
     return
   result = resul0
-  numScripts = int(numScripts_00)
-
-proc scripts*(self: Language; numScripts: var int): ScriptArray =
-  var numScripts_00 = int32(numScripts)
-  let resul0 = pango_language_get_scripts(cast[ptr Language00](self.impl), numScripts_00)
-  if resul0.isNil:
-    return
-  result = resul0
-  numScripts = int(numScripts_00)
+  if numScripts.addr != nil:
+    numScripts = int(numScripts_00)
 
 proc pango_language_includes_script(self: ptr Language00; script: Script): gboolean {.
     importc, libprag.}
@@ -735,11 +737,6 @@ proc pango_language_get_default(): ptr Language00 {.
     importc, libprag.}
 
 proc getDefaultLanguage*(): Language =
-  fnew(result, gBoxedFreePangoLanguage)
-  result.impl = pango_language_get_default()
-  result.ignoreFinalizer = true
-
-proc defaultLanguage*(): Language =
   fnew(result, gBoxedFreePangoLanguage)
   result.impl = pango_language_get_default()
   result.ignoreFinalizer = true
@@ -917,69 +914,61 @@ type
     ignoreFinalizer*: bool
 
 type
-  AttrIterator00* {.pure.} = object
-  AttrIterator* = ref object
-    impl*: ptr AttrIterator00
-    ignoreFinalizer*: bool
+  AttrIterator* {.pure, byRef.} = object
 
 proc pango_attr_iterator_get_type*(): GType {.importc, libprag.}
 
-proc gBoxedFreePangoAttrIterator*(self: AttrIterator) =
-  if not self.ignoreFinalizer:
-    boxedFree(pango_attr_iterator_get_type(), cast[ptr AttrIterator00](self.impl))
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(AttrIterator()[])) =
-    if not self.ignoreFinalizer and self.impl != nil:
-      boxedFree(pango_attr_iterator_get_type(), cast[ptr AttrIterator00](self.impl))
-      self.impl = nil
-
-proc pango_attr_iterator_copy(self: ptr AttrIterator00): ptr AttrIterator00 {.
+proc pango_attr_iterator_copy(self: AttrIterator): ptr AttrIterator {.
     importc, libprag.}
 
-proc copy*(self: AttrIterator): AttrIterator =
-  fnew(result, gBoxedFreePangoAttrIterator)
-  result.impl = pango_attr_iterator_copy(cast[ptr AttrIterator00](self.impl))
+proc copy*(self: AttrIterator): ptr AttrIterator =
+  pango_attr_iterator_copy(self)
 
-proc pango_attr_iterator_destroy(self: ptr AttrIterator00) {.
+proc pango_attr_iterator_destroy(self: AttrIterator) {.
     importc, libprag.}
 
 proc destroy*(self: AttrIterator) =
-  pango_attr_iterator_destroy(cast[ptr AttrIterator00](self.impl))
+  pango_attr_iterator_destroy(self)
 
-proc pango_attr_iterator_get_attrs(self: ptr AttrIterator00): ptr pointer {.
+proc pango_attr_iterator_get_attrs(self: AttrIterator): ptr glib.SList {.
     importc, libprag.}
 
-proc getAttrs*(self: AttrIterator): ptr pointer =
-  pango_attr_iterator_get_attrs(cast[ptr AttrIterator00](self.impl))
+proc getAttrs*(self: AttrIterator): seq[Attribute] =
+  let resul0 = pango_attr_iterator_get_attrs(self)
+  result = gslistStructs2seq[Attribute](resul0, false)
+  g_slist_free(resul0)
 
-proc attrs*(self: AttrIterator): ptr pointer =
-  pango_attr_iterator_get_attrs(cast[ptr AttrIterator00](self.impl))
+proc attrs*(self: AttrIterator): seq[Attribute] =
+  let resul0 = pango_attr_iterator_get_attrs(self)
+  result = gslistStructs2seq[Attribute](resul0, false)
+  g_slist_free(resul0)
 
-proc pango_attr_iterator_get_font(self: ptr AttrIterator00; desc: ptr FontDescription00;
-    language: ptr Language00; extraAttrs: ptr pointer) {.
+proc pango_attr_iterator_get_font(self: AttrIterator; desc: ptr FontDescription00;
+    language: ptr Language00; extraAttrs: ptr glib.SList) {.
     importc, libprag.}
 
 proc getFont*(self: AttrIterator; desc: FontDescription;
-    language: Language = nil; extraAttrs: ptr pointer) =
-  pango_attr_iterator_get_font(cast[ptr AttrIterator00](self.impl), cast[ptr FontDescription00](desc.impl), if language.isNil: nil else: cast[ptr Language00](language.impl), extraAttrs)
+    language: Language = nil; extraAttrs: seq[Attribute]) =
+  var tempResGL = seq2GSList(extraAttrs)
+  pango_attr_iterator_get_font(self, cast[ptr FontDescription00](desc.impl), if language.isNil: nil else: cast[ptr Language00](language.impl), tempResGL)
 
-proc pango_attr_iterator_next(self: ptr AttrIterator00): gboolean {.
+proc pango_attr_iterator_next(self: AttrIterator): gboolean {.
     importc, libprag.}
 
 proc next*(self: AttrIterator): bool =
-  toBool(pango_attr_iterator_next(cast[ptr AttrIterator00](self.impl)))
+  toBool(pango_attr_iterator_next(self))
 
-proc pango_attr_iterator_range(self: ptr AttrIterator00; start: var int32;
-    `end`: var int32) {.
+proc pango_attr_iterator_range(self: AttrIterator; start: var int32; `end`: var int32) {.
     importc, libprag.}
 
 proc range*(self: AttrIterator; start: var int; `end`: var int) =
-  var start_00 = int32(start)
-  var end_00 = int32(`end`)
-  pango_attr_iterator_range(cast[ptr AttrIterator00](self.impl), start_00, end_00)
-  start = int(start_00)
-  `end` = int(end_00)
+  var start_00: int32
+  var end_00: int32
+  pango_attr_iterator_range(self, start_00, end_00)
+  if start.addr != nil:
+    start = int(start_00)
+  if `end`.addr != nil:
+    `end` = int(end_00)
 
 type
   AttrType* {.size: sizeof(cint), pure.} = enum
@@ -1012,6 +1001,8 @@ type
     allowBreaks = 26
     show = 27
     insertHyphens = 28
+    overline = 29
+    overlineColor = 30
 
 proc pango_attr_type_get_name(`type`: AttrType): cstring {.
     importc, libprag.}
@@ -1031,22 +1022,16 @@ proc name*(`type`: AttrType): string =
 proc registerAttrType*(name: cstring): AttrType {.
     importc: "pango_attr_type_register", libprag.}
 
-proc pango_attr_iterator_get(self: ptr AttrIterator00; `type`: AttrType): ptr Attribute00 {.
+proc pango_attr_iterator_get(self: AttrIterator; `type`: AttrType): ptr Attribute00 {.
     importc, libprag.}
 
 proc getAttrIterator*(self: AttrIterator; `type`: AttrType): Attribute =
-  let impl0 = pango_attr_iterator_get(cast[ptr AttrIterator00](self.impl), `type`)
+  let impl0 = pango_attr_iterator_get(self, `type`)
   if impl0.isNil:
     return nil
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = impl0
-
-proc attrIterator*(self: AttrIterator; `type`: AttrType): Attribute =
-  let impl0 = pango_attr_iterator_get(cast[ptr AttrIterator00](self.impl), `type`)
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreePangoAttribute)
-  result.impl = impl0
+  result.ignoreFinalizer = true
 
 type
   AttrLanguage00* {.pure.} = object
@@ -1079,6 +1064,12 @@ when defined(gcDestructors):
       boxedFree(pango_attr_list_get_type(), cast[ptr AttrList00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var AttrList) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoAttrList)
+
 proc pango_attr_list_unref(self: ptr AttrList00) {.
     importc, libprag.}
 
@@ -1093,6 +1084,7 @@ proc pango_attr_list_change(self: ptr AttrList00; attr: ptr Attribute00) {.
     importc, libprag.}
 
 proc change*(self: AttrList; attr: Attribute) =
+  attr.ignoreFinalizer = true
   pango_attr_list_change(cast[ptr AttrList00](self.impl), cast[ptr Attribute00](attr.impl))
 
 proc pango_attr_list_copy(self: ptr AttrList00): ptr AttrList00 {.
@@ -1105,6 +1097,12 @@ proc copy*(self: AttrList): AttrList =
   fnew(result, gBoxedFreePangoAttrList)
   result.impl = impl0
 
+proc pango_attr_list_equal(self: ptr AttrList00; otherList: ptr AttrList00): gboolean {.
+    importc, libprag.}
+
+proc equal*(self: AttrList; otherList: AttrList): bool =
+  toBool(pango_attr_list_equal(cast[ptr AttrList00](self.impl), cast[ptr AttrList00](otherList.impl)))
+
 proc pango_attr_list_filter(self: ptr AttrList00; `func`: AttrFilterFunc;
     data: pointer): ptr AttrList00 {.
     importc, libprag.}
@@ -1116,32 +1114,37 @@ proc filter*(self: AttrList; `func`: AttrFilterFunc; data: pointer): AttrList =
   fnew(result, gBoxedFreePangoAttrList)
   result.impl = impl0
 
-proc pango_attr_list_get_attributes(self: ptr AttrList00): ptr pointer {.
+proc pango_attr_list_get_attributes(self: ptr AttrList00): ptr glib.SList {.
     importc, libprag.}
 
-proc getAttributes*(self: AttrList): ptr pointer =
-  pango_attr_list_get_attributes(cast[ptr AttrList00](self.impl))
+proc getAttributes*(self: AttrList): seq[Attribute] =
+  let resul0 = pango_attr_list_get_attributes(cast[ptr AttrList00](self.impl))
+  result = gslistStructs2seq[Attribute](resul0, false)
+  g_slist_free(resul0)
 
-proc attributes*(self: AttrList): ptr pointer =
-  pango_attr_list_get_attributes(cast[ptr AttrList00](self.impl))
+proc attributes*(self: AttrList): seq[Attribute] =
+  let resul0 = pango_attr_list_get_attributes(cast[ptr AttrList00](self.impl))
+  result = gslistStructs2seq[Attribute](resul0, false)
+  g_slist_free(resul0)
 
-proc pango_attr_list_get_iterator(self: ptr AttrList00): ptr AttrIterator00 {.
+proc pango_attr_list_get_iterator(self: ptr AttrList00): ptr AttrIterator {.
     importc, libprag.}
 
-proc getIterator*(self: AttrList): AttrIterator =
-  fnew(result, gBoxedFreePangoAttrIterator)
-  result.impl = pango_attr_list_get_iterator(cast[ptr AttrList00](self.impl))
+proc getIterator*(self: AttrList): ptr AttrIterator =
+  pango_attr_list_get_iterator(cast[ptr AttrList00](self.impl))
 
 proc pango_attr_list_insert(self: ptr AttrList00; attr: ptr Attribute00) {.
     importc, libprag.}
 
 proc insert*(self: AttrList; attr: Attribute) =
+  attr.ignoreFinalizer = true
   pango_attr_list_insert(cast[ptr AttrList00](self.impl), cast[ptr Attribute00](attr.impl))
 
 proc pango_attr_list_insert_before(self: ptr AttrList00; attr: ptr Attribute00) {.
     importc, libprag.}
 
 proc insertBefore*(self: AttrList; attr: Attribute) =
+  attr.ignoreFinalizer = true
   pango_attr_list_insert_before(cast[ptr AttrList00](self.impl), cast[ptr Attribute00](attr.impl))
 
 proc pango_attr_list_ref(self: ptr AttrList00): ptr AttrList00 {.
@@ -1280,6 +1283,13 @@ proc pango_color_parse(self: Color; spec: cstring): gboolean {.
 
 proc parse*(self: Color; spec: cstring): bool =
   toBool(pango_color_parse(self, spec))
+
+proc pango_color_parse_with_alpha(self: Color; alpha: var uint16; spec: cstring): gboolean {.
+    importc, libprag.}
+
+proc parseWithAlpha*(self: Color; alpha: var uint16 = cast[var uint16](nil);
+    spec: cstring): bool =
+  toBool(pango_color_parse_with_alpha(self, alpha, spec))
 
 proc pango_color_to_string(self: Color): cstring {.
     importc, libprag.}
@@ -1526,6 +1536,12 @@ when defined(gcDestructors):
       boxedFree(pango_font_metrics_get_type(), cast[ptr FontMetrics00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var FontMetrics) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoFontMetrics)
+
 proc pango_font_metrics_unref(self: ptr FontMetrics00) {.
     importc, libprag.}
 
@@ -1636,11 +1652,6 @@ proc getMetrics*(self: Context; desc: FontDescription = nil;
   fnew(result, gBoxedFreePangoFontMetrics)
   result.impl = pango_context_get_metrics(cast[ptr Context00](self.impl), if desc.isNil: nil else: cast[ptr FontDescription00](desc.impl), if language.isNil: nil else: cast[ptr Language00](language.impl))
 
-proc metrics*(self: Context; desc: FontDescription = nil;
-    language: Language = nil): FontMetrics =
-  fnew(result, gBoxedFreePangoFontMetrics)
-  result.impl = pango_context_get_metrics(cast[ptr Context00](self.impl), if desc.isNil: nil else: cast[ptr FontDescription00](desc.impl), if language.isNil: nil else: cast[ptr Language00](language.impl))
-
 type
   FontFamily* = ref object of gobject.Object
   FontFamily00* = object of gobject.Object00
@@ -1677,15 +1688,16 @@ proc pango_font_family_is_variable(self: ptr FontFamily00): gboolean {.
 proc isVariable*(self: FontFamily): bool =
   toBool(pango_font_family_is_variable(cast[ptr FontFamily00](self.impl)))
 
-proc pango_context_list_families(self: ptr Context00; families: var ptr FontFamily00Array;
+proc pango_context_list_families(self: ptr Context00; families: var ptr ptr FontFamily00;
     nFamilies: var int32) {.
     importc, libprag.}
 
-proc listFamilies*(self: Context; families: var ptr FontFamily00Array;
+proc listFamilies*(self: Context; families: var ptr ptr FontFamily00;
     nFamilies: var int) =
-  var nFamilies_00 = int32(nFamilies)
+  var nFamilies_00: int32
   pango_context_list_families(cast[ptr Context00](self.impl), families, nFamilies_00)
-  nFamilies = int(nFamilies_00)
+  if nFamilies.addr != nil:
+    nFamilies = int(nFamilies_00)
 
 type
   FontFace* = ref object of gobject.Object
@@ -1718,21 +1730,78 @@ proc getFaceName*(self: FontFace): string =
 proc faceName*(self: FontFace): string =
   result = $pango_font_face_get_face_name(cast[ptr FontFace00](self.impl))
 
+proc pango_font_face_get_family(self: ptr FontFace00): ptr FontFamily00 {.
+    importc, libprag.}
+
+proc getFamily*(self: FontFace): FontFamily =
+  let gobj = pango_font_face_get_family(cast[ptr FontFace00](self.impl))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, pango.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc family*(self: FontFace): FontFamily =
+  let gobj = pango_font_face_get_family(cast[ptr FontFace00](self.impl))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, pango.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
 proc pango_font_face_is_synthesized(self: ptr FontFace00): gboolean {.
     importc, libprag.}
 
 proc isSynthesized*(self: FontFace): bool =
   toBool(pango_font_face_is_synthesized(cast[ptr FontFace00](self.impl)))
 
-proc pango_font_family_list_faces(self: ptr FontFamily00; faces: var ptr FontFace00Array;
+proc pango_font_family_get_face(self: ptr FontFamily00; name: cstring): ptr FontFace00 {.
+    importc, libprag.}
+
+proc getFace*(self: FontFamily; name: cstring = ""): FontFace =
+  let gobj = pango_font_family_get_face(cast[ptr FontFamily00](self.impl), safeStringToCString(name))
+  if gobj.isNil:
+    return nil
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, pango.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc pango_font_family_list_faces(self: ptr FontFamily00; faces: var ptr ptr FontFace00;
     nFaces: var int32) {.
     importc, libprag.}
 
-proc listFaces*(self: FontFamily; faces: var ptr FontFace00Array;
+proc listFaces*(self: FontFamily; faces: var ptr ptr FontFace00 = cast[var ptr ptr FontFace00](nil);
     nFaces: var int) =
-  var nFaces_00 = int32(nFaces)
+  var nFaces_00: int32
   pango_font_family_list_faces(cast[ptr FontFamily00](self.impl), faces, nFaces_00)
-  nFaces = int(nFaces_00)
+  if nFaces.addr != nil:
+    nFaces = int(nFaces_00)
 
 type
   Font* = ref object of gobject.Object
@@ -1749,10 +1818,10 @@ when defined(gcDestructors):
       g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
       self.impl = nil
 
-proc pango_font_descriptions_free(descs: ptr FontDescription00Array; nDescs: int32) {.
+proc pango_font_descriptions_free(descs: ptr ptr FontDescription00; nDescs: int32) {.
     importc, libprag.}
 
-proc descriptionsFree*(descs: ptr FontDescription00Array; nDescs: int) =
+proc descriptionsFree*(descs: ptr ptr FontDescription00; nDescs: int) =
   pango_font_descriptions_free(descs, int32(nDescs))
 
 proc pango_font_describe(self: ptr Font00): ptr FontDescription00 {.
@@ -1769,22 +1838,66 @@ proc describeWithAbsoluteSize*(self: Font): FontDescription =
   fnew(result, gBoxedFreePangoFontDescription)
   result.impl = pango_font_describe_with_absolute_size(cast[ptr Font00](self.impl))
 
+proc pango_font_get_face(self: ptr Font00): ptr FontFace00 {.
+    importc, libprag.}
+
+proc getFace*(self: Font): FontFace =
+  let gobj = pango_font_get_face(cast[ptr Font00](self.impl))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, pango.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc face*(self: Font): FontFace =
+  let gobj = pango_font_get_face(cast[ptr Font00](self.impl))
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, pango.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc pango_font_get_features(self: ptr Font00; features: var ptr harfbuzz.featureT00;
+    len: var uint32; numFeatures: var uint32) {.
+    importc, libprag.}
+
+proc getFeatures*(self: Font; features: var ptr harfbuzz.featureT00;
+    len: var int; numFeatures: var int) =
+  var numFeatures_00 = uint32(numFeatures)
+  var len_00: uint32
+  pango_font_get_features(cast[ptr Font00](self.impl), features, len_00, numFeatures_00)
+  numFeatures = int(numFeatures_00)
+  if len.addr != nil:
+    len = int(len_00)
+
 proc pango_font_get_glyph_extents(self: ptr Font00; glyph: uint32; inkRect: var Rectangle;
     logicalRect: var Rectangle) {.
     importc, libprag.}
 
-proc getGlyphExtents*(self: Font; glyph: int; inkRect: var Rectangle;
-    logicalRect: var Rectangle) =
+proc getGlyphExtents*(self: Font; glyph: int; inkRect: var Rectangle = cast[var Rectangle](nil);
+    logicalRect: var Rectangle = cast[var Rectangle](nil)) =
   pango_font_get_glyph_extents(cast[ptr Font00](self.impl), uint32(glyph), inkRect, logicalRect)
 
 proc pango_font_get_metrics(self: ptr Font00; language: ptr Language00): ptr FontMetrics00 {.
     importc, libprag.}
 
 proc getMetrics*(self: Font; language: Language = nil): FontMetrics =
-  fnew(result, gBoxedFreePangoFontMetrics)
-  result.impl = pango_font_get_metrics(cast[ptr Font00](self.impl), if language.isNil: nil else: cast[ptr Language00](language.impl))
-
-proc metrics*(self: Font; language: Language = nil): FontMetrics =
   fnew(result, gBoxedFreePangoFontMetrics)
   result.impl = pango_font_get_metrics(cast[ptr Font00](self.impl), if language.isNil: nil else: cast[ptr Language00](language.impl))
 
@@ -1936,12 +2049,12 @@ proc initCoverage*[T](result: var T) {.deprecated.} =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc pango_coverage_from_bytes(bytes: uint8Array; nBytes: int32): ptr Coverage00 {.
+proc pango_coverage_from_bytes(bytes: ptr uint8; nBytes: int32): ptr Coverage00 {.
     importc, libprag.}
 
 proc fromBytes*(bytes: seq[uint8] | string): Coverage =
   let nBytes = int(bytes.len)
-  let gobj = pango_coverage_from_bytes(unsafeaddr(bytes[0]), int32(nBytes))
+  let gobj = pango_coverage_from_bytes(cast[ptr uint8](unsafeaddr(bytes[0])), int32(nBytes))
   if gobj.isNil:
     return nil
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -2031,23 +2144,6 @@ proc getCoverage*(self: Font; language: Language): Coverage =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc coverage*(self: Font; language: Language): Coverage =
-  let gobj = pango_font_get_coverage(cast[ptr Font00](self.impl), cast[ptr Language00](language.impl))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, pango.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
 type
   CoverageLevel* {.size: sizeof(cint), pure.} = enum
     none = 0
@@ -2059,9 +2155,6 @@ proc pango_coverage_get(self: ptr Coverage00; index: int32): CoverageLevel {.
     importc, libprag.}
 
 proc getCoverage*(self: Coverage; index: int): CoverageLevel =
-  pango_coverage_get(cast[ptr Coverage00](self.impl), int32(index))
-
-proc coverage*(self: Coverage; index: int): CoverageLevel =
   pango_coverage_get(cast[ptr Coverage00](self.impl), int32(index))
 
 proc pango_coverage_set(self: ptr Coverage00; index: int32; level: CoverageLevel) {.
@@ -2089,23 +2182,6 @@ proc pango_fontset_get_font(self: ptr Fontset00; wc: uint32): ptr Font00 {.
     importc, libprag.}
 
 proc getFont*(self: Fontset; wc: int): Font =
-  let gobj = pango_fontset_get_font(cast[ptr Fontset00](self.impl), uint32(wc))
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, pango.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc font*(self: Fontset; wc: int): Font =
   let gobj = pango_fontset_get_font(cast[ptr Fontset00](self.impl), uint32(wc))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -2225,6 +2301,25 @@ proc createContext*(self: FontMap): Context =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
+proc pango_font_map_get_family(self: ptr FontMap00; name: cstring): ptr FontFamily00 {.
+    importc, libprag.}
+
+proc getFamily*(self: FontMap; name: cstring): FontFamily =
+  let gobj = pango_font_map_get_family(cast[ptr FontMap00](self.impl), name)
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, pango.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
 proc pango_font_map_get_serial(self: ptr FontMap00): uint32 {.
     importc, libprag.}
 
@@ -2234,15 +2329,16 @@ proc getSerial*(self: FontMap): int =
 proc serial*(self: FontMap): int =
   int(pango_font_map_get_serial(cast[ptr FontMap00](self.impl)))
 
-proc pango_font_map_list_families(self: ptr FontMap00; families: var ptr FontFamily00Array;
+proc pango_font_map_list_families(self: ptr FontMap00; families: var ptr ptr FontFamily00;
     nFamilies: var int32) {.
     importc, libprag.}
 
-proc listFamilies*(self: FontMap; families: var ptr FontFamily00Array;
+proc listFamilies*(self: FontMap; families: var ptr ptr FontFamily00;
     nFamilies: var int) =
-  var nFamilies_00 = int32(nFamilies)
+  var nFamilies_00: int32
   pango_font_map_list_families(cast[ptr FontMap00](self.impl), families, nFamilies_00)
-  nFamilies = int(nFamilies_00)
+  if nFamilies.addr != nil:
+    nFamilies = int(nFamilies_00)
 
 proc pango_font_map_load_font(self: ptr FontMap00; context: ptr Context00;
     desc: ptr FontDescription00): ptr Font00 {.
@@ -2512,16 +2608,20 @@ const GLYPH_INVALID_INPUT* = 4294967295'u32
 const GLYPH_UNKNOWN_FLAG* = 268435456'u32
 
 type
-  GlyphGeometry00* {.pure.} = object
-  GlyphGeometry* = ref object
-    impl*: ptr GlyphGeometry00
-    ignoreFinalizer*: bool
+  GlyphGeometry* {.pure, byRef.} = object
+    width*: int32
+    xOffset*: int32
+    yOffset*: int32
 
 type
-  GlyphInfo00* {.pure.} = object
-  GlyphInfo* = ref object
-    impl*: ptr GlyphInfo00
-    ignoreFinalizer*: bool
+  GlyphVisAttr* {.pure, byRef.} = object
+    isClusterStart*: uint32
+
+type
+  GlyphInfo* {.pure, byRef.} = object
+    glyph*: uint32
+    geometry*: GlyphGeometry
+    attr*: GlyphVisAttr
 
 type
   GlyphItem00* {.pure.} = object
@@ -2540,6 +2640,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(pango_glyph_item_get_type(), cast[ptr GlyphItem00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var GlyphItem) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoGlyphItem)
 
 proc pango_glyph_item_free(self: ptr GlyphItem00) {.
     importc, libprag.}
@@ -2561,19 +2667,21 @@ proc copy*(self: GlyphItem): GlyphItem =
   fnew(result, gBoxedFreePangoGlyphItem)
   result.impl = impl0
 
-proc pango_glyph_item_apply_attrs(self: ptr GlyphItem00; text: cstring; list: ptr AttrList00): ptr pointer {.
+proc pango_glyph_item_apply_attrs(self: ptr GlyphItem00; text: cstring; list: ptr AttrList00): ptr glib.SList {.
     importc, libprag.}
 
-proc applyAttrs*(self: GlyphItem; text: cstring; list: AttrList): ptr pointer =
-  pango_glyph_item_apply_attrs(cast[ptr GlyphItem00](self.impl), text, cast[ptr AttrList00](list.impl))
+proc applyAttrs*(self: GlyphItem; text: cstring; list: AttrList): seq[GlyphItem] =
+  let resul0 = pango_glyph_item_apply_attrs(cast[ptr GlyphItem00](self.impl), text, cast[ptr AttrList00](list.impl))
+  result = gslistStructs2seq[GlyphItem](resul0, false)
+  g_slist_free(resul0)
 
 proc pango_glyph_item_get_logical_widths(self: ptr GlyphItem00; text: cstring;
-    logicalWidths: int32Array) {.
+    logicalWidths: ptr int32) {.
     importc, libprag.}
 
 proc getLogicalWidths*(self: GlyphItem; text: cstring;
     logicalWidths: seq[int32]) =
-  pango_glyph_item_get_logical_widths(cast[ptr GlyphItem00](self.impl), text, unsafeaddr(logicalWidths[0]))
+  pango_glyph_item_get_logical_widths(cast[ptr GlyphItem00](self.impl), text, cast[ptr int32](unsafeaddr(logicalWidths[0])))
 
 proc pango_glyph_item_split(self: ptr GlyphItem00; text: cstring; splitIndex: int32): ptr GlyphItem00 {.
     importc, libprag.}
@@ -2589,10 +2697,10 @@ type
     ignoreFinalizer*: bool
 
 proc pango_glyph_item_letter_space(self: ptr GlyphItem00; text: cstring;
-    logAttrs: LogAttr00Array; letterSpacing: int32) {.
+    logAttrs: ptr LogAttr00; letterSpacing: int32) {.
     importc, libprag.}
 
-proc letterSpace*(self: GlyphItem; text: cstring; logAttrs: LogAttr00Array;
+proc letterSpace*(self: GlyphItem; text: cstring; logAttrs: ptr LogAttr00;
     letterSpacing: int) =
   pango_glyph_item_letter_space(cast[ptr GlyphItem00](self.impl), text, logAttrs, int32(letterSpacing))
 
@@ -2613,6 +2721,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(pango_glyph_item_iter_get_type(), cast[ptr GlyphItemIter00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var GlyphItemIter) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoGlyphItemIter)
 
 proc pango_glyph_item_iter_free(self: ptr GlyphItemIter00) {.
     importc, libprag.}
@@ -2680,6 +2794,12 @@ when defined(gcDestructors):
       boxedFree(pango_glyph_string_get_type(), cast[ptr GlyphString00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var GlyphString) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoGlyphString)
+
 proc pango_glyph_string_free(self: ptr GlyphString00) {.
     importc, libprag.}
 
@@ -2704,8 +2824,8 @@ proc pango_glyph_string_extents(self: ptr GlyphString00; font: ptr Font00;
     inkRect: var Rectangle; logicalRect: var Rectangle) {.
     importc, libprag.}
 
-proc extents*(self: GlyphString; font: Font; inkRect: var Rectangle;
-    logicalRect: var Rectangle) =
+proc extents*(self: GlyphString; font: Font; inkRect: var Rectangle = cast[var Rectangle](nil);
+    logicalRect: var Rectangle = cast[var Rectangle](nil)) =
   pango_glyph_string_extents(cast[ptr GlyphString00](self.impl), cast[ptr Font00](font.impl), inkRect, logicalRect)
 
 proc pango_glyph_string_extents_range(self: ptr GlyphString00; start: int32;
@@ -2713,7 +2833,7 @@ proc pango_glyph_string_extents_range(self: ptr GlyphString00; start: int32;
     importc, libprag.}
 
 proc extentsRange*(self: GlyphString; start: int; `end`: int;
-    font: Font; inkRect: var Rectangle; logicalRect: var Rectangle) =
+    font: Font; inkRect: var Rectangle = cast[var Rectangle](nil); logicalRect: var Rectangle = cast[var Rectangle](nil)) =
   pango_glyph_string_extents_range(cast[ptr GlyphString00](self.impl), int32(start), int32(`end`), cast[ptr Font00](font.impl), inkRect, logicalRect)
 
 proc pango_glyph_string_new(): ptr GlyphString00 {.
@@ -2734,12 +2854,12 @@ proc initGlyphString*[T](result: var T) {.deprecated.} =
   result.impl = pango_glyph_string_new()
 
 proc pango_glyph_string_get_logical_widths(self: ptr GlyphString00; text: cstring;
-    length: int32; embeddingLevel: int32; logicalWidths: int32Array) {.
+    length: int32; embeddingLevel: int32; logicalWidths: ptr int32) {.
     importc, libprag.}
 
 proc getLogicalWidths*(self: GlyphString; text: cstring;
     length: int; embeddingLevel: int; logicalWidths: seq[int32]) =
-  pango_glyph_string_get_logical_widths(cast[ptr GlyphString00](self.impl), text, int32(length), int32(embeddingLevel), unsafeaddr(logicalWidths[0]))
+  pango_glyph_string_get_logical_widths(cast[ptr GlyphString00](self.impl), text, int32(length), int32(embeddingLevel), cast[ptr int32](unsafeaddr(logicalWidths[0])))
 
 proc pango_glyph_string_get_width(self: ptr GlyphString00): int32 {.
     importc, libprag.}
@@ -2757,9 +2877,10 @@ proc pango_glyph_string_index_to_x(self: ptr GlyphString00; text: cstring;
 
 proc indexToX*(self: GlyphString; text: cstring; length: int;
     analysis: Analysis; index: int; trailing: bool; xPos: var int) =
-  var xPos_00 = int32(xPos)
+  var xPos_00: int32
   pango_glyph_string_index_to_x(cast[ptr GlyphString00](self.impl), text, int32(length), cast[ptr Analysis00](analysis.impl), int32(index), gboolean(trailing), xPos_00)
-  xPos = int(xPos_00)
+  if xPos.addr != nil:
+    xPos = int(xPos_00)
 
 proc pango_glyph_string_set_size(self: ptr GlyphString00; newLen: int32) {.
     importc, libprag.}
@@ -2777,17 +2898,13 @@ proc pango_glyph_string_x_to_index(self: ptr GlyphString00; text: cstring;
 
 proc xToIndex*(self: GlyphString; text: cstring; length: int;
     analysis: Analysis; xPos: int; index: var int; trailing: var int) =
-  var index_00 = int32(index)
-  var trailing_00 = int32(trailing)
+  var index_00: int32
+  var trailing_00: int32
   pango_glyph_string_x_to_index(cast[ptr GlyphString00](self.impl), text, int32(length), cast[ptr Analysis00](analysis.impl), int32(xPos), index_00, trailing_00)
-  index = int(index_00)
-  trailing = int(trailing_00)
-
-type
-  GlyphVisAttr00* {.pure.} = object
-  GlyphVisAttr* = ref object
-    impl*: ptr GlyphVisAttr00
-    ignoreFinalizer*: bool
+  if index.addr != nil:
+    index = int(index_00)
+  if trailing.addr != nil:
+    trailing = int(trailing_00)
 
 type
   IncludedModule00* {.pure.} = object
@@ -2813,6 +2930,12 @@ when defined(gcDestructors):
       boxedFree(pango_item_get_type(), cast[ptr Item00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var Item) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoItem)
+
 proc pango_item_free(self: ptr Item00) {.
     importc, libprag.}
 
@@ -2823,11 +2946,11 @@ proc finalizerfree*(self: Item) =
   if not self.ignoreFinalizer:
     pango_item_free(self.impl)
 
-proc pango_item_apply_attrs(self: ptr Item00; iter: ptr AttrIterator00) {.
+proc pango_item_apply_attrs(self: ptr Item00; iter: AttrIterator) {.
     importc, libprag.}
 
 proc applyAttrs*(self: Item; iter: AttrIterator) =
-  pango_item_apply_attrs(cast[ptr Item00](self.impl), cast[ptr AttrIterator00](iter.impl))
+  pango_item_apply_attrs(cast[ptr Item00](self.impl), iter)
 
 proc pango_item_copy(self: ptr Item00): ptr Item00 {.
     importc, libprag.}
@@ -2973,13 +3096,19 @@ proc pango_layout_get_attributes(self: ptr Layout00): ptr AttrList00 {.
     importc, libprag.}
 
 proc getAttributes*(self: Layout): AttrList =
+  let impl0 = pango_layout_get_attributes(cast[ptr Layout00](self.impl))
+  if impl0.isNil:
+    return nil
   fnew(result, gBoxedFreePangoAttrList)
-  result.impl = pango_layout_get_attributes(cast[ptr Layout00](self.impl))
+  result.impl = impl0
   result.ignoreFinalizer = true
 
 proc attributes*(self: Layout): AttrList =
+  let impl0 = pango_layout_get_attributes(cast[ptr Layout00](self.impl))
+  if impl0.isNil:
+    return nil
   fnew(result, gBoxedFreePangoAttrList)
-  result.impl = pango_layout_get_attributes(cast[ptr Layout00](self.impl))
+  result.impl = impl0
   result.ignoreFinalizer = true
 
 proc pango_layout_get_auto_dir(self: ptr Layout00): gboolean {.
@@ -3048,9 +3177,15 @@ proc pango_layout_get_cursor_pos(self: ptr Layout00; index: int32; strongPos: va
     weakPos: var Rectangle) {.
     importc, libprag.}
 
-proc getCursorPos*(self: Layout; index: int; strongPos: var Rectangle;
-    weakPos: var Rectangle) =
+proc getCursorPos*(self: Layout; index: int; strongPos: var Rectangle = cast[var Rectangle](nil);
+    weakPos: var Rectangle = cast[var Rectangle](nil)) =
   pango_layout_get_cursor_pos(cast[ptr Layout00](self.impl), int32(index), strongPos, weakPos)
+
+proc pango_layout_get_direction(self: ptr Layout00; index: int32): Direction {.
+    importc, libprag.}
+
+proc getDirection*(self: Layout; index: int): Direction =
+  pango_layout_get_direction(cast[ptr Layout00](self.impl), int32(index))
 
 proc pango_layout_get_ellipsize(self: ptr Layout00): EllipsizeMode {.
     importc, libprag.}
@@ -3065,7 +3200,8 @@ proc pango_layout_get_extents(self: ptr Layout00; inkRect: var Rectangle;
     logicalRect: var Rectangle) {.
     importc, libprag.}
 
-proc getExtents*(self: Layout; inkRect: var Rectangle; logicalRect: var Rectangle) =
+proc getExtents*(self: Layout; inkRect: var Rectangle = cast[var Rectangle](nil);
+    logicalRect: var Rectangle = cast[var Rectangle](nil)) =
   pango_layout_get_extents(cast[ptr Layout00](self.impl), inkRect, logicalRect)
 
 proc pango_layout_get_font_description(self: ptr Layout00): ptr FontDescription00 {.
@@ -3132,64 +3268,45 @@ proc getLineSpacing*(self: Layout): cfloat =
 proc lineSpacing*(self: Layout): cfloat =
   pango_layout_get_line_spacing(cast[ptr Layout00](self.impl))
 
-proc pango_layout_get_lines(self: ptr Layout00): ptr pointer {.
-    importc, libprag.}
-
-proc getLines*(self: Layout): ptr pointer =
-  pango_layout_get_lines(cast[ptr Layout00](self.impl))
-
-proc lines*(self: Layout): ptr pointer =
-  pango_layout_get_lines(cast[ptr Layout00](self.impl))
-
-proc pango_layout_get_lines_readonly(self: ptr Layout00): ptr pointer {.
-    importc, libprag.}
-
-proc getLinesReadonly*(self: Layout): ptr pointer =
-  pango_layout_get_lines_readonly(cast[ptr Layout00](self.impl))
-
-proc linesReadonly*(self: Layout): ptr pointer =
-  pango_layout_get_lines_readonly(cast[ptr Layout00](self.impl))
-
-proc pango_layout_get_log_attrs(self: ptr Layout00; attrs: var LogAttr00Array;
+proc pango_layout_get_log_attrs(self: ptr Layout00; attrs: var ptr LogAttr00;
     nAttrs: var int32) {.
     importc, libprag.}
 
-proc getLogAttrs*(self: Layout; attrs: var LogAttr00Array;
-    nAttrs: var int) =
-  var nAttrs_00 = int32(nAttrs)
+proc getLogAttrs*(self: Layout; attrs: var ptr LogAttr00; nAttrs: var int) =
+  var nAttrs_00: int32
   pango_layout_get_log_attrs(cast[ptr Layout00](self.impl), attrs, nAttrs_00)
-  nAttrs = int(nAttrs_00)
+  if nAttrs.addr != nil:
+    nAttrs = int(nAttrs_00)
 
-proc pango_layout_get_log_attrs_readonly(self: ptr Layout00; nAttrs: var int32): LogAttr00Array {.
+proc pango_layout_get_log_attrs_readonly(self: ptr Layout00; nAttrs: var int32): ptr LogAttr00 {.
     importc, libprag.}
 
-proc getLogAttrsReadonly*(self: Layout; nAttrs: var int): LogAttr00Array =
-  var nAttrs_00 = int32(nAttrs)
+proc getLogAttrsReadonly*(self: Layout; nAttrs: var int): ptr LogAttr00 =
+  var nAttrs_00: int32
   result = pango_layout_get_log_attrs_readonly(cast[ptr Layout00](self.impl), nAttrs_00)
-  nAttrs = int(nAttrs_00)
-
-proc logAttrsReadonly*(self: Layout; nAttrs: var int): LogAttr00Array =
-  var nAttrs_00 = int32(nAttrs)
-  result = pango_layout_get_log_attrs_readonly(cast[ptr Layout00](self.impl), nAttrs_00)
-  nAttrs = int(nAttrs_00)
+  if nAttrs.addr != nil:
+    nAttrs = int(nAttrs_00)
 
 proc pango_layout_get_pixel_extents(self: ptr Layout00; inkRect: var Rectangle;
     logicalRect: var Rectangle) {.
     importc, libprag.}
 
-proc getPixelExtents*(self: Layout; inkRect: var Rectangle;
-    logicalRect: var Rectangle) =
+proc getPixelExtents*(self: Layout; inkRect: var Rectangle = cast[var Rectangle](nil);
+    logicalRect: var Rectangle = cast[var Rectangle](nil)) =
   pango_layout_get_pixel_extents(cast[ptr Layout00](self.impl), inkRect, logicalRect)
 
 proc pango_layout_get_pixel_size(self: ptr Layout00; width: var int32; height: var int32) {.
     importc, libprag.}
 
-proc getPixelSize*(self: Layout; width: var int; height: var int) =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+proc getPixelSize*(self: Layout; width: var int = cast[var int](nil);
+    height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var height_00: int32
   pango_layout_get_pixel_size(cast[ptr Layout00](self.impl), width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc pango_layout_get_serial(self: ptr Layout00): uint32 {.
     importc, libprag.}
@@ -3212,12 +3329,15 @@ proc singleParagraphMode*(self: Layout): bool =
 proc pango_layout_get_size(self: ptr Layout00; width: var int32; height: var int32) {.
     importc, libprag.}
 
-proc getSize*(self: Layout; width: var int; height: var int) =
-  var width_00 = int32(width)
-  var height_00 = int32(height)
+proc getSize*(self: Layout; width: var int = cast[var int](nil);
+    height: var int = cast[var int](nil)) =
+  var width_00: int32
+  var height_00: int32
   pango_layout_get_size(cast[ptr Layout00](self.impl), width_00, height_00)
-  width = int(width_00)
-  height = int(height_00)
+  if width.addr != nil:
+    width = int(width_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc pango_layout_get_spacing(self: ptr Layout00): int32 {.
     importc, libprag.}
@@ -3260,12 +3380,14 @@ proc pango_layout_index_to_line_x(self: ptr Layout00; index: int32; trailing: gb
     importc, libprag.}
 
 proc indexToLineX*(self: Layout; index: int; trailing: bool;
-    line: var int; xPos: var int) =
-  var xPos_00 = int32(xPos)
-  var line_00 = int32(line)
+    line: var int = cast[var int](nil); xPos: var int = cast[var int](nil)) =
+  var xPos_00: int32
+  var line_00: int32
   pango_layout_index_to_line_x(cast[ptr Layout00](self.impl), int32(index), gboolean(trailing), line_00, xPos_00)
-  xPos = int(xPos_00)
-  line = int(line_00)
+  if xPos.addr != nil:
+    xPos = int(xPos_00)
+  if line.addr != nil:
+    line = int(line_00)
 
 proc pango_layout_index_to_pos(self: ptr Layout00; index: int32; pos: var Rectangle) {.
     importc, libprag.}
@@ -3292,11 +3414,13 @@ proc pango_layout_move_cursor_visually(self: ptr Layout00; strong: gboolean;
 
 proc moveCursorVisually*(self: Layout; strong: bool; oldIndex: int;
     oldTrailing: int; direction: int; newIndex: var int; newTrailing: var int) =
-  var newTrailing_00 = int32(newTrailing)
-  var newIndex_00 = int32(newIndex)
+  var newTrailing_00: int32
+  var newIndex_00: int32
   pango_layout_move_cursor_visually(cast[ptr Layout00](self.impl), gboolean(strong), int32(oldIndex), int32(oldTrailing), int32(direction), newIndex_00, newTrailing_00)
-  newTrailing = int(newTrailing_00)
-  newIndex = int(newIndex_00)
+  if newTrailing.addr != nil:
+    newTrailing = int(newTrailing_00)
+  if newIndex.addr != nil:
+    newIndex = int(newIndex_00)
 
 proc pango_layout_set_alignment(self: ptr Layout00; alignment: Alignment) {.
     importc, libprag.}
@@ -3390,7 +3514,7 @@ proc pango_layout_set_markup_with_accel(self: ptr Layout00; markup: cstring;
     importc, libprag.}
 
 proc setMarkupWithAccel*(self: Layout; markup: cstring; length: int;
-    accelMarker: gunichar; accelChar: var gunichar) =
+    accelMarker: gunichar; accelChar: var gunichar = cast[var gunichar](nil)) =
   pango_layout_set_markup_with_accel(cast[ptr Layout00](self.impl), markup, int32(length), accelMarker, accelChar)
 
 proc pango_layout_set_single_paragraph_mode(self: ptr Layout00; setting: gboolean) {.
@@ -3432,11 +3556,13 @@ proc pango_layout_xy_to_index(self: ptr Layout00; x: int32; y: int32; index: var
 
 proc xyToIndex*(self: Layout; x: int; y: int; index: var int;
     trailing: var int): bool =
-  var index_00 = int32(index)
-  var trailing_00 = int32(trailing)
+  var index_00: int32
+  var trailing_00: int32
   result = toBool(pango_layout_xy_to_index(cast[ptr Layout00](self.impl), int32(x), int32(y), index_00, trailing_00))
-  index = int(index_00)
-  trailing = int(trailing_00)
+  if index.addr != nil:
+    index = int(index_00)
+  if trailing.addr != nil:
+    trailing = int(trailing_00)
 
 type
   LayoutIter00* {.pure.} = object
@@ -3455,6 +3581,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(pango_layout_iter_get_type(), cast[ptr LayoutIter00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var LayoutIter) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoLayoutIter)
 
 proc pango_layout_iter_free(self: ptr LayoutIter00) {.
     importc, libprag.}
@@ -3501,8 +3633,8 @@ proc pango_layout_iter_get_cluster_extents(self: ptr LayoutIter00; inkRect: var 
     logicalRect: var Rectangle) {.
     importc, libprag.}
 
-proc getClusterExtents*(self: LayoutIter; inkRect: var Rectangle;
-    logicalRect: var Rectangle) =
+proc getClusterExtents*(self: LayoutIter; inkRect: var Rectangle = cast[var Rectangle](nil);
+    logicalRect: var Rectangle = cast[var Rectangle](nil)) =
   pango_layout_iter_get_cluster_extents(cast[ptr LayoutIter00](self.impl), inkRect, logicalRect)
 
 proc pango_layout_iter_get_index(self: ptr LayoutIter00): int32 {.
@@ -3553,28 +3685,31 @@ proc pango_layout_iter_get_layout_extents(self: ptr LayoutIter00; inkRect: var R
     logicalRect: var Rectangle) {.
     importc, libprag.}
 
-proc getLayoutExtents*(self: LayoutIter; inkRect: var Rectangle;
-    logicalRect: var Rectangle) =
+proc getLayoutExtents*(self: LayoutIter; inkRect: var Rectangle = cast[var Rectangle](nil);
+    logicalRect: var Rectangle = cast[var Rectangle](nil)) =
   pango_layout_iter_get_layout_extents(cast[ptr LayoutIter00](self.impl), inkRect, logicalRect)
 
 proc pango_layout_iter_get_line_extents(self: ptr LayoutIter00; inkRect: var Rectangle;
     logicalRect: var Rectangle) {.
     importc, libprag.}
 
-proc getLineExtents*(self: LayoutIter; inkRect: var Rectangle;
-    logicalRect: var Rectangle) =
+proc getLineExtents*(self: LayoutIter; inkRect: var Rectangle = cast[var Rectangle](nil);
+    logicalRect: var Rectangle = cast[var Rectangle](nil)) =
   pango_layout_iter_get_line_extents(cast[ptr LayoutIter00](self.impl), inkRect, logicalRect)
 
 proc pango_layout_iter_get_line_yrange(self: ptr LayoutIter00; y0: var int32;
     y1: var int32) {.
     importc, libprag.}
 
-proc getLineYrange*(self: LayoutIter; y0: var int; y1: var int) =
-  var y0_00 = int32(y0)
-  var y1_00 = int32(y1)
+proc getLineYrange*(self: LayoutIter; y0: var int = cast[var int](nil);
+    y1: var int = cast[var int](nil)) =
+  var y0_00: int32
+  var y1_00: int32
   pango_layout_iter_get_line_yrange(cast[ptr LayoutIter00](self.impl), y0_00, y1_00)
-  y0 = int(y0_00)
-  y1 = int(y1_00)
+  if y0.addr != nil:
+    y0 = int(y0_00)
+  if y1.addr != nil:
+    y1 = int(y1_00)
 
 proc pango_layout_iter_get_run(self: ptr LayoutIter00): ptr GlyphItem00 {.
     importc, libprag.}
@@ -3599,8 +3734,8 @@ proc pango_layout_iter_get_run_extents(self: ptr LayoutIter00; inkRect: var Rect
     logicalRect: var Rectangle) {.
     importc, libprag.}
 
-proc getRunExtents*(self: LayoutIter; inkRect: var Rectangle;
-    logicalRect: var Rectangle) =
+proc getRunExtents*(self: LayoutIter; inkRect: var Rectangle = cast[var Rectangle](nil);
+    logicalRect: var Rectangle = cast[var Rectangle](nil)) =
   pango_layout_iter_get_run_extents(cast[ptr LayoutIter00](self.impl), inkRect, logicalRect)
 
 proc pango_layout_iter_get_run_readonly(self: ptr LayoutIter00): ptr GlyphItem00 {.
@@ -3675,6 +3810,12 @@ when defined(gcDestructors):
       boxedFree(pango_layout_line_get_type(), cast[ptr LayoutLine00](self.impl))
       self.impl = nil
 
+proc newWithFinalizer*(x: var LayoutLine) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoLayoutLine)
+
 proc pango_layout_line_unref(self: ptr LayoutLine00) {.
     importc, libprag.}
 
@@ -3688,29 +3829,31 @@ proc finalizerunref*(self: LayoutLine) =
 proc pango_layout_line_get_height(self: ptr LayoutLine00; height: var int32) {.
     importc, libprag.}
 
-proc getHeight*(self: LayoutLine; height: var int) =
-  var height_00 = int32(height)
+proc getHeight*(self: LayoutLine; height: var int = cast[var int](nil)) =
+  var height_00: int32
   pango_layout_line_get_height(cast[ptr LayoutLine00](self.impl), height_00)
-  height = int(height_00)
+  if height.addr != nil:
+    height = int(height_00)
 
 proc pango_layout_line_get_pixel_extents(self: ptr LayoutLine00; inkRect: var Rectangle;
     logicalRect: var Rectangle) {.
     importc, libprag.}
 
-proc getPixelExtents*(self: LayoutLine; inkRect: var Rectangle;
-    logicalRect: var Rectangle) =
+proc getPixelExtents*(self: LayoutLine; inkRect: var Rectangle = cast[var Rectangle](nil);
+    logicalRect: var Rectangle = cast[var Rectangle](nil)) =
   pango_layout_line_get_pixel_extents(cast[ptr LayoutLine00](self.impl), inkRect, logicalRect)
 
 proc pango_layout_line_get_x_ranges(self: ptr LayoutLine00; startIndex: int32;
-    endIndex: int32; ranges: var int32Array; nRanges: var int32) {.
+    endIndex: int32; ranges: var ptr int32; nRanges: var int32) {.
     importc, libprag.}
 
 proc getXRanges*(self: LayoutLine; startIndex: int; endIndex: int;
     ranges: var seq[int32]; nRanges: var int) =
-  var nRanges_00 = int32(nRanges)
-  var ranges_00: pointer
+  var nRanges_00: int32
+  var ranges_00: ptr int32
   pango_layout_line_get_x_ranges(cast[ptr LayoutLine00](self.impl), int32(startIndex), int32(endIndex), ranges_00, nRanges_00)
-  nRanges = int(nRanges_00)
+  if nRanges.addr != nil:
+    nRanges = int(nRanges_00)
   ranges.setLen(nRanges)
   copyMem(unsafeaddr ranges[0], ranges_00, nRanges.int * sizeof(ranges[0]))
   cogfree(ranges_00)
@@ -3721,9 +3864,10 @@ proc pango_layout_line_index_to_x(self: ptr LayoutLine00; index: int32; trailing
 
 proc indexToX*(self: LayoutLine; index: int; trailing: bool;
     xPos: var int) =
-  var xPos_00 = int32(xPos)
+  var xPos_00: int32
   pango_layout_line_index_to_x(cast[ptr LayoutLine00](self.impl), int32(index), gboolean(trailing), xPos_00)
-  xPos = int(xPos_00)
+  if xPos.addr != nil:
+    xPos = int(xPos_00)
 
 proc pango_layout_line_ref(self: ptr LayoutLine00): ptr LayoutLine00 {.
     importc, libprag.}
@@ -3736,8 +3880,8 @@ proc pango_layout_line_get_extents(self: ptr LayoutLine00; inkRect: var Rectangl
     logicalRect: var Rectangle) {.
     importc, libprag.}
 
-proc getExtents*(self: LayoutLine; inkRect: var Rectangle;
-    logicalRect: var Rectangle) =
+proc getExtents*(self: LayoutLine; inkRect: var Rectangle = cast[var Rectangle](nil);
+    logicalRect: var Rectangle = cast[var Rectangle](nil)) =
   pango_layout_line_get_extents(cast[ptr LayoutLine00](self.impl), inkRect, logicalRect)
 
 proc pango_layout_line_x_to_index(self: ptr LayoutLine00; xPos: int32; index: var int32;
@@ -3746,24 +3890,18 @@ proc pango_layout_line_x_to_index(self: ptr LayoutLine00; xPos: int32; index: va
 
 proc xToIndex*(self: LayoutLine; xPos: int; index: var int;
     trailing: var int): bool =
-  var index_00 = int32(index)
-  var trailing_00 = int32(trailing)
+  var index_00: int32
+  var trailing_00: int32
   result = toBool(pango_layout_line_x_to_index(cast[ptr LayoutLine00](self.impl), int32(xPos), index_00, trailing_00))
-  index = int(index_00)
-  trailing = int(trailing_00)
+  if index.addr != nil:
+    index = int(index_00)
+  if trailing.addr != nil:
+    trailing = int(trailing_00)
 
 proc pango_layout_get_line(self: ptr Layout00; line: int32): ptr LayoutLine00 {.
     importc, libprag.}
 
 proc getLine*(self: Layout; line: int): LayoutLine =
-  let impl0 = pango_layout_get_line(cast[ptr Layout00](self.impl), int32(line))
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreePangoLayoutLine)
-  result.impl = impl0
-  result.ignoreFinalizer = true
-
-proc line*(self: Layout; line: int): LayoutLine =
   let impl0 = pango_layout_get_line(cast[ptr Layout00](self.impl), int32(line))
   if impl0.isNil:
     return nil
@@ -3782,13 +3920,23 @@ proc getLineReadonly*(self: Layout; line: int): LayoutLine =
   result.impl = impl0
   result.ignoreFinalizer = true
 
-proc lineReadonly*(self: Layout; line: int): LayoutLine =
-  let impl0 = pango_layout_get_line_readonly(cast[ptr Layout00](self.impl), int32(line))
-  if impl0.isNil:
-    return nil
-  fnew(result, gBoxedFreePangoLayoutLine)
-  result.impl = impl0
-  result.ignoreFinalizer = true
+proc pango_layout_get_lines(self: ptr Layout00): ptr glib.SList {.
+    importc, libprag.}
+
+proc getLines*(self: Layout): seq[LayoutLine] =
+  discard
+
+proc lines*(self: Layout): seq[LayoutLine] =
+  discard
+
+proc pango_layout_get_lines_readonly(self: ptr Layout00): ptr glib.SList {.
+    importc, libprag.}
+
+proc getLinesReadonly*(self: Layout): seq[LayoutLine] =
+  discard
+
+proc linesReadonly*(self: Layout): seq[LayoutLine] =
+  discard
 
 proc pango_layout_iter_get_line(self: ptr LayoutIter00): ptr LayoutLine00 {.
     importc, libprag.}
@@ -3833,6 +3981,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(pango_tab_array_get_type(), cast[ptr TabArray00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var TabArray) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoTabArray)
 
 proc pango_tab_array_free(self: ptr TabArray00) {.
     importc, libprag.}
@@ -3926,11 +4080,12 @@ proc pango_tab_array_get_tab(self: ptr TabArray00; tabIndex: int32; alignment: v
     location: var int32) {.
     importc, libprag.}
 
-proc getTab*(self: TabArray; tabIndex: int; alignment: var TabAlign;
-    location: var int) =
-  var location_00 = int32(location)
+proc getTab*(self: TabArray; tabIndex: int; alignment: var TabAlign = cast[var TabAlign](nil);
+    location: var int = cast[var int](nil)) =
+  var location_00: int32
   pango_tab_array_get_tab(cast[ptr TabArray00](self.impl), int32(tabIndex), alignment, location_00)
-  location = int(location_00)
+  if location.addr != nil:
+    location = int(location_00)
 
 proc pango_tab_array_set_tab(self: ptr TabArray00; tabIndex: int32; alignment: TabAlign;
     location: int32) {.
@@ -3976,6 +4131,11 @@ type
     impl*: ptr MapEntry00
     ignoreFinalizer*: bool
 
+type
+  Overline* {.size: sizeof(cint), pure.} = enum
+    none = 0
+    single = 1
+
 const RENDER_TYPE_NONE* = "PangoRenderNone"
 
 type
@@ -3984,6 +4144,7 @@ type
     background = 1
     underline = 2
     strikethrough = 3
+    overline = 4
 
 type
   Renderer* = ref object of gobject.Object
@@ -4081,16 +4242,10 @@ proc pango_renderer_get_alpha(self: ptr Renderer00; part: RenderPart): uint16 {.
 proc getAlpha*(self: Renderer; part: RenderPart): uint16 =
   pango_renderer_get_alpha(cast[ptr Renderer00](self.impl), part)
 
-proc alpha*(self: Renderer; part: RenderPart): uint16 =
-  pango_renderer_get_alpha(cast[ptr Renderer00](self.impl), part)
-
 proc pango_renderer_get_color(self: ptr Renderer00; part: RenderPart): ptr Color {.
     importc, libprag.}
 
 proc getColor*(self: Renderer; part: RenderPart): ptr Color =
-  pango_renderer_get_color(cast[ptr Renderer00](self.impl), part)
-
-proc color*(self: Renderer; part: RenderPart): ptr Color =
   pango_renderer_get_color(cast[ptr Renderer00](self.impl), part)
 
 proc pango_renderer_get_layout(self: ptr Renderer00): ptr Layout00 {.
@@ -4185,7 +4340,7 @@ proc setAlpha*(self: Renderer; part: RenderPart; alpha: uint16) =
 proc pango_renderer_set_color(self: ptr Renderer00; part: RenderPart; color: Color) {.
     importc, libprag.}
 
-proc setColor*(self: Renderer; part: RenderPart; color: Color = cast[ptr Color](nil)[]) =
+proc setColor*(self: Renderer; part: RenderPart; color: Color = cast[var Color](nil)) =
   pango_renderer_set_color(cast[ptr Renderer00](self.impl), part, color)
 
 proc pango_renderer_set_matrix(self: ptr Renderer00; matrix: ptr Matrix00) {.
@@ -4216,6 +4371,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(pango_script_iter_get_type(), cast[ptr ScriptIter00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var ScriptIter) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreePangoScriptIter)
 
 proc pango_script_iter_free(self: ptr ScriptIter00) {.
     importc, libprag.}
@@ -4248,13 +4409,15 @@ proc pango_script_iter_get_range(self: ptr ScriptIter00; start: var cstring;
     `end`: var cstring; script: var Script) {.
     importc, libprag.}
 
-proc getRange*(self: ScriptIter; start: var string; `end`: var string;
-    script: var Script) =
-  var start_00 = cstring(start)
-  var end_00 = cstring(`end`)
+proc getRange*(self: ScriptIter; start: var string = cast[var string](nil);
+    `end`: var string = cast[var string](nil); script: var Script = cast[var Script](nil)) =
+  var start_00: cstring
+  var end_00: cstring
   pango_script_iter_get_range(cast[ptr ScriptIter00](self.impl), start_00, end_00, script)
-  start = $(start_00)
-  `end` = $(end_00)
+  if start.addr != nil:
+    start = $(start_00)
+  if `end`.addr != nil:
+    `end` = $(end_00)
 
 proc pango_script_iter_next(self: ptr ScriptIter00): gboolean {.
     importc, libprag.}
@@ -4287,168 +4450,185 @@ type
     double = 2
     low = 3
     error = 4
+    singleLine = 5
+    doubleLine = 6
+    errorLine = 7
 
 const VERSION_MIN_REQUIRED* = 2'i32
 
 proc pango_attr_allow_breaks_new(allowBreaks: gboolean): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrAllowBreaksNew*(allowBreaks: bool): Attribute =
+proc newAttrAllowBreaks*(allowBreaks: bool): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_allow_breaks_new(gboolean(allowBreaks))
 
 proc pango_attr_background_alpha_new(alpha: uint16): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrBackgroundAlphaNew*(alpha: uint16): Attribute =
+proc newAttrBackgroundAlpha*(alpha: uint16): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_background_alpha_new(alpha)
 
 proc pango_attr_background_new(red: uint16; green: uint16; blue: uint16): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrBackgroundNew*(red: uint16; green: uint16; blue: uint16): Attribute =
+proc newAttrBackground*(red: uint16; green: uint16; blue: uint16): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_background_new(red, green, blue)
 
 proc pango_attr_fallback_new(enableFallback: gboolean): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrFallbackNew*(enableFallback: bool): Attribute =
+proc newAttrFallback*(enableFallback: bool): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_fallback_new(gboolean(enableFallback))
 
 proc pango_attr_family_new(family: cstring): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrFamilyNew*(family: cstring): Attribute =
+proc newAttrFamily*(family: cstring): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_family_new(family)
 
 proc pango_attr_foreground_alpha_new(alpha: uint16): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrForegroundAlphaNew*(alpha: uint16): Attribute =
+proc newAttrForegroundAlpha*(alpha: uint16): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_foreground_alpha_new(alpha)
 
 proc pango_attr_foreground_new(red: uint16; green: uint16; blue: uint16): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrForegroundNew*(red: uint16; green: uint16; blue: uint16): Attribute =
+proc newAttrForeground*(red: uint16; green: uint16; blue: uint16): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_foreground_new(red, green, blue)
 
 proc pango_attr_gravity_hint_new(hint: GravityHint): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrGravityHintNew*(hint: GravityHint): Attribute =
+proc newAttrGravityHint*(hint: GravityHint): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_gravity_hint_new(hint)
 
 proc pango_attr_gravity_new(gravity: Gravity): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrGravityNew*(gravity: Gravity): Attribute =
+proc newAttrGravity*(gravity: Gravity): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_gravity_new(gravity)
 
 proc pango_attr_insert_hyphens_new(insertHyphens: gboolean): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrInsertHyphensNew*(insertHyphens: bool): Attribute =
+proc newAttrInsertHyphens*(insertHyphens: bool): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_insert_hyphens_new(gboolean(insertHyphens))
 
 proc pango_attr_letter_spacing_new(letterSpacing: int32): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrLetterSpacingNew*(letterSpacing: int): Attribute =
+proc newAttrLetterSpacing*(letterSpacing: int): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_letter_spacing_new(int32(letterSpacing))
+
+proc pango_attr_overline_color_new(red: uint16; green: uint16; blue: uint16): ptr Attribute00 {.
+    importc, libprag.}
+
+proc newAttrOverlineColor*(red: uint16; green: uint16; blue: uint16): Attribute =
+  fnew(result, gBoxedFreePangoAttribute)
+  result.impl = pango_attr_overline_color_new(red, green, blue)
+
+proc pango_attr_overline_new(overline: Overline): ptr Attribute00 {.
+    importc, libprag.}
+
+proc newAttrOverline*(overline: Overline): Attribute =
+  fnew(result, gBoxedFreePangoAttribute)
+  result.impl = pango_attr_overline_new(overline)
 
 proc pango_attr_rise_new(rise: int32): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrRiseNew*(rise: int): Attribute =
+proc newAttrRise*(rise: int): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_rise_new(int32(rise))
 
 proc pango_attr_scale_new(scaleFactor: cdouble): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrScaleNew*(scaleFactor: cdouble): Attribute =
+proc newAttrScale*(scaleFactor: cdouble): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_scale_new(scaleFactor)
 
 proc pango_attr_show_new(flags: ShowFlags): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrShowNew*(flags: ShowFlags): Attribute =
+proc newAttrShow*(flags: ShowFlags): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_show_new(flags)
 
 proc pango_attr_stretch_new(stretch: Stretch): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrStretchNew*(stretch: Stretch): Attribute =
+proc newAttrStretch*(stretch: Stretch): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_stretch_new(stretch)
 
 proc pango_attr_strikethrough_color_new(red: uint16; green: uint16; blue: uint16): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrStrikethroughColorNew*(red: uint16; green: uint16; blue: uint16): Attribute =
+proc newAttrStrikethroughColor*(red: uint16; green: uint16; blue: uint16): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_strikethrough_color_new(red, green, blue)
 
 proc pango_attr_strikethrough_new(strikethrough: gboolean): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrStrikethroughNew*(strikethrough: bool): Attribute =
+proc newAttrStrikethrough*(strikethrough: bool): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_strikethrough_new(gboolean(strikethrough))
 
 proc pango_attr_style_new(style: Style): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrStyleNew*(style: Style): Attribute =
+proc newAttrStyle*(style: Style): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_style_new(style)
 
 proc pango_attr_underline_color_new(red: uint16; green: uint16; blue: uint16): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrUnderlineColorNew*(red: uint16; green: uint16; blue: uint16): Attribute =
+proc newAttrUnderlineColor*(red: uint16; green: uint16; blue: uint16): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_underline_color_new(red, green, blue)
 
 proc pango_attr_underline_new(underline: Underline): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrUnderlineNew*(underline: Underline): Attribute =
+proc newAttrUnderline*(underline: Underline): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_underline_new(underline)
 
 proc pango_attr_variant_new(variant: Variant): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrVariantNew*(variant: Variant): Attribute =
+proc newAttrVariant*(variant: Variant): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_variant_new(variant)
 
 proc pango_attr_weight_new(weight: Weight): ptr Attribute00 {.
     importc, libprag.}
 
-proc attrWeightNew*(weight: Weight): Attribute =
+proc newAttrWeight*(weight: Weight): Attribute =
   fnew(result, gBoxedFreePangoAttribute)
   result.impl = pango_attr_weight_new(weight)
 
 proc pango_break(text: cstring; length: int32; analysis: ptr Analysis00;
-    attrs: LogAttr00Array; attrsLen: int32) {.
+    attrs: ptr LogAttr00; attrsLen: int32) {.
     importc, libprag.}
 
-proc `break`*(text: cstring; length: int; analysis: Analysis; attrs: LogAttr00Array;
+proc `break`*(text: cstring; length: int; analysis: Analysis; attrs: ptr LogAttr00;
     attrsLen: int) =
   pango_break(text, int32(length), cast[ptr Analysis00](analysis.impl), attrs, int32(attrsLen))
 
@@ -4460,8 +4640,8 @@ proc defaultBreak*(text: cstring; length: int; analysis: Analysis = nil;
     attrs: LogAttr; attrsLen: int) =
   pango_default_break(text, int32(length), if analysis.isNil: nil else: cast[ptr Analysis00](analysis.impl), cast[ptr LogAttr00](attrs.impl), int32(attrsLen))
 
-proc extentsToPixels*(inclusive: Rectangle = cast[ptr Rectangle](nil)[];
-    nearest: Rectangle = cast[ptr Rectangle](nil)[]) {.
+proc extentsToPixels*(inclusive: Rectangle = cast[var Rectangle](nil);
+    nearest: Rectangle = cast[var Rectangle](nil)) {.
     importc: "pango_extents_to_pixels", libprag.}
 
 proc pango_find_base_dir(text: cstring; length: int32): Direction {.
@@ -4476,27 +4656,26 @@ proc pango_find_paragraph_boundary(text: cstring; length: int32; paragraphDelimi
 
 proc findParagraphBoundary*(text: cstring; length: int; paragraphDelimiterIndex: var int;
     nextParagraphStart: var int) =
-  var paragraphDelimiterIndex_00 = int32(paragraphDelimiterIndex)
-  var nextParagraphStart_00 = int32(nextParagraphStart)
+  var paragraphDelimiterIndex_00: int32
+  var nextParagraphStart_00: int32
   pango_find_paragraph_boundary(text, int32(length), paragraphDelimiterIndex_00, nextParagraphStart_00)
-  paragraphDelimiterIndex = int(paragraphDelimiterIndex_00)
-  nextParagraphStart = int(nextParagraphStart_00)
+  if paragraphDelimiterIndex.addr != nil:
+    paragraphDelimiterIndex = int(paragraphDelimiterIndex_00)
+  if nextParagraphStart.addr != nil:
+    nextParagraphStart = int(nextParagraphStart_00)
 
 proc pango_get_log_attrs(text: cstring; length: int32; level: int32; language: ptr Language00;
-    logAttrs: LogAttr00Array; attrsLen: int32) {.
+    logAttrs: ptr LogAttr00; attrsLen: int32) {.
     importc, libprag.}
 
 proc getLogAttrs*(text: cstring; length: int; level: int; language: Language;
-    logAttrs: LogAttr00Array; attrsLen: int) =
+    logAttrs: ptr LogAttr00; attrsLen: int) =
   pango_get_log_attrs(text, int32(length), int32(level), cast[ptr Language00](language.impl), logAttrs, int32(attrsLen))
 
 proc pango_get_mirror_char(ch: gunichar; mirroredCh: ptr gunichar): gboolean {.
     importc, libprag.}
 
 proc getMirrorChar*(ch: gunichar; mirroredCh: ptr gunichar): bool =
-  toBool(pango_get_mirror_char(ch, mirroredCh))
-
-proc mirrorChar*(ch: gunichar; mirroredCh: ptr gunichar): bool =
   toBool(pango_get_mirror_char(ch, mirroredCh))
 
 proc pango_is_zero_width(ch: gunichar): gboolean {.
@@ -4506,21 +4685,25 @@ proc isZeroWidth*(ch: gunichar): bool =
   toBool(pango_is_zero_width(ch))
 
 proc pango_itemize(context: ptr Context00; text: cstring; startIndex: int32;
-    length: int32; attrs: ptr AttrList00; cachedIter: ptr AttrIterator00): ptr pointer {.
+    length: int32; attrs: ptr AttrList00; cachedIter: AttrIterator): ptr glib.List {.
     importc, libprag.}
 
 proc itemize*(context: Context; text: cstring; startIndex: int; length: int;
-    attrs: AttrList; cachedIter: AttrIterator = nil): ptr pointer =
-  pango_itemize(cast[ptr Context00](context.impl), text, int32(startIndex), int32(length), cast[ptr AttrList00](attrs.impl), if cachedIter.isNil: nil else: cast[ptr AttrIterator00](cachedIter.impl))
+    attrs: AttrList; cachedIter: AttrIterator = cast[var AttrIterator](nil)): seq[Item] =
+  let resul0 = pango_itemize(cast[ptr Context00](context.impl), text, int32(startIndex), int32(length), cast[ptr AttrList00](attrs.impl), cachedIter)
+  result = glistStructs2seq[Item](resul0, false)
+  g_list_free(resul0)
 
 proc pango_itemize_with_base_dir(context: ptr Context00; baseDir: Direction;
     text: cstring; startIndex: int32; length: int32; attrs: ptr AttrList00;
-    cachedIter: ptr AttrIterator00): ptr pointer {.
+    cachedIter: AttrIterator): ptr glib.List {.
     importc, libprag.}
 
 proc itemizeWithBaseDir*(context: Context; baseDir: Direction; text: cstring;
-    startIndex: int; length: int; attrs: AttrList; cachedIter: AttrIterator = nil): ptr pointer =
-  pango_itemize_with_base_dir(cast[ptr Context00](context.impl), baseDir, text, int32(startIndex), int32(length), cast[ptr AttrList00](attrs.impl), if cachedIter.isNil: nil else: cast[ptr AttrIterator00](cachedIter.impl))
+    startIndex: int; length: int; attrs: AttrList; cachedIter: AttrIterator = cast[var AttrIterator](nil)): seq[Item] =
+  let resul0 = pango_itemize_with_base_dir(cast[ptr Context00](context.impl), baseDir, text, int32(startIndex), int32(length), cast[ptr AttrList00](attrs.impl), cachedIter)
+  result = glistStructs2seq[Item](resul0, false)
+  g_list_free(resul0)
 
 proc pango_log2vis_get_embedding_levels(text: cstring; length: int32; pbaseDir: ptr Direction): ptr uint8 {.
     importc, libprag.}
@@ -4532,23 +4715,25 @@ proc pango_markup_parser_finish(context: ptr glib.MarkupParseContext00; attrList
     text: var cstring; accelChar: var gunichar; error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
-proc markupParserFinish*(context: glib.MarkupParseContext; attrList: var AttrList;
-    text: var string; accelChar: var gunichar): bool =
-  fnew(attrList, gBoxedFreePangoAttrList)
+proc markupParserFinish*(context: glib.MarkupParseContext; attrList: var AttrList = cast[var AttrList](nil);
+    text: var string = cast[var string](nil); accelChar: var gunichar = cast[var gunichar](nil)): bool =
+  if addr(attrList) != nil:
+    fnew(attrList, gBoxedFreePangoAttrList)
   var gerror: ptr glib.Error
-  var text_00 = cstring(text)
-  let resul0 = pango_markup_parser_finish(cast[ptr glib.MarkupParseContext00](context.impl), cast[var ptr AttrList00](addr attrList.impl), text_00, accelChar, addr gerror)
+  var text_00: cstring
+  let resul0 = pango_markup_parser_finish(cast[ptr glib.MarkupParseContext00](context.impl), cast[var ptr AttrList00](if addr(attrList) == nil: nil else: addr attrList.impl), text_00, accelChar, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  text = $(text_00)
+  if text.addr != nil:
+    text = $(text_00)
 
 proc pango_markup_parser_new(accelMarker: gunichar): ptr glib.MarkupParseContext00 {.
     importc, libprag.}
 
-proc markupParserNew*(accelMarker: gunichar): glib.MarkupParseContext =
+proc newMarkupParser*(accelMarker: gunichar): glib.MarkupParseContext =
   fnew(result, gBoxedFreeGMarkupParseContext)
   result.impl = pango_markup_parser_new(accelMarker)
   result.ignoreFinalizer = true
@@ -4557,13 +4742,15 @@ proc pango_parse_enum(`type`: GType; str: cstring; value: var int32; warn: gbool
     possibleValues: var cstring): gboolean {.
     importc, libprag.}
 
-proc parseEnum*(`type`: GType; str: cstring = ""; value: var int; warn: bool;
-    possibleValues: var string): bool =
-  var possibleValues_00 = cstring(possibleValues)
-  var value_00 = int32(value)
+proc parseEnum*(`type`: GType; str: cstring = ""; value: var int = cast[var int](nil);
+    warn: bool; possibleValues: var string = cast[var string](nil)): bool =
+  var possibleValues_00: cstring
+  var value_00: int32
   result = toBool(pango_parse_enum(`type`, safeStringToCString(str), value_00, gboolean(warn), possibleValues_00))
-  possibleValues = $(possibleValues_00)
-  value = int(value_00)
+  if possibleValues.addr != nil:
+    possibleValues = $(possibleValues_00)
+  if value.addr != nil:
+    value = int(value_00)
 
 proc pango_parse_markup(markupText: cstring; length: int32; accelMarker: gunichar;
     attrList: var ptr AttrList00; text: var cstring; accelChar: var gunichar;
@@ -4571,17 +4758,20 @@ proc pango_parse_markup(markupText: cstring; length: int32; accelMarker: gunicha
     importc, libprag.}
 
 proc parseMarkup*(markupText: cstring; length: int; accelMarker: gunichar;
-    attrList: var AttrList; text: var string; accelChar: var gunichar): bool =
-  fnew(attrList, gBoxedFreePangoAttrList)
+    attrList: var AttrList = cast[var AttrList](nil); text: var string = cast[var string](nil);
+    accelChar: var gunichar = cast[var gunichar](nil)): bool =
+  if addr(attrList) != nil:
+    fnew(attrList, gBoxedFreePangoAttrList)
   var gerror: ptr glib.Error
-  var text_00 = cstring(text)
-  let resul0 = pango_parse_markup(markupText, int32(length), accelMarker, cast[var ptr AttrList00](addr attrList.impl), text_00, accelChar, addr gerror)
+  var text_00: cstring
+  let resul0 = pango_parse_markup(markupText, int32(length), accelMarker, cast[var ptr AttrList00](if addr(attrList) == nil: nil else: addr attrList.impl), text_00, accelChar, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
     raise newException(GException, msg)
   result = toBool(resul0)
-  text = $(text_00)
+  if text.addr != nil:
+    text = $(text_00)
 
 proc pango_parse_stretch(str: cstring; stretch: var Stretch; warn: gboolean): gboolean {.
     importc, libprag.}
@@ -4623,17 +4813,25 @@ proc pango_read_line(stream: pointer; str: glib.String): int32 {.
 proc readLine*(stream: pointer; str: glib.String): int =
   int(pango_read_line(stream, str))
 
-proc reorderItems*(logicalItems: ptr pointer): ptr pointer {.
-    importc: "pango_reorder_items", libprag.}
+proc pango_reorder_items(logicalItems: ptr glib.List): ptr glib.List {.
+    importc, libprag.}
+
+proc reorderItems*(logicalItems: seq[Item]): seq[Item] =
+  var tempResGL = seq2GList(logicalItems)
+  let resul0 = pango_reorder_items(tempResGL)
+  g_list_free(tempResGL)
+  result = glistStructs2seq[Item](resul0, false)
+  g_list_free(resul0)
 
 proc pango_scan_int(pos: var cstring; `out`: var int32): gboolean {.
     importc, libprag.}
 
 proc scanInt*(pos: var string; `out`: var int): bool =
-  var out_00 = int32(`out`)
+  var out_00: int32
   var pos_00 = cstring(pos)
   result = toBool(pango_scan_int(pos_00, out_00))
-  `out` = int(out_00)
+  if `out`.addr != nil:
+    `out` = int(out_00)
   pos = $(pos_00)
 
 proc pango_scan_string(pos: var cstring; `out`: glib.String): gboolean {.
@@ -4684,7 +4882,7 @@ proc skipSpace*(pos: var string): bool =
   result = toBool(pango_skip_space(pos_00))
   pos = $(pos_00)
 
-proc pango_split_file_list(str: cstring): cstringArray {.
+proc pango_split_file_list(str: cstring): ptr cstring {.
     importc, libprag.}
 
 proc splitFileList*(str: cstring): seq[string] =
@@ -4693,11 +4891,11 @@ proc splitFileList*(str: cstring): seq[string] =
   g_strfreev(resul0)
 
 proc pango_tailor_break(text: cstring; length: int32; analysis: ptr Analysis00;
-    offset: int32; logAttrs: LogAttr00Array; logAttrsLen: int32) {.
+    offset: int32; logAttrs: ptr LogAttr00; logAttrsLen: int32) {.
     importc, libprag.}
 
 proc tailorBreak*(text: cstring; length: int; analysis: Analysis; offset: int;
-    logAttrs: LogAttr00Array; logAttrsLen: int) =
+    logAttrs: ptr LogAttr00; logAttrsLen: int) =
   pango_tailor_break(text, int32(length), cast[ptr Analysis00](analysis.impl), int32(offset), logAttrs, int32(logAttrsLen))
 
 proc pango_trim_string(str: cstring): cstring {.
@@ -4744,3 +4942,31 @@ proc pango_version_string(): cstring {.
 proc versionString*(): string =
   result = $pango_version_string()
 # === remaining symbols:
+
+when not declared(ATTR_INDEX_TO_TEXT_END):
+  const ATTR_INDEX_TO_TEXT_END* = uint32.high
+
+when not declared(ATTR_INDEX_FROM_TEXT_BEGINNING):
+  const ATTR_INDEX_FROM_TEXT_BEGINNING* = uint32.low
+
+proc setStartIndex*(a: Attribute; i: uint32) =
+  a.impl.startIndex = i
+
+proc setEndIndex*(a: Attribute; i: uint32) =
+  a.impl.endIndex = i
+
+proc setIndices*(a: Attribute; s, e: uint32) =
+  a.impl.startIndex = s
+  a.impl.endIndex = e
+
+proc `startIndex=`*(a: Attribute; i: uint32) =
+  a.impl.startIndex = i
+
+proc `endIndex=`*(a: Attribute; i: uint32) =
+  a.impl.endIndex = i
+
+#proc `indices=`*(a: Attribute; s, e: uint32) =
+proc `indices=`*(a: Attribute; se: tuple[start: uint32; `end`: uint32]) =
+  a.impl.startIndex = se[0]
+  a.impl.endIndex = se[1]
+

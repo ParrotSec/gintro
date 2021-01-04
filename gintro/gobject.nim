@@ -8,17 +8,8 @@
 import glib
 const Lib = "libgobject-2.0.so.0"
 {.pragma: libprag, cdecl, dynlib: Lib.}
-
-type
-  GTypeArray* = pointer
-  Parameter00Array* = pointer
-  ParamSpec00Array* = pointer
-  uint32Array* = pointer
-
 type
   GCallback* = proc () {.cdecl.}
-type
-  Object00Array* = pointer
 type
   VaClosureMarshal* = pointer
 
@@ -346,10 +337,10 @@ type
     impl*: ptr Parameter00
     ignoreFinalizer*: bool
 
-proc g_object_newv(objectType: GType; nParameters: uint32; parameters: Parameter00Array): ptr Object00 {.
+proc g_object_newv(objectType: GType; nParameters: uint32; parameters: ptr Parameter00): ptr Object00 {.
     importc, libprag.}
 
-proc newObjectv*(objectType: GType; nParameters: int; parameters: Parameter00Array): Object {.deprecated.}  =
+proc newObjectv*(objectType: GType; nParameters: int; parameters: ptr Parameter00): Object {.deprecated.}  =
   let gobj = g_object_newv(objectType, uint32(nParameters), parameters)
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
@@ -366,7 +357,7 @@ proc newObjectv*(objectType: GType; nParameters: int; parameters: Parameter00Arr
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc newObjectv*(tdesc: typedesc; objectType: GType; nParameters: int; parameters: Parameter00Array): tdesc {.deprecated.}  =
+proc newObjectv*(tdesc: typedesc; objectType: GType; nParameters: int; parameters: ptr Parameter00): tdesc {.deprecated.}  =
   assert(result is Object)
   let gobj = g_object_newv(objectType, uint32(nParameters), parameters)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -384,7 +375,7 @@ proc newObjectv*(tdesc: typedesc; objectType: GType; nParameters: int; parameter
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc initObjectv*[T](result: var T; objectType: GType; nParameters: int; parameters: Parameter00Array) {.deprecated.} =
+proc initObjectv*[T](result: var T; objectType: GType; nParameters: int; parameters: ptr Parameter00) {.deprecated.} =
   assert(result is Object)
   let gobj = g_object_newv(objectType, uint32(nParameters), parameters)
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -416,18 +407,6 @@ type
   InterfaceInfo00* {.pure.} = object
   InterfaceInfo* = ref object
     impl*: ptr InterfaceInfo00
-    ignoreFinalizer*: bool
-
-type
-  TypeInfo00* {.pure.} = object
-  TypeInfo* = ref object
-    impl*: ptr TypeInfo00
-    ignoreFinalizer*: bool
-
-type
-  TypeValueTable00* {.pure.} = object
-  TypeValueTable* = ref object
-    impl*: ptr TypeValueTable00
     ignoreFinalizer*: bool
 
 type
@@ -482,14 +461,6 @@ proc completeInterfaceInfo*(self: TypePlugin | TypeModule;
     instanceType: GType; interfaceType: GType; info: InterfaceInfo) =
   g_type_plugin_complete_interface_info(cast[ptr TypePlugin00](self.impl), instanceType, interfaceType, cast[ptr InterfaceInfo00](info.impl))
 
-proc g_type_plugin_complete_type_info(self: ptr TypePlugin00; gType: GType;
-    info: ptr TypeInfo00; valueTable: ptr TypeValueTable00) {.
-    importc, libprag.}
-
-proc completeTypeInfo*(self: TypePlugin | TypeModule; gType: GType;
-    info: TypeInfo; valueTable: TypeValueTable) =
-  g_type_plugin_complete_type_info(cast[ptr TypePlugin00](self.impl), gType, cast[ptr TypeInfo00](info.impl), cast[ptr TypeValueTable00](valueTable.impl))
-
 proc g_type_plugin_unuse(self: ptr TypePlugin00) {.
     importc, libprag.}
 
@@ -503,45 +474,29 @@ proc use*(self: TypePlugin | TypeModule) =
   g_type_plugin_use(cast[ptr TypePlugin00](self.impl))
 
 type
-  EnumValue00* {.pure.} = object
-  EnumValue* = ref object
-    impl*: ptr EnumValue00
-    ignoreFinalizer*: bool
+  EnumValue* {.pure, byRef.} = object
+    value*: int32
+    valueName*: cstring
+    valueNick*: cstring
 
-proc g_type_module_register_enum(self: ptr TypeModule00; name: cstring; constStaticValues: ptr EnumValue00): GType {.
+proc g_type_module_register_enum(self: ptr TypeModule00; name: cstring; constStaticValues: EnumValue): GType {.
     importc, libprag.}
 
 proc registerEnum*(self: TypeModule; name: cstring; constStaticValues: EnumValue): GType =
-  g_type_module_register_enum(cast[ptr TypeModule00](self.impl), name, cast[ptr EnumValue00](constStaticValues.impl))
+  g_type_module_register_enum(cast[ptr TypeModule00](self.impl), name, constStaticValues)
 
 type
-  FlagsValue00* {.pure.} = object
-  FlagsValue* = ref object
-    impl*: ptr FlagsValue00
-    ignoreFinalizer*: bool
+  FlagsValue* {.pure, byRef.} = object
+    value*: uint32
+    valueName*: cstring
+    valueNick*: cstring
 
 proc g_type_module_register_flags(self: ptr TypeModule00; name: cstring;
-    constStaticValues: ptr FlagsValue00): GType {.
+    constStaticValues: FlagsValue): GType {.
     importc, libprag.}
 
 proc registerFlags*(self: TypeModule; name: cstring; constStaticValues: FlagsValue): GType =
-  g_type_module_register_flags(cast[ptr TypeModule00](self.impl), name, cast[ptr FlagsValue00](constStaticValues.impl))
-
-type
-  TypeFlag* {.size: sizeof(cint), pure.} = enum
-    ignoreThisDummyValue = 0
-    abstract = 4
-    valueAbstract = 5
-
-  TypeFlags* {.size: sizeof(cint).} = set[TypeFlag]
-
-proc g_type_module_register_type(self: ptr TypeModule00; parentType: GType;
-    typeName: cstring; typeInfo: ptr TypeInfo00; flags: TypeFlags): GType {.
-    importc, libprag.}
-
-proc registerType*(self: TypeModule; parentType: GType; typeName: cstring;
-    typeInfo: TypeInfo; flags: TypeFlags): GType =
-  g_type_module_register_type(cast[ptr TypeModule00](self.impl), parentType, typeName, cast[ptr TypeInfo00](typeInfo.impl), flags)
+  g_type_module_register_flags(cast[ptr TypeModule00](self.impl), name, constStaticValues)
 
 type
   ParamSpec* = ref object of RootRef
@@ -593,6 +548,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_closure_get_type(), cast[ptr Closure00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var Closure) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGClosure)
 
 proc g_closure_unref(self: ptr Closure00) {.
     importc, libprag.}
@@ -766,16 +727,19 @@ proc g_signal_connect_data*(instance: pointer; detailedSignal: cstring; cHandler
     importc: "g_signal_connect_data", libprag.}
 
 type
-  EnumClass00* {.pure.} = object
-  EnumClass* = ref object
-    impl*: ptr EnumClass00
-    ignoreFinalizer*: bool
+  EnumClass* {.pure, byRef.} = object
+    gTypeClass*: TypeClass00
+    minimum*: int32
+    maximum*: int32
+    nValues*: uint32
+    values*: ptr EnumValue
 
 type
-  FlagsClass00* {.pure.} = object
-  FlagsClass* = ref object
-    impl*: ptr FlagsClass00
-    ignoreFinalizer*: bool
+  FlagsClass* {.pure, byRef.} = object
+    gTypeClass*: TypeClass00
+    mask*: uint32
+    nValues*: uint32
+    values*: ptr FlagsValue
 
 type
   InitiallyUnowned* = ref object of Object
@@ -808,6 +772,49 @@ type
   InstanceInitFunc* = proc (instance: ptr TypeInstance00; gClass: ptr TypeClass00) {.cdecl.}
 
 type
+  TypeValueTable00* {.pure.} = object
+  TypeValueTable* = ref object
+    impl*: ptr TypeValueTable00
+    ignoreFinalizer*: bool
+
+type
+  TypeInfo* {.pure, byRef.} = object
+    classSize*: uint16
+    baseInit*: BaseInitFunc
+    baseFinalize*: BaseFinalizeFunc
+    classInit*: ClassInitFunc
+    classFinalize*: ClassFinalizeFunc
+    classData*: pointer
+    instanceSize*: uint16
+    nPreallocs*: uint16
+    instanceInit*: InstanceInitFunc
+    valueTable*: ptr TypeValueTable00
+
+proc g_type_plugin_complete_type_info(self: ptr TypePlugin00; gType: GType;
+    info: TypeInfo; valueTable: ptr TypeValueTable00) {.
+    importc, libprag.}
+
+proc completeTypeInfo*(self: TypePlugin | TypeModule; gType: GType;
+    info: TypeInfo; valueTable: TypeValueTable) =
+  g_type_plugin_complete_type_info(cast[ptr TypePlugin00](self.impl), gType, info, cast[ptr TypeValueTable00](valueTable.impl))
+
+type
+  TypeFlag* {.size: sizeof(cint), pure.} = enum
+    ignoreThisDummyValue = 0
+    abstract = 4
+    valueAbstract = 5
+
+  TypeFlags* {.size: sizeof(cint).} = set[TypeFlag]
+
+proc g_type_module_register_type(self: ptr TypeModule00; parentType: GType;
+    typeName: cstring; typeInfo: TypeInfo; flags: TypeFlags): GType {.
+    importc, libprag.}
+
+proc registerType*(self: TypeModule; parentType: GType; typeName: cstring;
+    typeInfo: TypeInfo; flags: TypeFlags): GType =
+  g_type_module_register_type(cast[ptr TypeModule00](self.impl), parentType, typeName, typeInfo, flags)
+
+type
   InterfaceFinalizeFunc* = proc (gIface: ptr TypeInterface00; ifaceData: pointer) {.cdecl.}
 
 type
@@ -828,10 +835,10 @@ proc findProperty*(self: ObjectClass; propertyName: cstring): ParamSpec =
   result.ignoreFinalizer = true
 
 proc g_object_class_install_properties(self: ptr ObjectClass00; nPspecs: uint32;
-    pspecs: ptr ParamSpec00Array) {.
+    pspecs: ptr ptr ParamSpec00) {.
     importc, libprag.}
 
-proc installProperties*(self: ObjectClass; nPspecs: int; pspecs: ptr ParamSpec00Array) =
+proc installProperties*(self: ObjectClass; nPspecs: int; pspecs: ptr ptr ParamSpec00) =
   g_object_class_install_properties(cast[ptr ObjectClass00](self.impl), uint32(nPspecs), pspecs)
 
 proc g_object_class_install_property(self: ptr ObjectClass00; propertyId: uint32;
@@ -842,13 +849,14 @@ proc installProperty*(self: ObjectClass; propertyId: int;
     pspec: ParamSpec) =
   g_object_class_install_property(cast[ptr ObjectClass00](self.impl), uint32(propertyId), cast[ptr ParamSpec00](pspec.impl))
 
-proc g_object_class_list_properties(self: ptr ObjectClass00; nProperties: var uint32): ptr ParamSpec00Array {.
+proc g_object_class_list_properties(self: ptr ObjectClass00; nProperties: var uint32): ptr ptr ParamSpec00 {.
     importc, libprag.}
 
-proc listProperties*(self: ObjectClass; nProperties: var int): ptr ParamSpec00Array =
-  var nProperties_00 = uint32(nProperties)
+proc listProperties*(self: ObjectClass; nProperties: var int): ptr ptr ParamSpec00 =
+  var nProperties_00: uint32
   result = g_object_class_list_properties(cast[ptr ObjectClass00](self.impl), nProperties_00)
-  nProperties = int(nProperties_00)
+  if nProperties.addr != nil:
+    nProperties = int(nProperties_00)
 
 proc g_object_class_override_property(self: ptr ObjectClass00; propertyId: uint32;
     name: cstring) {.
@@ -857,12 +865,6 @@ proc g_object_class_override_property(self: ptr ObjectClass00; propertyId: uint3
 proc overrideProperty*(self: ObjectClass; propertyId: int;
     name: cstring) =
   g_object_class_override_property(cast[ptr ObjectClass00](self.impl), uint32(propertyId), name)
-
-type
-  ObjectConstructParam00* {.pure.} = object
-  ObjectConstructParam* = ref object
-    impl*: ptr ObjectConstructParam00
-    ignoreFinalizer*: bool
 
 type
   ObjectFinalizeFunc* = proc (`object`: ptr Object00) {.cdecl.}
@@ -1173,7 +1175,7 @@ type
     signalFlags*: SignalFlags
     returnType*: GType
     nParams*: uint32
-    paramTypes*: GTypeArray
+    paramTypes*: ptr GType
 
 const TYPE_FLAG_RESERVED_ID_BIT* = 1'u64
 
@@ -1195,10 +1197,7 @@ type
   ToggleNotify* = proc (data: pointer; `object`: ptr Object00; isLastRef: gboolean) {.cdecl.}
 
 type
-  TypeCValue00* {.pure, union.} = object
-  TypeCValue* = ref object
-    impl*: ptr TypeCValue00
-    ignoreFinalizer*: bool
+  TypeCValue* {.pure, byRef, union.} = object
 
 type
   TypeClassCacheFunc* = proc (cacheData: pointer; gClass: ptr TypeClass00): gboolean {.cdecl.}
@@ -1240,7 +1239,7 @@ type
     info: ptr InterfaceInfo00) {.cdecl.}
 
 type
-  TypePluginCompleteTypeInfo* = proc (plugin: ptr TypePlugin00; gType: GType; info: ptr TypeInfo00; valueTable: ptr TypeValueTable00) {.cdecl.}
+  TypePluginCompleteTypeInfo* = proc (plugin: ptr TypePlugin00; gType: GType; info: TypeInfo; valueTable: ptr TypeValueTable00) {.cdecl.}
 
 type
   TypePluginUnuse* = proc (plugin: ptr TypePlugin00) {.cdecl.}
@@ -1254,6 +1253,8 @@ type
     typeName*: cstring
     classSize*: uint32
     instanceSize*: uint32
+
+const VALUE_INTERNED_STRING* = 268435456'i32
 
 const VALUE_NOCOPY_CONTENTS* = 134217728'i32
 
@@ -1274,6 +1275,12 @@ when defined(gcDestructors):
     if not self.ignoreFinalizer and self.impl != nil:
       boxedFree(g_value_array_get_type(), cast[ptr ValueArray00](self.impl))
       self.impl = nil
+
+proc newWithFinalizer*(x: var ValueArray) =
+  when defined(gcDestructors):
+    new(x)
+  else:
+    new(x, gBoxedFreeGValueArray)
 
 proc g_value_array_new(nPrealloced: uint32): ptr ValueArray00 {.
     importc, libprag.}
@@ -1321,10 +1328,7 @@ type
   WeakNotify* = proc (data: pointer; whereTheObjectWas: ptr Object00) {.cdecl.}
 
 type
-  WeakRef00* {.pure.} = object
-  WeakRef* = ref object
-    impl*: ptr WeakRef00
-    ignoreFinalizer*: bool
+  WeakRef* {.pure, byRef.} = object
 
 type
   ValueDataUnion* {.pure, byRef, union.} = object
@@ -1710,6 +1714,15 @@ proc setInt64*(self: Value; vInt64: int64) =
 proc `int64=`*(self: Value; vInt64: int64) =
   g_value_set_int64(self, vInt64)
 
+proc g_value_set_interned_string(self: Value; vString: cstring) {.
+    importc, libprag.}
+
+proc setInternedString*(self: Value; vString: cstring = "") =
+  g_value_set_interned_string(self, safeStringToCString(vString))
+
+proc `internedString=`*(self: Value; vString: cstring = "") =
+  g_value_set_interned_string(self, safeStringToCString(vString))
+
 proc g_value_set_long(self: Value; vLong: int64) {.
     importc, libprag.}
 
@@ -1852,6 +1865,8 @@ proc g_value_take_variant(self: Value; variant: ptr glib.Variant00) {.
     importc, libprag.}
 
 proc takeVariant*(self: Value; variant: glib.Variant = nil) =
+  if variant != nil:
+    variant.ignoreFinalizer = true
   g_value_take_variant(self, if variant.isNil: nil else: cast[ptr glib.Variant00](variant.impl))
 
 proc g_value_transform(self: Value; destValue: Value): gboolean {.
@@ -1881,7 +1896,7 @@ type
 
   ValueTransform* = proc (srcValue: Value; destValue: Value) {.cdecl.}
 
-  SignalEmissionHook* = proc (ihint: ptr SignalInvocationHint00; nParamValues: uint32; paramValues: ValueArray;
+  SignalEmissionHook* = proc (ihint: ptr SignalInvocationHint00; nParamValues: uint32; paramValues: ptr Value;
     data: pointer): gboolean {.cdecl.}
 
 proc g_object_get_property(self: ptr Object00; propertyName: cstring; value: Value) {.
@@ -1890,12 +1905,12 @@ proc g_object_get_property(self: ptr Object00; propertyName: cstring; value: Val
 proc getProperty*(self: Object; propertyName: cstring; value: Value) =
   g_object_get_property(cast[ptr Object00](self.impl), propertyName, value)
 
-proc g_object_getv(self: ptr Object00; nProperties: uint32; names: cstringArray;
-    values: ValueArray) {.
+proc g_object_getv(self: ptr Object00; nProperties: uint32; names: ptr cstring;
+    values: ptr Value) {.
     importc, libprag.}
 
 proc getv*(self: Object; nProperties: int; names: openArray[string];
-    values: ValueArray) =
+    values: ptr Value) =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   g_object_getv(cast[ptr Object00](self.impl), uint32(nProperties), seq2CstringArray(names, fs469n23), values)
@@ -1907,11 +1922,11 @@ proc setProperty*(self: Object; propertyName: cstring; value: Value) =
   g_object_set_property(cast[ptr Object00](self.impl), propertyName, value)
 
 proc g_closure_invoke(self: ptr Closure00; returnValue: var Value; nParamValues: uint32;
-    paramValues: ValueArray; invocationHint: pointer) {.
+    paramValues: ptr Value; invocationHint: pointer) {.
     importc, libprag.}
 
-proc invoke*(self: Closure; returnValue: var Value; nParamValues: int;
-    paramValues: ValueArray; invocationHint: pointer) =
+proc invoke*(self: Closure; returnValue: var Value = cast[var Value](nil);
+    nParamValues: int; paramValues: ptr Value; invocationHint: pointer) =
   g_closure_invoke(cast[ptr Closure00](self.impl), returnValue, uint32(nParamValues), paramValues, invocationHint)
 
 proc g_cclosure_marshal_generic(closure: ptr Closure00; returnGvalue: Value;
@@ -1925,7 +1940,7 @@ proc marshalGeneric*(closure: Closure; returnGvalue: Value; nParamValues: int;
 proc g_value_array_append(self: ptr ValueArray00; value: Value): ptr ValueArray00 {.
     importc, libprag.}
 
-proc append*(self: ValueArray; value: Value = cast[ptr Value](nil)[]): ValueArray =
+proc append*(self: ValueArray; value: Value = cast[var Value](nil)): ValueArray =
   fnew(result, gBoxedFreeGValueArray)
   result.impl = g_value_array_append(cast[ptr ValueArray00](self.impl), value)
   result.ignoreFinalizer = true
@@ -1936,13 +1951,10 @@ proc g_value_array_get_nth(self: ptr ValueArray00; index: uint32): ptr Value {.
 proc getNth*(self: ValueArray; index: int): ptr Value =
   g_value_array_get_nth(cast[ptr ValueArray00](self.impl), uint32(index))
 
-proc nth*(self: ValueArray; index: int): ptr Value =
-  g_value_array_get_nth(cast[ptr ValueArray00](self.impl), uint32(index))
-
 proc g_value_array_insert(self: ptr ValueArray00; index: uint32; value: Value): ptr ValueArray00 {.
     importc, libprag.}
 
-proc insert*(self: ValueArray; index: int; value: Value = cast[ptr Value](nil)[]): ValueArray =
+proc insert*(self: ValueArray; index: int; value: Value = cast[var Value](nil)): ValueArray =
   fnew(result, gBoxedFreeGValueArray)
   result.impl = g_value_array_insert(cast[ptr ValueArray00](self.impl), uint32(index), value)
   result.ignoreFinalizer = true
@@ -1950,7 +1962,7 @@ proc insert*(self: ValueArray; index: int; value: Value = cast[ptr Value](nil)[]
 proc g_value_array_prepend(self: ptr ValueArray00; value: Value): ptr ValueArray00 {.
     importc, libprag.}
 
-proc prepend*(self: ValueArray; value: Value = cast[ptr Value](nil)[]): ValueArray =
+proc prepend*(self: ValueArray; value: Value = cast[var Value](nil)): ValueArray =
   fnew(result, gBoxedFreeGValueArray)
   result.impl = g_value_array_prepend(cast[ptr ValueArray00](self.impl), value)
   result.ignoreFinalizer = true
@@ -1969,7 +1981,12 @@ type
   ObjectGetPropertyFunc* = proc (`object`: ptr Object00; propertyId: uint32; value: Value; pspec: ptr ParamSpec00) {.cdecl.}
 
 type
-  ClosureMarshal* = proc (closure: ptr Closure00; returnValue: Value; nParamValues: uint32; paramValues: ValueArray;
+  ObjectConstructParam* {.pure, byRef.} = object
+    pspec*: ptr ParamSpec00
+    value*: ptr Value
+
+type
+  ClosureMarshal* = proc (closure: ptr Closure00; returnValue: Value; nParamValues: uint32; paramValues: ptr Value;
     invocationHint: pointer; marshalData: pointer) {.cdecl.}
 
 type
@@ -1981,42 +1998,23 @@ proc g_clear_signal_handler(handlerIdPtr: ptr uint64; instance: ptr Object00) {.
 proc clearSignalHandler*(handlerIdPtr: ptr uint64; instance: Object) =
   g_clear_signal_handler(handlerIdPtr, cast[ptr Object00](instance.impl))
 
-proc g_enum_complete_type_info(gEnumType: GType; info: var TypeInfo00; constValues: ptr EnumValue00) {.
+proc enumCompleteTypeInfo*(gEnumType: GType; info: var TypeInfo; constValues: EnumValue) {.
+    importc: "g_enum_complete_type_info", libprag.}
+
+proc g_enum_get_value(enumClass: EnumClass; value: int32): ptr EnumValue {.
     importc, libprag.}
 
-proc enumCompleteTypeInfo*(gEnumType: GType; info: var TypeInfo; constValues: EnumValue) =
-  new(info)
-  g_enum_complete_type_info(gEnumType, cast[var TypeInfo00](addr info.impl), cast[ptr EnumValue00](constValues.impl))
+proc enumGetValue*(enumClass: EnumClass; value: int): ptr EnumValue =
+  g_enum_get_value(enumClass, int32(value))
 
-proc g_enum_get_value(enumClass: ptr EnumClass00; value: int32): ptr EnumValue00 {.
-    importc, libprag.}
+proc enumGetValueByName*(enumClass: EnumClass; name: cstring): ptr EnumValue {.
+    importc: "g_enum_get_value_by_name", libprag.}
 
-proc enumGetValue*(enumClass: EnumClass; value: int): EnumValue =
-  new(result)
-  result.impl = g_enum_get_value(cast[ptr EnumClass00](enumClass.impl), int32(value))
-  result.ignoreFinalizer = true
+proc enumGetValueByNick*(enumClass: EnumClass; nick: cstring): ptr EnumValue {.
+    importc: "g_enum_get_value_by_nick", libprag.}
 
-proc g_enum_get_value_by_name(enumClass: ptr EnumClass00; name: cstring): ptr EnumValue00 {.
-    importc, libprag.}
-
-proc enumGetValueByName*(enumClass: EnumClass; name: cstring): EnumValue =
-  new(result)
-  result.impl = g_enum_get_value_by_name(cast[ptr EnumClass00](enumClass.impl), name)
-  result.ignoreFinalizer = true
-
-proc g_enum_get_value_by_nick(enumClass: ptr EnumClass00; nick: cstring): ptr EnumValue00 {.
-    importc, libprag.}
-
-proc enumGetValueByNick*(enumClass: EnumClass; nick: cstring): EnumValue =
-  new(result)
-  result.impl = g_enum_get_value_by_nick(cast[ptr EnumClass00](enumClass.impl), nick)
-  result.ignoreFinalizer = true
-
-proc g_enum_register_static(name: cstring; constStaticValues: ptr EnumValue00): GType {.
-    importc, libprag.}
-
-proc enumRegisterStatic*(name: cstring; constStaticValues: EnumValue): GType =
-  g_enum_register_static(name, cast[ptr EnumValue00](constStaticValues.impl))
+proc enumRegisterStatic*(name: cstring; constStaticValues: EnumValue): GType {.
+    importc: "g_enum_register_static", libprag.}
 
 proc g_enum_to_string(gEnumType: GType; value: int32): cstring {.
     importc, libprag.}
@@ -2026,43 +2024,23 @@ proc enumToString*(gEnumType: GType; value: int): string =
   result = $resul0
   cogfree(resul0)
 
-proc g_flags_complete_type_info(gFlagsType: GType; info: var TypeInfo00;
-    constValues: ptr FlagsValue00) {.
+proc flagsCompleteTypeInfo*(gFlagsType: GType; info: var TypeInfo; constValues: FlagsValue) {.
+    importc: "g_flags_complete_type_info", libprag.}
+
+proc g_flags_get_first_value(flagsClass: FlagsClass; value: uint32): ptr FlagsValue {.
     importc, libprag.}
 
-proc flagsCompleteTypeInfo*(gFlagsType: GType; info: var TypeInfo; constValues: FlagsValue) =
-  new(info)
-  g_flags_complete_type_info(gFlagsType, cast[var TypeInfo00](addr info.impl), cast[ptr FlagsValue00](constValues.impl))
+proc flagsGetFirstValue*(flagsClass: FlagsClass; value: int): ptr FlagsValue =
+  g_flags_get_first_value(flagsClass, uint32(value))
 
-proc g_flags_get_first_value(flagsClass: ptr FlagsClass00; value: uint32): ptr FlagsValue00 {.
-    importc, libprag.}
+proc flagsGetValueByName*(flagsClass: FlagsClass; name: cstring): ptr FlagsValue {.
+    importc: "g_flags_get_value_by_name", libprag.}
 
-proc flagsGetFirstValue*(flagsClass: FlagsClass; value: int): FlagsValue =
-  new(result)
-  result.impl = g_flags_get_first_value(cast[ptr FlagsClass00](flagsClass.impl), uint32(value))
-  result.ignoreFinalizer = true
+proc flagsGetValueByNick*(flagsClass: FlagsClass; nick: cstring): ptr FlagsValue {.
+    importc: "g_flags_get_value_by_nick", libprag.}
 
-proc g_flags_get_value_by_name(flagsClass: ptr FlagsClass00; name: cstring): ptr FlagsValue00 {.
-    importc, libprag.}
-
-proc flagsGetValueByName*(flagsClass: FlagsClass; name: cstring): FlagsValue =
-  new(result)
-  result.impl = g_flags_get_value_by_name(cast[ptr FlagsClass00](flagsClass.impl), name)
-  result.ignoreFinalizer = true
-
-proc g_flags_get_value_by_nick(flagsClass: ptr FlagsClass00; nick: cstring): ptr FlagsValue00 {.
-    importc, libprag.}
-
-proc flagsGetValueByNick*(flagsClass: FlagsClass; nick: cstring): FlagsValue =
-  new(result)
-  result.impl = g_flags_get_value_by_nick(cast[ptr FlagsClass00](flagsClass.impl), nick)
-  result.ignoreFinalizer = true
-
-proc g_flags_register_static(name: cstring; constStaticValues: ptr FlagsValue00): GType {.
-    importc, libprag.}
-
-proc flagsRegisterStatic*(name: cstring; constStaticValues: FlagsValue): GType =
-  g_flags_register_static(name, cast[ptr FlagsValue00](constStaticValues.impl))
+proc flagsRegisterStatic*(name: cstring; constStaticValues: FlagsValue): GType {.
+    importc: "g_flags_register_static", libprag.}
 
 proc g_flags_to_string(flagsType: GType; value: uint32): cstring {.
     importc, libprag.}
@@ -2140,7 +2118,7 @@ proc signalAddEmissionHook*(signalId: int; detail: int; hookFunc: SignalEmission
     hookData: pointer; dataDestroy: DestroyNotify): uint64 =
   g_signal_add_emission_hook(uint32(signalId), uint32(detail), hookFunc, hookData, dataDestroy)
 
-proc signalChainFromOverridden*(instanceAndParams: ValueArray; returnValue: Value) {.
+proc signalChainFromOverridden*(instanceAndParams: ptr Value; returnValue: Value) {.
     importc: "g_signal_chain_from_overridden", libprag.}
 
 proc g_signal_connect_closure(instance: ptr Object00; detailedSignal: cstring;
@@ -2241,15 +2219,22 @@ proc signalHasHandlerPending*(instance: Object; signalId: int; detail: int;
     mayBeBlocked: bool): bool =
   toBool(g_signal_has_handler_pending(cast[ptr Object00](instance.impl), uint32(signalId), uint32(detail), gboolean(mayBeBlocked)))
 
-proc g_signal_list_ids(itype: GType; nIds: var uint32): uint32Array {.
+proc g_signal_is_valid_name(name: cstring): gboolean {.
+    importc, libprag.}
+
+proc signalIsValidName*(name: cstring): bool =
+  toBool(g_signal_is_valid_name(name))
+
+proc g_signal_list_ids(itype: GType; nIds: var uint32): ptr uint32 {.
     importc, libprag.}
 
 proc signalListIds*(itype: GType; nIds: var int): seq[uint32] =
-  var nIds_00 = uint32(nIds)
+  var nIds_00: uint32
   let resul0 = g_signal_list_ids(itype, nIds_00)
-  result = uint32ArrayZT2seq(resul0)
+  result = uint32ArrayToSeq(resul0, nIds.int)
   cogfree(resul0)
-  nIds = int(nIds_00)
+  if nIds.addr != nil:
+    nIds = int(nIds_00)
 
 proc g_signal_lookup(name: cstring; itype: GType): uint32 {.
     importc, libprag.}
@@ -2277,11 +2262,13 @@ proc g_signal_parse_name(detailedSignal: cstring; itype: GType; signalIdP: var u
 
 proc signalParseName*(detailedSignal: cstring; itype: GType; signalIdP: var int;
     detailP: var int; forceDetailQuark: bool): bool =
-  var signalIdP_00 = uint32(signalIdP)
-  var detailP_00 = uint32(detailP)
+  var signalIdP_00: uint32
+  var detailP_00: uint32
   result = toBool(g_signal_parse_name(detailedSignal, itype, signalIdP_00, detailP_00, gboolean(forceDetailQuark)))
-  signalIdP = int(signalIdP_00)
-  detailP = int(detailP_00)
+  if signalIdP.addr != nil:
+    signalIdP = int(signalIdP_00)
+  if detailP.addr != nil:
+    detailP = int(detailP_00)
 
 proc g_signal_query(signalId: uint32; query: var SignalQuery) {.
     importc, libprag.}
@@ -2316,7 +2303,7 @@ proc signalStopEmissionByName*(instance: Object; detailedSignal: cstring) =
 proc g_signal_type_cclosure_new(itype: GType; structOffset: uint32): ptr Closure00 {.
     importc, libprag.}
 
-proc signalTypeCclosureNew*(itype: GType; structOffset: int): Closure =
+proc newSignalTypeCclosure*(itype: GType; structOffset: int): Closure =
   fnew(result, gBoxedFreeGClosure)
   result.impl = g_signal_type_cclosure_new(itype, uint32(structOffset))
   result.ignoreFinalizer = true
@@ -2401,14 +2388,15 @@ proc g_type_check_value_holds(value: Value; `type`: GType): gboolean {.
 proc typeCheckValueHolds*(value: Value; `type`: GType): bool =
   toBool(g_type_check_value_holds(value, `type`))
 
-proc g_type_children(`type`: GType; nChildren: var uint32): GTypeArray {.
+proc g_type_children(`type`: GType; nChildren: var uint32): ptr GType {.
     importc, libprag.}
 
-proc typeChildren*(`type`: GType; nChildren: var int): GTypeArray =
-  var nChildren_00 = uint32(nChildren)
+proc typeChildren*(`type`: GType; nChildren: var int = cast[var int](nil)): ptr GType =
+  var nChildren_00: uint32
   let resul0 = g_type_children(`type`, nChildren_00)
   result = resul0
-  nChildren = int(nChildren_00)
+  if nChildren.addr != nil:
+    nChildren = int(nChildren_00)
 
 proc g_type_default_interface_peek(gType: GType): ptr TypeInterface00 {.
     importc, libprag.}
@@ -2483,14 +2471,15 @@ proc typeInit*() {.
 proc typeInitWithDebugFlags*(debugFlags: TypeDebugFlags) {.
     importc: "g_type_init_with_debug_flags", libprag.}
 
-proc g_type_interfaces(`type`: GType; nInterfaces: var uint32): GTypeArray {.
+proc g_type_interfaces(`type`: GType; nInterfaces: var uint32): ptr GType {.
     importc, libprag.}
 
-proc typeInterfaces*(`type`: GType; nInterfaces: var int): GTypeArray =
-  var nInterfaces_00 = uint32(nInterfaces)
+proc typeInterfaces*(`type`: GType; nInterfaces: var int = cast[var int](nil)): ptr GType =
+  var nInterfaces_00: uint32
   let resul0 = g_type_interfaces(`type`, nInterfaces_00)
   result = resul0
-  nInterfaces = int(nInterfaces_00)
+  if nInterfaces.addr != nil:
+    nInterfaces = int(nInterfaces_00)
 
 proc g_type_is_a(`type`: GType; isAType: GType): gboolean {.
     importc, libprag.}
@@ -2531,21 +2520,17 @@ proc typeQname*(`type`: GType): int =
 proc typeQuery*(`type`: GType; query: var TypeQuery) {.
     importc: "g_type_query", libprag.}
 
-proc g_type_register_fundamental(typeId: GType; typeName: cstring; info: ptr TypeInfo00;
+proc g_type_register_fundamental(typeId: GType; typeName: cstring; info: TypeInfo;
     finfo: ptr TypeFundamentalInfo00; flags: TypeFlags): GType {.
     importc, libprag.}
 
 proc typeRegisterFundamental*(typeId: GType; typeName: cstring; info: TypeInfo;
     finfo: TypeFundamentalInfo; flags: TypeFlags): GType =
-  g_type_register_fundamental(typeId, typeName, cast[ptr TypeInfo00](info.impl), cast[ptr TypeFundamentalInfo00](finfo.impl), flags)
-
-proc g_type_register_static(parentType: GType; typeName: cstring; info: ptr TypeInfo00;
-    flags: TypeFlags): GType {.
-    importc, libprag.}
+  g_type_register_fundamental(typeId, typeName, info, cast[ptr TypeFundamentalInfo00](finfo.impl), flags)
 
 proc typeRegisterStatic*(parentType: GType; typeName: cstring; info: TypeInfo;
-    flags: TypeFlags): GType =
-  g_type_register_static(parentType, typeName, cast[ptr TypeInfo00](info.impl), flags)
+    flags: TypeFlags): GType {.
+    importc: "g_type_register_static", libprag.}
 
 proc g_type_set_qdata(`type`: GType; quark: uint32; data: pointer) {.
     importc, libprag.}
@@ -2563,6 +2548,124 @@ proc typeTestFlags*(`type`: GType; flags: int): bool =
 #proc refCount*(o: gobject.Object): int =
 #  let p = cast[ptr cuint](cast[int](o.impl) + sizeof(pointer))
 #  return p[].int
+
+# similar to gobjectTemp()
+proc glistObjects2seq*[T](t: typedesc[T]; l: ptr glib.List; elTransferFull: bool): seq[T] =
+  var r: T
+  var obj: ptr Object00
+  var el = l
+  while el != nil:
+    obj = cast[ptr Object00](el.data)
+    if obj == nil:
+      continue
+    let qdata = g_object_get_qdata(obj, Quark)
+    if qdata != nil:
+      r = cast[T](qdata)
+      assert(r.impl == obj)
+      result.add(r)
+    else:
+      fnew(r, finalizeGObject)#" % [mprefix])
+      r.impl = obj
+      GC_ref(r)
+      if elTransferFull:
+        if g_object_is_floating(r.impl).int != 0:
+          discard g_object_ref_sink(r.impl)
+      else:
+        discard g_object_ref_sink(r.impl)
+      g_object_add_toggle_ref(r.impl, toggleNotify, addr(r[]))
+      g_object_unref(r.impl)
+      assert(g_object_get_qdata(r.impl, Quark) == nil)
+      g_object_set_qdata(r.impl, Quark, addr(r[]))
+    el = el.next
+
+proc gslistObjects2seq*[T](t: typedesc[T]; l: ptr glib.SList; elTransferFull: bool): seq[T] =
+  var r: T
+  var obj: ptr Object00
+  var el = l
+  while el != nil:
+    obj = cast[ptr Object00](el.data)
+    if obj == nil:
+      continue
+    let qdata = g_object_get_qdata(obj, Quark)
+    if qdata != nil:
+      r = cast[T](qdata)
+      assert(r.impl == obj)
+      result.add(r)
+    else:
+      fnew(r, finalizeGObject)#" % [mprefix])
+      r.impl = obj
+      GC_ref(r)
+      if elTransferFull:
+        if g_object_is_floating(r.impl).int != 0:
+          discard g_object_ref_sink(r.impl)
+      else:
+        discard g_object_ref_sink(r.impl)
+      g_object_add_toggle_ref(r.impl, toggleNotify, addr(r[]))
+      g_object_unref(r.impl)
+      assert(g_object_get_qdata(r.impl, Quark) == nil)
+      g_object_set_qdata(r.impl, Quark, addr(r[]))
+    el = el.next
+
+proc glistStructs2seq*[T](l: ptr glib.List; igFin: bool): seq[T] =
+  var r: T
+  var el = l
+  while el != nil:
+    if el.data == nil:
+      continue
+    newWithFinalizer(r)
+    r.impl = cast[typeof(r.impl)](el.data)
+    r.ignoreFinalizer = igFin
+    result.add(r)
+    el = el.next
+
+proc gslistStructs2seq*[T](l: ptr glib.SList; igFin: bool): seq[T] =
+  var r: T
+  var el = l
+  while el != nil:
+    if el.data == nil:
+      continue
+    newWithFinalizer(r)
+    r.impl = cast[typeof(r.impl)](el.data)
+    r.ignoreFinalizer = igFin
+    result.add(r)
+    el = el.next
+
+# Not much tested, but in use for libnice simple_example.nim
+# Some other modules may need a similar local proc, ie for pango.Item
+proc seq2GList*[T](s: seq[T]): ptr glib.List =
+  var l: ptr glib.List
+  var i = s.len
+  while i > 0:
+    dec(i)
+    when T is gobject.Object or compiles(T.impl): # https://github.com/StefanSalewski/gintro/issues/99#issuecomment-739435944
+    # when compiles(s[i].impl == nil):
+    # when T is gobject.Object: # or T is pango.Item:
+      l = g_list_prepend(l, s[i].impl)
+    elif T is cstring:
+      l = g_list_prepend(l, s[i]) # cstring
+    else:
+      # {.error: "seq2GList was called with unsupported type".} # that would break compiling the modules currently
+      discard # make it compile for these cases, of course will not work
+  return l
+
+proc seq2GSList*[T](s: seq[T]): ptr glib.SList =
+  var l: ptr glib.SList
+  var i = s.len
+  while i > 0:
+    dec(i)
+    when T is gobject.Object or compiles(T.impl):
+    # when compiles(s[i].impl == nil): # NiceCandidate
+    # when T is gobject.Object: # or T is pango.Item:
+      l = g_slist_prepend(l, s[i].impl)
+    elif T is cstring:
+      l = g_slist_prepend(l, s[i]) # cstring
+    else:
+      # {.error: "seq2GSList was called with unsupported type".}
+      discard # make it compile for these cases, of course will not work
+  return l
+
+#include gimplgobj
+include gimplglib
 
 
 proc g_type_invalid_get_type*(): GType = g_type_from_name("(null)")
