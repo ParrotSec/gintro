@@ -1,3 +1,9 @@
+gintro (0.8.4+parrot1) lts-updates; urgency=medium
+
+  * Rebuild package.
+
+ -- Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>  Sat, 21 Aug 2021 02:05:10 +0200
+
 gintro (0.8.4+parrot0) rolling-testing; urgency=medium
 
   * Upstream new release
