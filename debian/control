@@ -3,7 +3,10 @@ Section: libdevel
 Priority: optional
 Maintainer: Parrot Team <team@parrotsec.org>
 Uploaders: Nong Hoang "dmknght" Tu <dmknght@parrotsec.org>
-Build-Depends: debhelper-compat (= 12)
+Build-Depends: debhelper-compat (= 12),
+ nim,
+# Generate binding for lib vte
+ gir1.2-vte-2.91,
 Standards-Version: 4.5.0
 Homepage: https://github.com/StefanSalewski/gintro/
 #Vcs-Browser: https://salsa.debian.org/debian/gintro
