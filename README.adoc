@@ -1,0 +1,3184 @@
+= High level GTK4 and GTK3 bindings for the Nim programming language
+//(c) Stefan Salewski                                     
+//Version 0.9.6
+:experimental:
+:imagesdir: http://ssalewski.de/tmp
+//:source-highlighter: pygments
+//:pygments-style: monokai
+:source-highlighter: rouge
+:rouge-style: molokai
+:icons: font
+:toc: left
+
+:GIR: GObject-Introspection
+:MAC: MacOSX
+
+//(c) Stefan Salewski +
+//2018
+
+TIP: A more fancy copy of this document with dark source code background is available at http://ssalewski.de/gintroreadme.html[GIntro README]
+This document describes mainly the use of these bindings for GTK3. For GTK4 you may also consult the pre-print of the 
+*Nim GTK4 book* located at http://ssalewski.de/gtkprogramming.html.
+
+WARNING: Please do not use the code from the examples in this page, but use the actual code from
+https://github.com/StefanSalewski/gintro/tree/master/examples . The github readme.adoc does not
+allow to insert code from files, so I had to manually insert it, and so that code in the html page
+may not compile with latest gintro version. I plan to create a new page hosted somewhere else
+with code inserted from files directly.
+
+NOTE: This work is partly based on earlier works of J. Mansour and has been supported by A. Rumpf, E. Bassi and other _Nim_ and _GTK/Gnome_ developers.
+The `combinatorics` module was kindly provided by R. Behrends.
+
+NOTE: This is version 0.9.6 of the gintro Nim GTK bindings. We tried to fix a bug related to the appearance of libsoup 3.0.
+When gobject-introspection was first processing libnice, it loads old libsoup 2.4 and when then processing linsoup 3.0
+name conflicts lead to error messages and the install process hung. Now we process always libsoup in version 2.4 and 3.0
+before libnice, this seems to work. For libsoup 2.4 we generate a module called libsoup.nim as before, and the
+libsoup 3.0 module is now called libsoup3.nim.  
+
+NOTE: For version 0.9.5 of the gintro Nim GTK bindings we added a patch to support very old GTK3 versions
+like Debian Buster, updated the list of "light symbols" like Rectangle, TextIter and such that do not
+need Nim Proxy objects, and finally fixed a recent glib proc name conflict.
+
+NOTE: Version 0.9.4 of the gintro Nim GTK bindings contains a lot of fixes.
+Before 0.9.4 some GtkDrawingArea  examples gave crashes with the most recent Nim compiler
+due to a wrong cast from ref object to RootRef. That is fixed, and the drawingarea example works now
+also without manually freeing cairo resources like Context, Surface and Pattern. We have not updated the example,
+so it still contains the manually memory management, but you can comment it out if you want. When you compile your code with
+--gc:arc you really should not have to care for releasing cairo resources. If you still use the default refc GC you may
+release cairo resources manually, as the GC has a delay, which may first allocate some GB before the GC becomes active and frees
+the cairo resources. Note that only a small part of all the cairo functions has been tested yet, so there may still be bugs.
+Strings are now passed to GTK functions as cstrings, so you can pass nil as well as empty strings. The nil value has for GTK in most cases
+a special meaning and is different from an empty "" string. For some function parameters nil is the default value for cstrings.
+Finally we support now named empty flag sets, so instead of
+passing the empty set as {} for default flag set values you can use names like BindingFlagsDefault or BindingFlags.default.
+
+NOTE: Version 0.9.3 of the gintro Nim GTK bindings contains some serious changes
+following the discussion in https://discourse.gnome.org/t/get-ref-function-for-none-gobject-classes-like-gtkexpression/6696.
+With that changes issue https://github.com/StefanSalewski/gintro/issues/135 should be fixed, and the listview_clocks example works
+with a C and a Nim part. For most apps that changes should be invisible, but it is possible that we have introduced
+new bugs or maybe memory leaks. At least the existing examples seems still to compile, but we have not yet tested them all.
+//You can test this version with nimble install gintro@#head.
+And the notify signals for gobject properties like "notify::cursor-moved" for entry widgets should work now.
+
+NOTE: The version 0.9.2 of the gintro Nim GTK bindings is only a fix for the issue with latest gstreamer
+from gitlab, see https://github.com/StefanSalewski/gintro/issues/138.
+
+NOTE: Version 0.9.1 is mostly a plain fix for issue https://github.com/StefanSalewski/gintro/issues/133.
+For GObject proc parameters with direction in and transfer full we have to avoid that the Nim memory management destroys the GObject when the Nim proxy object is destroyed. Current fix was adding a plain ".ignoreFinalizer = true" for that case, which works in most cases. But maybe a better fix would be to ref() the gtk object instead. Maybe that makes no difference for gobjects, but it can make a difference for entities like GtkExpression which are used further, see issue
+https://github.com/StefanSalewski/gintro/issues/137. But we will leave that for next version 0.9.3.
+
+NOTE: Due to a user request we added support for the adwaita library for version 0.8.9.
+This lib is the libhandy variant for GTK4 and is intended to
+support GTK on mobile devices. Unfortunately we can not yet provide
+an example program for this library. The C example from git sources
+is not really tiny, so porting to Nim would take some hours at least, as we have
+absolutely no knowledge about that lib yet. Maybe we can provide an example next
+year or maybe that user will finally provide something? 
+
+NOTE: Starting with version 0.8.8 of the gintro Nim GTK bindings
+for procs like getStartIter() without a result but with a var out
+parameter an overloaded version is created where the var out
+parameter is returned as result. So we can write "let startIter = buffer.getStartIter()" now.
+And we tried to fix the issues with out gobject parameters as in g_file_new_tmp().
+
+NOTE: For version 0.8.7 of the gintro Nim GTK bindings
+we did a larger internal cleanup for the gen.nim generator script but tried to
+generate output modules identical to v.0.8.6 still. For next release v0.8.8
+there will be some changes in the generated modules then.
+Also for this version 0.8.7 we do support webkit2 for GTK4.
+
+NOTE: Version 0.8.6 of the gintro Nim GTK bindings
+contains now all the standard gst modules, and due to a recent
+request also the gtklayershell.nim module. Due to issues with some gst modules
+we do now call init() for the gst module before we use it with gobject-introspection.
+We do the same for GTK3 and GTK4 as these provide also an init() proc. According to
+a recent discussion with the GTK core devs that init() call is necessary. The call is
+done by use of dlopen(), for which we need to provide the names of the
+dynamic libraries, which is some guesswork for Windows and Mac.
+
+NOTE: For version 0.8.5 of the gintro Nim GTK bindings
+we have added webkitgtk support.
+Unfortunately still only for GTK3, as the latest webkitgtk package 2.30.4
+does not compile with stable GTK4. But we should get
+webkitgtk for GTK4 in a few weeks. One question is still how to name the GTK4
+version then. The official name of the version for GTK3 is webkit2, so shall
+we call the version for GTK4 webkitgtk4 or webkit4? Or different?
+
+NOTE: Since version 0.8.4 we do support the
+libnice module for Linux and Windows. And we added gtksourceview5 to
+support gtksourceview usage for GTK4. The module is called gtksourceview5
+because the underlying C library has mayor version 5 already. So you can
+write your own GTK4 Nim editor now. Additional optional var out parameters
+are supported now and GtkGestures should work also.
+
+NOTE: The version gintro v0.8.3 will have some internal cleanup, which removes the temporary
+Array types. In the past we used that names to indicate array parameters, it was working well, but still
+it was ugly using names to indicates data types. So we fixed that. And we have added some better support for
+GList parameter. GLists are now converted to Nim seqs and vice versa. Not everywhere still, and this conversion
+is still untested, as GList parameters are used most of the time in exotic functions only. Another change is that
+we have support for libnice by a request of a user from Japan now. As he intents to use libnice on Windows 8.1
+with only glib and gobject installed, but with no gtk installed, we had to break module gimpl.nim
+into two units called gimplgobj.nim and gimplgtk.nim, and we added a module called dummygtk.nim
+which can be imported to make the connect() macro available while a real gtk module is not available.
+Please let us know if these changes should break something for ordinary gtk users.
+To test libnice we added the sdp_example.nim converted from
+a C example, it seems to compile and run. But we have not tested real communication between
+different computers yet, and not tested it on windows at all. If you have a use case for libnice you may test it yourself,
+possible issues may Nim's string vs seq[uint8] vs plain ptr char, or the uint data types in C example which we replaced
+by plain int as used in Nim prefereable. Debugging should be not hard, if you do not manage it yourself then you may
+open a github issue. Version v0.8.3 uses also some more light entities like gtk.TextIter or glib.Mutex, that are entities
+which are generally allocated on the stack and are only initialized to plain binary zero. For these types no
+proxy symbols are needed. Unfortunately discovering these entities by use of gobject-introspection works
+not reliable, so we are using a manually created list, which may contain errors.
+And finally with v0.8.3 the examples from the GTK4 book  (http://ssalewski.de/gtkprogramming.html) should work.
+For the GTK3 examples we had to do some minimal fixes, so you may have to do similar fixes for your own code as well.
+
+NOTE: Version 0.8.2 of gintro was only a fix for recent gstreamer 1.18 which added some uncommon
+gobject-introspection stuff which brook the install of 0.8.1 for a few users. We were not yet able to
+verify that the gst example which is bases on the gst C tutorial1 works with gstreamer 1.18.
+
+NOTE: For version 0.8.1 of gintro, requested by FedericoCeratto, we have added libhandy support.
+Libhandy is not yet available for GTK4 but seems to work with gtk+-3.24.22. As Gentoo Linux ships still
+only a very old libhandy, we tested with latest release from https://gitlab.gnome.org/GNOME/libhandy/
+Only available example is currently /examples/gtk3/handy.nim converted from example.py.
+
+NOTE: If you are using Arch Linux you may still have to ensure that
+curl or wget is available, see https://github.com/StefanSalewski/gintro/issues/83.
+Next release will get support for GList proc parameters and results, but providing that is some non trivial work
+and may break some other stuff unfortunately. Note that the File type of module gio is now called GFile to
+prevent name conflicts with Nims own File type.
+
+NOTE: Version 0.7.7 contains the fixes from https://github.com/StefanSalewski/gintro/issues/75.
+Mr lscrd has tested it already by use of nimble install gintro@#head some weeks ago, so we may assume that
+it works properly. Next version will again have serious modifications for GTK4, see http://ssalewski.de/gtkprogramming.html.
+So it may be a good idea to have a version 0.7.7 available as a fallback.
+
+NOTE: Starting with version 0.7.4 we support latest GTK 3.98.3 which may become GTK 4 at the end of 2020.
+
+NOTE: Starting with version v0.7.3 we allow passing a type descriptor as first parameter to the
+new() procs like `newButton(MyButtonSubclass)` to support subclassing and extending Widgets in OOP style.
+See <<Extending or sub-classing Widgets>> for an complete example. The init() procs which were used
+before for this task are now deprecated and will be removed later. This new approach generally saves
+one line of source code, allows using `let` instead of `var`, and the naming of procs is more consistent.
+
+NOTE: Starting with version v0.7.1 we have added destructor support when compiled with `--gc:arc`,
+so we have no memory leak for subclassed objects any more, see the example in <<Extending or sub-classing Widgets>> section.
+When compiled with default (refc) GC finalizers are used as before. And for objects marked with `nullable`
+tag in gobject-introspection we now return nil value for the proxy object when the C lib has returned NULL.
+So according to the C API docs, you can check for nil result for the few functions which may return NULL.
+Nil objects returned by GTK Builder causes now a program termination (by assert()) because in that case
+nil should indicate a programming error. 
+
+NOTE: Starting with version v0.7.0 we support the new Nim memory management called ARC, see
+https://forum.nim-lang.org/t/5734. Just compile your programs with `--gc:arc`. The main advantage is that
+ARC is deterministic, so it is easier to find bugs in the bindings or in your programs. And
+manually freeing resources, as we did previous for some cairo data structures to free them
+without GC delay should be now unnecessary. Generally this version should be more stable:
+Nim without option `--gc:arc` compiled new() calls silently with and without a finalizer proc parameter for
+the same data type, but the finalizer was then always called. This behaviour was stated in the Nim manual,
+but it was easy to forget this strange behaviour, so unintentionally finalizer calls may have ocurred.
+Nim with --gc:arc detects at least some of these errors, and for gintro we now try hard to not mix these calls.
+Generally we specify a finalizer, and use a field in the ref object to ignore the call when necessary.
+For a type always the same finalizer has to be used (or always none) and finalizer must be defined in the
+same module as the object type itself. For this to work reliable we have generally to qualify the
+finalizer proc with its module prefix. All that made a larger rewrite of gen.nim generator script
+necessary, with the danger of introducing bugs. We have not tested v0.7 much yet, the examples in
+gtk3 directory compile and seems to start at least. We would still have to check the macros in gimpl.nim more
+carefully -- we had to replace deepcopy by a plain copy and removed a (wrong?) GC_ref(). Generally we have
+to investigate possible memory leaks. One leak is unavoidable: If we subclass Widgets, then
+finalizer are not applied to the GTK object, so its memory leaks. See https://forum.nim-lang.org/t/5825#36241.
+But that should be not a too serious problem, subclassed objects are generally only allocated once
+in a program and generally live as long as the program is running any way. For the next version of
+gintro we do consider using only destructors and no finalizers, see https://forum.nim-lang.org/t/5854
+and https://forum.nim-lang.org/t/5786. That may simplify the code and enable subclassed GTK objects
+to release its memory, but require rewriting gen.nim again. But then we would have to use `--gc:arc`
+always. Maybe we can join both by specifying some conditional `when` expression -- we will see.
+If for you installation or compiling with v0.7 should not work, then please report issues on
+github issue tracker and continue using v0.6.1 for now. 
+
+NOTE: Starting with version v.0.6.0 we support gstreamer (gst). At the same time we have split
+cairo module into an gobject-introspection basic part and an manually created part. Unfortunately the
+gobject-introspection is not available for very old GTK/cairo libraries, so installation may fail for you.
+Use v0.5.5 in this case. Also we support gBoxed types now, this is assumed to work well but is not well tested yet.
+Command to install older releases should be something like
+`nimble uninstall gintro` followed by `nimble install gintro@v0.5.5`
+
+NOTE: Starting with release 0.5.3 we do not generate field entries for objects and we do
+not generate class structs and private objects. Also we stopped exporting the low level functions
+like gtk_button_new(). For a real high-level binding we should not need these. If that is a serious
+limitation for you, then use release 0.5.2 for now and create an github issue for your use case, we
+will try to fix it, maybe undo these changes. Also starting with v0.5.3 we try to support array
+parameters like TargetEntryArray, PageRangeArray and KeymapKeyArray. Use of these array parameters is rare,
+if you will use functions with these parameters you may inspect the source code first, as the
+code is auto-generated and still untested. 
+
+NOTE: Starting with release 0.5.0 we also support GTK4. GTK4 is still work in progress and not intended for
+end users yet, but it is good to have it available for migration testing. For GTK4 we have a new module gsk, and
+new versions of modules gtk, gdk and gdkX11, which are not backward compatible with the old once of GTK3. The other
+modules can be used by GTK3 and GTK4 in parallel. Due to this fact we use a single nimble package which can be used for
+GTK3 and GTK4 development. To archive this, we have named the new modules gtk4, gdk4 and gdkX114 -- the
+old once are named gtk, gdk and gdkX11 still. So for existing GTK3 software no code changes are necessary.
+For GTK4 an example is provided -- it imports gtk4 instead of gtk now, and instead of window.showAll()
+window.show() is needed. More GTK4 examples may follow eventually, see GTK4 migration page at
+https://developer.gnome.org/gtk4/stable/gtk-migrating-3-to-4.html. The gintro package tries to install
+the GTK4 modules when GTK4 is available on the local computer and skips it if not available.
+For successful detection of GTK4 the typelibs must be found. For example, if you have installed
+GTK4 from sources on /opt/gtk as described in https://developer.gnome.org/gtk4/3.96/gtk-building.html, then
+you may have to execute "export GI_TYPELIB_PATH=/opt/gtk/lib64/girepository-1.0" in your shell before you
+do "nimble install gintro". Currently gtksourceview and vte is not available for GTK4. GTK4 provides a
+official test program called gtk4-demo -- of course that one should work fine on your box before you
+consider testing Nim with GTK4.
+
+//icon:thumbs-up[]
+//This repository contains bindings from the Nim programming language to the GTK3 _GUI_ (_Graphical User Interface_) library and related libraries. (With some fixes
+//it should also work for upcoming _GTK4_.)
+
+https://nim-lang.org/[Nim] is a modern universal programming language.
+
+https://www.gtk.org/[GTK], also known as the _Gimp Tool Kit_ and now sometimes called _Gnome Tool Kit_, is a Graphical User Interface library.
+
+NOTE: Later we will insert at this location a nice picture of a fancy Nim GTK3 GUI. Such a picture is fine to attract users and indeed is a good motivation.
+But such pictures are no real evidence for the quality of a GUI toolkit -- the concrete example may look nice, while the toolkit
+looks much worse in other environments and offers by far not all that what is needed in real life. 
+
+While GTK was initially designed and advertised as cross platform GUI toolkit, it is currently mostly used on _Linux_ and other _Unix_ like operation systems.
+Most Linux distributions include it, and some use it for their default desktop environment, often with the Gnome environment or other window managers.
+While GTK2 applications like _GIMP_ are still used on _Windows_, there seems to exist currently only very few GTK3 applications for Windows or _{MAC}_.
+When you develop primary _free open source software_ (_FOSS_) for Linux or other Unix like operating systems, then GTK3 is a good choice for you. With some 
+effort you should be even able to port your application to the proprietary Windows or {MAC} operating systems. But when your primary target platforms
+are Windows and {MAC} and you desire a real native look and feel there, then you may find better suited ones in the Nim software repository.
+Also, when you only need a minimal restricted GUI which is very easy to install on Windows and {MAC}, then you may find better suited packages
+in the Nim package repository. _Android OS_ is currently not supported by GTK at all.
+
+TIP: At least for Windows 10 it seems to be not that hard to install GTK3 libraries, as was recently reported in
+https://github.com/StefanSalewski/gintro/issues/24 by user zetashift:
+----
+  Sketch of GTK3 install for Windows 10:
+  For the GTK libs I did according these instructions(https://www.gtk.org/download/windows.php):
+  Install MSYS2
+  In the msys2 cmd I entered:
+  pacman -S mingw-w64-x86_64-gtk3
+  Then for some other necessary depencies(girepository.dll) you need to do:
+  pacman -S mingw-w64-x86_64-python3-gobject
+
+  Additional, you have to install the separate GtkSourceView lib in a similar manner from
+  https://github.com/Alexpux/MINGW-packages/blob/master/mingw-w64-gtksourceview3/
+----
+
+While low level Nim bindings for GTK3 are already available since a few years, this one is an attempt to
+provide real high level bindings with full type safety, full _Garbage Collector_ (_GC_) support and an idiomatic
+_Application Programming Interface_ (_API_).
+
+Currently there are at least 3 sources of GTK3 bindings for Nim:
+
+* https://github.com/ngtk3 (obsolete, has been deleted)
+* https://github.com/StefanSalewski/oldgtk3
+* https://github.com/StefanSalewski/gintro
+
+ngtk3 was the first attempt to provide GTK3 support for Nim. It contained single repositories for all the GTK related libraries and
+was not supported by nimble package manager. It was created from GTK 3.20 headers and is now deprecated.
+
+oldgtk3 is the port of ngtk3 to GTK 3.22 -- joining all libraries and providing nimble support. Some people may still prefer
+using oldgtk3. As it is generated with the Nim tool c2nim directly from the C header files without much manual intervention,
+it should be complete and contain not that much bugs. Missing Garbage Collector support is generally not really a problem, as
+widgets are generally put into containers and were automatically deleted together with its parents due to GTK's reference counting.
+
+Still there can be some demand for really high level bindings -- so this gintro repository tries to provide them.
+
+High level GTK3 bindings, as available for many other programming languages like _C++_, _Python_, _Ruby_ or _D_ already,
+have these advantages:
+
+* full Garbage Collector or Destructor support -- you should never have to free resources manually
+* Widgets are Nim objects, so inheritance and sub-classing can be used
+* full type safety -- no needs for casts or other unsafe and dangerous operations
+
+These high level bindings are based on _{GIR}_, an _XML_ based database like interface description. Compared to the _C_ header
+files this description gives us more and deeper information about data types and function calls, for example ownership transfer of objects and
+in or out direction of procedure variables,  which makes writing the glue code much easier.
+And it should work with minimal
+modifications also for the upcoming GTK4.
+
+Unfortunately there are also some drawbacks:
+
+* The Application Programming Interface (API) will be different from what is known from _C_ API, so using _C_ examples or _C_ tutorials is not really straight forward 
+* The high level source code will differ from available _C_ examples, so there would be a big demand for tutorials
+* We need a lot of glue code, which has much room for bugs. So much testing is necessary.
+* There is some overhead due to indirect calls, leading to some code size increase and minimal
+performance loss.
+
+NOTE: The new package name is *gintro*, short for _{GIR}_. The previous name was _nim-gi_, but the hyphen is deprecated for package names, as is the
+nim prefix.
+
+== Current state of these bindings
+
+We are still in an early stage, but it is already more than a proof of concept. GTK and related libraries have many thousand of
+callable functions and nearly as many data types. Testing all that is nearly impossible for a small team with limited resources.
+The initial approach was to generate low level
+bindings, which looked similar to the ones generated by the `c2nim` tool from the _C_ headers. After that was done, we have associated all
+the _C_ structs and _GObject_ data types with Nim proxy objects. A well defined relation between these proxy object and the low level _C_ data types
+should ensure fully automatic garbage collection. This is supported by smart type conversion, for example _C_ strings returned by `glib` library
+are assigned to newly created Nim strings, while the memory of the _C_ strings is automatically freed. For most cases this seems to work. But there
+exists a few more complicated cases, for example functions may return whole arrays of _C_ strings or other non elementary data types,
+or function arguments or results may be so called _glists_,
+list structures of `glib` library. These cases can not be processed automatically but needs carefully manual investigations. And there may be still functions and data
+types missing: {GIR} query gives us many thousand lines of Nim interface code, and it is not really obvious if and what is missing.
+Some functions and data types are missing for sure -- at least some low level ones, which are considered unneeded for high level bindings by {GIR}.
+But maybe more is missing, we have to investigate that. Until now these bindings have been tested only for 64 bit Linux systems with GTK 3.24.
+
+These basic libraries are already partly tested:
+
+Gtk, Gdk, GLib, GObject, Gio, GdkPixbuf, GtkSource, Pango, PangoCairo, PangoFT2, GModule, Rsvg, fontconfig, freetype2, xlib, Atk, Vte, cairo
+
+In best case it should be possible to add more GObject based libraries to this list without larger modifications of the generator source code.
+Unfortunately the bindings for the _cairo_ drawing library provided by {GIR} was only a minimal stub -- we have extend it manually.
+
+== How to try it out
+
+Of course you will need a working Nim installation with a recent compiler version and you have to ensure that GTK and related libraries are installed on your system. For some Linux
+distributions which provide mainly pre-compiled software you may have to also install some GTK related developer files. 
+
+With a recent nimble version (>= v0.8.10) you only have to type in a shell window:
+
+----
+nimble install gintro
+----
+
+NOTE: Latest version of gintro package uses some files from oldgtk3 package for bootstrapping. We assume that
+users of gintro generally are not interested in low level oldgtk3 package, so we try to download only 3 single files
+from oldgtk3 package. That should work if wget or nimgrab executables are available. If it fails you should
+get a longer error message which may help you to solve the issue.
+
+NOTE: Nimble prepare should run for about 20 seconds, it compiles and executes the generator program `gen.nim`.
+Unfortunately we can not guarantee that the generator command  will be able to really build all the
+desired modules. The built process highly depends on your OS and installed GTK version. For 64 bit Linux systems
+with GTK 3.24 and all required dependencies installed it should work. For never GTK versions it may fail, when that GTK
+release introduces for example new unknown data types like array containers. In that case manual fixes may be necessary.
+The {GIR} based built process generates bindings customized to the OS where the generator is executed,
+so for older GTK releases or a 32 bit system different files are created. Later we may also provide pre-generated
+files for various OS and GTK versions, but building locally is preferred when possible. 
+
+== A few basic examples
+
+NOTE: Currently we do not install the example programs. If you want to try them, you have to copy the source code of the
+examples from https://github.com/StefanSalewski/gintro/tree/master/examples to your local computer, maybe to /tmp/gintro/examples directory.
+
+Then you can compile and run them from shell with commands like
+
+----
+cd /tmp/gintro/examples/
+nim c app0.nim
+./app0
+----
+
+or you may open the source files in your favorite Nim IDE or editor. [black yellow-background]#Taking the source code from this Readme file is not
+really recommended, as these source code listings may be not the latest versions.#
+
+GTK3 programs can use still the old _GTK2_ design, where you first initialize the GTK library, create your widgets and finally enter the GTK main loop.
+This style is still used in many tutorials as in http://zetcode.com/gui/gtk2/[Zetcode tutorial] or in the GTK book of A. Krause.
+Or you can use the new _GTK3 App style_, this is generally recommended by newer original GTK documentation.
+Unfortunately the GTK3 original documentation is mostly restricted to the GTK3 API documentation, which is generally very good, but makes
+it not really easy for beginners to start with GTK. API docs and some basic introduction is available here:
+
+* https://www.gnome.org/
+* https://www.gtk.org/
+* https://developer.gnome.org/
+* https://developer.gnome.org/gtk3/stable/
+* https://developer.gnome.org/gtk3/stable/ch01s04.html#id-1.2.3.12.5
+* https://developer.gnome.org/gnome-devel-demos/stable/c.html.en
+
+TIP: If you should decide to continue developing software with GTK, then you may consider installing the so called
+`devhelp` tool. It gives you easy and fast access to the GTK API docs. For example, if you want to use a _Button Widget_ in your
+GUI and wants to learn more about related functions and signals, you just enter _Button_ in that tool and are guided to
+all the relevant information. 
+
+We start with a minimal traditional old style example, which should be familiar to most of us:
+
+[[t0.nim]]
+[source,nim]
+.t0.nim
+----
+# nim c t0.nim
+import gintro/[gtk, gobject]
+
+proc bye(w: Window) =
+  mainQuit()
+  echo "Bye..."
+
+proc main =
+  gtk.init()
+  let window = newWindow()
+  window.title = "First Test"
+  window.connect("destroy", bye)
+  window.showAll
+  gtk.main()
+
+main()
+----
+
+This is the traditional layout of GTK2 programs. When using this style then it is important to initialize the GTK library by calling `gtk.init()`
+at the very beginning. Then we create the desired widgets, connect signals, show all widgets and finally enter the GTK main loop
+by calling `gtk.main`. About connecting signals we will learn more soon, for now it is only important that we have to connect to
+the destroy signal here to enable the user to terminate program execution by clicking the window close button. 
+
+Now a really minimal but complete App style example, which displays an empty window.
+
+NOTE: The source text of all these examples is contained in the examples directory. Unfortunately _github_
+seems to not allow to include that sources directly into this document, so there may be minimal
+differences between the source code displayed here and the sources in examples directory.
+
+[[app0.nim]]
+[source,nim]
+.app0.nim
+----
+# app0.nim -- minimal application style example
+# nim c app0.nim
+import gintro/[gtk, glib, gobject, gio]
+
+proc appActivate(app: Application) =
+  let window = newApplicationWindow(app)
+  window.title = "GTK3 & Nim"
+  window.defaultSize = (200, 200)
+  showAll(window)
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", appActivate)
+  discard run(app)
+
+main()
+----
+
+In the `main proc` we create a new application and connect the activate signal to our `activate proc`, which then creates and displays
+the still empty window.
+
+NOTE: We are importing modules gtk and gio. Initially both modules had a data type called `Application` (`gtk.Application`
+extends indeed the `gio.Application`), so we would have to use module name prefixes, or we could import from gio only
+what is really needed (`from gio import ...`) or use the form (`import gio exept ...`). But as gio.Application is generally
+not needed often, we have no renamed gio.Application to GApplication. No more name clashes.
+
+Various ways to set widget parameters are supported -- the number 1 to 6 refer to the comments below:
+
+//. Setting widget parameters
+[source,nim]
+----
+setDefaultSize(window, 200, 200) # <1>
+gtk.setDefaultSize(window, 200, 200) # <2>
+window.setDefaultSize(200, 200) # <3>
+window.setDefaultSize(width = 200, height = 200) # <4>
+window.defaultSize = (200, 200) # <5>
+window.defaultSize = (width: 200, height: 200) # <6>
+----
+
+<1> proc call syntax
+<2> optional qualified with module name prefix
+<3> method call syntax
+<4> named parameters
+<5> tupel assignment
+<6> tupel assignment with named members
+
+Well, that empty window is really not very interesting. The GTK and Gnome team provides some GTK examples
+at https://developer.gnome.org/gnome-devel-demos/.
+The https://developer.gnome.org/gnome-devel-demos/3.22/c.html.en[C demos] seems to be most actual and complete,
+and are easy to port to Nim. So we start with these,
+but if you are familiar with the other listed languages, then you can try to port them to Nim as well.
+Let us start with https://developer.gnome.org/gnome-devel-demos/3.22/button.c.html.en as it is
+still short and easy to understand, but shows already some interesting topics.
+
+image::NimGTK3Button.png[]
+
+The _C_ code looks like this:
+
+[[button.c]]
+[source,c]
+.button.c
+----
+#include <gtk/gtk.h>
+
+/*This is the callback function. It is a handler function which 
+reacts to the signal. In this case, it will cause the button label's 
+string to reverse.*/
+static void
+button_clicked (GtkButton *button,
+                gpointer   user_data)
+{
+  const char *old_label;
+  char *new_label;
+
+  old_label = gtk_button_get_label (button);
+  new_label = g_utf8_strreverse (old_label, -1);
+
+  gtk_button_set_label (button, new_label);
+  g_free (new_label);
+}
+
+static void
+activate (GtkApplication *app,
+          gpointer        user_data)
+{
+  GtkWidget *window;
+  GtkWidget *button;
+
+  /*Create a window with a title and a default size*/
+  window = gtk_application_window_new (app);
+  gtk_window_set_title (GTK_WINDOW (window), "GNOME Button");
+  gtk_window_set_default_size (GTK_WINDOW (window), 250, 50);
+
+  /*Create a button with a label, and add it to the window*/
+  button = gtk_button_new_with_label ("Click Me");
+  gtk_container_add (GTK_CONTAINER (window), button);
+
+  /*Connecting the clicked signal to the callback function*/
+  g_signal_connect (GTK_BUTTON (button),
+                    "clicked", 
+                    G_CALLBACK (button_clicked), 
+                    G_OBJECT (window));
+
+  gtk_widget_show_all (window);
+}
+
+int
+main (int argc, char **argv)
+{
+  GtkApplication *app;
+  int status;
+
+  app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
+  g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
+  status = g_application_run (G_APPLICATION (app), argc, argv);
+  g_object_unref (app);
+
+  return status;
+}
+
+----
+
+Converting it to Nim is straight forward with some basic _C_ and Nim knowledge, and Nim does not force us
+to convert its shape into all the classes known from pure _Object Orientated_ (_OO_) languages. We can either use the
+Nim tool `c2nim` to help us with the conversion, or do it manually. Indeed `c2nim` can be very helpful by
+converting _C_ sources to Nim. Most of the time it works well. Personally I generally pre-process _C_ files, for example
+by removing too strange `macros` and `defines, or by replacing strange constructs, like _C_ `for loops`, to simpler
+ones like `while loops`. Then I apply `c2nim` to the _C_ file and finally manually compare the result line by line and
+fine tune the Nim code. But for this short source text we may do all that manually and finally get something like
+this:
+
+[[button.nim]]
+[source,nim]
+.button.nim
+----
+# nim c button.nim
+import gintro/[gtk, glib, gobject, gio]
+
+proc buttonClicked (button: Button) =
+  button.label = utf8Strreverse(button.label, -1)
+
+proc appActivate (app: Application) =
+  let window = newApplicationWindow(app)
+  window.title = "GNOME Button"
+  window.defaultSize = (250, 50)
+  let button = newButton("Click Me")
+  window.add(button)
+  button.connect("clicked",  buttonClicked)
+  window.showAll
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", appActivate)
+  discard app.run
+
+main()
+----
+
+Again we have the basic shape already known from <<app0.nim>> example: `Main proc` creates the application, connect
+to the activate signal and finally runs the application. When GTK launches the application and emits the `activate` signal, then
+our activate proc is called, which creates a main window containing a button widget. That button is again connected with a
+signal, in this case named `clicked`. That signal is emitted by GTK whenever that button is clicked with the mouse and results
+in a call of our provided `buttonClicked()` proc. The procs connected to signals are called _callbacks_ and generally got the widget
+on which the signal was emitted as first parameter. They can also get a second optional parameter of arbitrary type -- we will
+see that in a later example. This callback here gets only the button itself as parameter, and it's task is to reverse the
+text displayed by the button. Not very interesting basically, but we are indeed using the _glib_ function `utf8Strreverse()`
+for this task. While that function internally works with `cstrings`, and in _C_ we have to free the memory of the returned `cstring`,
+in our Nim example that is done automatically by Nim's Garbage Collector. When you compare our example carefully with the _C_ code,
+then you may notice a difference. The _C_ code passes the window containing the button as an additional parameter to the
+callback function, but that parameter is not really used. We simple ignore it here, as it is not used at all.
+In one of the following examples you will learn how passing (nearly) arbitrary parameters in a type safe way is done.  
+Another difference is, that  the _C_ code returns an `integer` status value returned by `g_application_run()` to the _OS_. We
+could do the same by using the `quit() proc` of Nim's _OS_ module, but as that would give us no additional benefit, we simply ignore it.
+
+TIP: The command `nim c sourcetext.nim` generates an executable which contains code for runtime checks and debugging,
+which increases executable size and decreases performance.
+After you have tested your software carefully, you may give the additional parameter `-d:release` to avoid this. For the `gcc` backend
+you may additional enable _Link Time Optimization_ (_LTO_), which reduces executable size further. To enable LTO you may put
+a `nim.cfg` file in your sources directory with content like
+
+----
+path:"$projectdir"
+nimcache:"/tmp/$projectdir"
+gcc.options.speed = "-march=native -O3 -flto -fstrict-aliasing"
+----   
+
+With that optimization, your executable sizes should be in the range of about 50 kB only!
+
+== Optional, type safe parameters for callbacks
+
+The next example shows, how we can pass (nearly) arbitrary parameters to our connect procs.
+We pass a string, an object from the stack, a reference to an object allocated on the heap
+and finally a widget (in this case the application window itself, you may also try passing
+another button). As the main window itself is a so called GTK `bin` and can contain only one
+single child widget, we create a container widget, a vertical box in this case, fill that box with
+some buttons, and add that box to the window.
+
+Compile and start this example from the command line and watch what
+happens when you click on the buttons.
+
+[[connect_args.nim]]
+[source,nim]
+.connect_args.nim
+----
+# nim c connect_args.nim
+import gintro/[gtk, glib, gobject, gio]
+
+type
+  O = object
+    i: int
+
+proc b1Callback(button: Button; str: string) =
+  echo str
+
+proc b2Callback(button: Button; o: O) =
+  echo "Value of field i in object o = ", o.i
+
+proc b3Callback(button: Button; r: ref O) =
+  echo "Value of field i in ref to object O = ", r.i
+
+proc b4Callback(button: Button; w: ApplicationWindow) =
+  if w.title == "Nim with GTK3":
+    w.title = "GTK3 with Nim"
+  else:
+    w.title = "Nim with GTK3"
+
+proc appActivate (app: Application) =
+  var o: O
+  var r: ref O
+  new r
+  o.i = 1234567
+  r.i = 7654321
+  let window = newApplicationWindow(app)
+  let box = newBox(Orientation.vertical, 0)
+  window.title = "Parameters for callbacks"
+  let b1 = newButton("Nim with GTK3")
+  let b2 = newButton("Passing an object from stack")
+  let b3 = newButton("Passing an object from heap")
+  let b4 = newButton("Passing a Widget")
+  b1.connect("clicked",  b1Callback, "is much fun.")
+  b2.connect("clicked",  b2Callback, o)
+  b3.connect("clicked",  b3Callback, r)
+  b4.connect("clicked",  b4Callback, window)
+  box.add(b1)
+  box.add(b2)
+  box.add(b3)
+  box.add(b4)
+  window.add(box)
+  window.showAll
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", appActivate)
+  discard app.run
+
+main()
+----
+
+To prove type safety, we may modify one of the callback procs and watch the compiler output:
+
+[source,nim]
+----
+proc b1Callback(button: Button; str: int) =
+  discard # echo str
+----
+
+----
+connect_args.nim(37, 5) template/generic instantiation from here
+gtk.nim(-15021, 10) Error: type mismatch: got (ref Button:ObjectType, string)
+but expected one of: 
+proc b1Callback(button: Button; str: int)
+----
+
+It may be not always really obvious what the compiler wants to tell us, but at least we
+are told that it got a string and expected an int.
+
+Currently the connect function is realized by a Nim type safe `macro`. Connect accepts two or three
+arguments -- the widget, the signal name and the optional argument. When the optional argument
+is a ref (reference to objects on the heap) then it is passed as a reference, otherwise a deep copy
+of the argument is passed. For the above code this means, that `r` and the `window` variables are passed
+as references, while the string and the stack object are deep copied. Currently it is not possible
+to release the memory of passed arguments again. This should be no real problem, as in most
+cases no arguments are passed at all, and when arguments are passed, then they are general
+small in size like plain numbers or strings, or maybe references to widgets which could not be freed
+at all, as they are part of the GUI. Later we may add more variants of that connect macro.
+
+NOTE: Navigation can be hard for beginners. You may have basic knowledge of GTK and want
+to build a GUI for your application. But how to find what you need. Well, we offer no separate 
+automatically generated API documentation currently, as that is not really helpful. In most cases
+it is easy to just guess Nim symbol names, proc parameters and all that. Using a smart editor
+with good `nimsuggest` support further supports navigation -- for example `NEd` shows us
+all the needed proc parameters when we move the cursor on a proc name, or we press  kbd:[Ctrl+W] and jump
+to the definition of that symbol. For unknown stuff the original _C_ function name is often a good starting point.
+Assume you don't know much about GTK's buttons, but you know that you want to have a button in 
+your GUI application. GTK generally offers generator functions containing the string `new` in their name.
+So it is easy to guess that there exists a _C_ function named `gtk_button_new`. That name is also
+contained in the bindings files, in this case in `gtk.nim`. So we open that file in a text editor and search for
+that term. So it is really easy to find first starting points for related procs and data types. Most data types
+are located near by their related functions, so you should be able to find all relevant information fast.
+Remember the GTK `devhelp` tool, and use also `grep` or the `nimgrep` variant.
+
+== Extending or sub-classing Widgets
+
+It may occur that we want to attach additional information to GTK widgets
+by extending or subclassing them. [line-through]#Doing this is supported
+by providing for each widget class not only a corresponding new() proc which returns 
+the newly created widget, but also
+a init() proc, which gets an uninitialized variable of the (extended) widget type as argument and
+initializes that variable with a newly created
+GTK widget.#
+Doing this is supported
+by providing for each widget class an additional new() proc which takes an type descriptor
+as first argument, like `newButton(CountButton, "Counting down from 100 by 5")` in the example below.
+Initializing the added fields is
+done separately by the user. The following code shows a GTK button, which is
+extended with a counter member field. That counter is decreased for
+each button click. The amount of decrease (5) is passed to the callback as a int parameter.
+
+[black yellow-background]#Recent tests proved that providing custom destructors is
+not really needed any more, see https://forum.nim-lang.org/t/7360#46632.#
+
+Since gintro version 0.7.1 we support destructors when compile option `--gc:arc` is used.
+[line-through]#To destroy subclassed widgets we have to create a `=destroy()` proc as shown in the code below.#
+This may look a bit verbose, and it is only necessary to avoid memory leaks for widgets
+which are created and destroyed multiple times during program execution. Most widgets are
+created at startup and live until program terminates, so there is no noticeable leak even
+without a matching destroy. (In `examples/gtk3` there is a extended file called `subclassArcDestructorTest.nim`
+to test the destructor behaviour.)
+
+[[count_button.nim]]
+[source,nim]
+.count_button.nim
+----
+# nim c count_button.nim
+import gintro/[gtk, gobject, gio]
+
+type
+  CountButton = ref object of Button
+    counter: int
+
+when defined(gcDestructors):
+  proc `=destroy`(x: var typeof(CountButton()[])) =
+    gtk.`=destroy`(typeof(Button()[])(x))
+
+proc buttonClicked (button: CountButton; decrement: int) =
+  dec(button.counter, decrement)
+  button.label = "Counter: " & $button.counter
+  echo "Counter is now: ", button.counter
+
+proc appActivate (app: Application) =
+  #var button: CountButton
+  let window = newApplicationWindow(app)
+  window.title = "Count Button"
+  #initButton(button, "Counting down from 100 by 5") # deprecated
+  let button = newButton(CountButton, "Counting down from 100 by 5")
+  button.counter = 100
+  window.add(button)
+  button.connect("clicked", buttonClicked, 5)
+  window.showAll
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", appActivate)
+  discard app.run
+
+main()
+----
+
+In this example we have to define our new widget type first, then we have to
+declare a variable of that type and pass that variable to the init() proc.
+
+== CSS styles, GErrors and Exceptions
+
+image::NimGTK3Label.png[]
+
+Often GTK beginners ask how one can apply custom styles to GTK widgets, for example custom colors.
+While in most cases the use of custom colors gives just ugly results, as the custom colors generally do
+not match well with the default color scheme, it is good to know how we can do it. For GTK3 styles are
+applied to widgets by using _Cascading Style Sheets_ (_CSS_). You may find C example code similar to this:
+
+[[label.c]]
+[source,c]
+.label.c
+----
+// https://stackoverflow.com/questions/30791670/how-to-style-a-gtklabel-with-css
+// gcc `pkg-config gtk+-3.0 --cflags` test.c -o test `pkg-config --libs gtk+-3.0`
+#include <gtk/gtk.h>
+int main(int argc, char *argv[]) {
+    gtk_init(&argc, &argv);
+    GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    GtkWidget *label = gtk_label_new("Label");
+    GtkCssProvider *cssProvider = gtk_css_provider_new();
+    char *data = "label {color: green;}";
+    gtk_css_provider_load_from_data(cssProvider, data, -1, NULL);
+    gtk_style_context_add_provider(gtk_widget_get_style_context(window),
+                                   GTK_STYLE_PROVIDER(cssProvider),
+                                   GTK_STYLE_PROVIDER_PRIORITY_USER);
+    g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+    gtk_container_add(GTK_CONTAINER(window), label);
+    gtk_widget_show_all(window);
+    gtk_main();
+}
+----
+
+Converting that to Nim is again straight forward:
+
+[[label.nim]]
+[source,nim]
+.label.nim
+----
+# nim c label.nim
+import gintro/[gtk, glib, gobject, gio]
+
+proc appActivate(app: Application) =
+  let window = newApplicationWindow(app)
+  let label = newLabel("Yellow text on green background")
+  let cssProvider = newCssProvider()
+  let data = "label {color: yellow; background: green;}"
+  #discard cssProvider.loadFromPath("doesnotexist")
+  discard cssProvider.loadFromData(data)
+  let styleContext = label.getStyleContext
+  assert styleContext != nil
+  addProvider(styleContext, cssProvider, STYLE_PROVIDER_PRIORITY_USER)
+  window.add(label)
+  showAll(window)
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", appActivate)
+  discard run(app)
+
+main()
+----
+
+For this example we create a plain label widget with some text. To colorize it, we generate a
+CssProvider and load it with a textual description of our desired colors. Then we extract the
+style context from the label and add our CssProvider to it.
+
+The last parameter of the _C_ function gtk_css_provider_load_from_data() is of type GError and can
+be used in _C_ code to detect runtime errors. The _C_ code above just passes NULL to ignore this error.
+For Nim we map that GError argument to _exceptions_. To test what happens in Nim when an GError would
+report an error condition, you may uncomment  function loadFromPath() in the code above. As the specified path
+does not exist, we should get an exception with a message telling us the problem. Of course in your real
+code you may catch such exceptions with Nim's `try:` blocks. (You may also modify the data variable above to
+an illegal CSS statement -- if the statement is seriously wrong, then you should get an exception from
+loadFromData().
+
+
+== SpinButton
+
+This widget is used for entering numerical values. We can type in the value with the keyboard, click on the
++/- symbols or use the scroll wheel of the mouse. This example also shows that we can use vertical or horizontal
+orientation for this widget, and how we can use bindProperty() to bind a property of one widget to another widget.
+Here we use a button to control wrapping behaviour of the spin buttons.
+
+[[spinbutton.nim]]
+[source,nim]
+.spinbutton.nim
+----
+##  https://github.com/GNOME/gtk/blob/gtk-3-24/tests/testspinbutton.c
+##  gcc `pkg-config gtk+-3.0 --cflags` spinbutton.c -o spinbutton `pkg-config --libs gtk+-3.0`
+
+import gintro/[gtk, gdk, glib, gobject]
+
+var numWindows: int
+
+proc onDeleteEvent(w: gtk.Window; event: gdk.Event): bool =
+  dec(numWindows)
+  if numWindows == 0:
+    gtk.mainQuit()
+  return EVENT_PROPAGATE # false
+
+proc prepareWindowForOrientation(orientation: gtk.Orientation) =
+  let window = newWindow()
+  discard connect(window, "delete_event", onDeleteEvent)
+  let mainbox = gtk.newBox(if orientation == gtk.Orientation.horizontal: Orientation.vertical else: Orientation.horizontal, 2)
+  window.add(mainbox)
+  let wrapButton = newToggleButtonWithLabel("Wrap")
+  mainbox.add(wrapButton)
+  var max = 0
+  while max <= 999999999:
+    let adj = newAdjustment(max.float, 1, max.float, 1, (max.float + 1) * 0.1, 0)
+    let spin = newSpinButton(adj, 1, 0)
+    spin.setOrientation(orientation)
+    spin.setHalign(gtk.Align.center)
+    discard bindProperty(wrapButton, "active", spin, "wrap", {BindingFlag.syncCreate})
+    let hbox = newBox(gtk.Orientation.horizontal, 2)
+    hbox.packStart(spin, false, false, 2)
+    mainbox.add(hbox)
+    max = max * 10 + 9
+  window.showAll()
+  inc(numWindows)
+
+proc main =
+  gtk.init()
+  prepareWindowForOrientation(gtk.Orientation.horizontal)
+  prepareWindowForOrientation(gtk.Orientation.vertical)
+  gtk.main()
+
+main()
+----
+
+== GTK Builder -- user interfaces created with the glade tool 
+
+As C code can be very verbose, some people prefer outsourcing the GUI layout
+in XML files which can be created and modified with the glade GUI creator program.
+For high level languages like Python or Nim the program source code is generally
+short and clean, so that use of XML files may not have much benefit. But of course
+we can use GTK builder from Nim. We follow the example from
+https://developer.gnome.org/gtk3/stable/ch01s03.html
+but we modify it to use the new GTK3 app style: For the XML file we have to change only
+class="GtkWindow" into class="GtkApplicationWindow". Our Nim program has
+the well known application shape, with one addition: We have to
+explicitly set the application for the main window. Of course you can also
+use the traditional program structure with Nim and Builder, for that case
+you can straight follow the linked page or other examples. Here is the XML file and the Nim code:
+
+[[builder.ui]]
+[source, xml]
+.builder.ui
+----
+<interface>
+  <object id="window" class="GtkApplicationWindow">
+    <property name="visible">True</property>
+    <property name="title">Grid</property>
+    <property name="border-width">10</property>
+    <child>
+      <object id="grid" class="GtkGrid">
+        <property name="visible">True</property>
+        <child>
+          <object id="button1" class="GtkButton">
+            <property name="visible">True</property>
+            <property name="label">Button 1</property>
+          </object>
+          <packing>
+            <property name="left-attach">0</property>
+            <property name="top-attach">0</property>
+          </packing>
+        </child>
+        <child>
+          <object id="button2" class="GtkButton">
+            <property name="visible">True</property>
+            <property name="label">Button 2</property>
+          </object>
+          <packing>
+            <property name="left-attach">1</property>
+            <property name="top-attach">0</property>
+          </packing>
+        </child>
+        <child>
+          <object id="quit" class="GtkButton">
+            <property name="visible">True</property>
+            <property name="label">Quit</property>
+          </object>
+          <packing>
+            <property name="left-attach">0</property>
+            <property name="top-attach">1</property>
+            <property name="width">2</property>
+          </packing>
+        </child>
+      </object>
+      <packing>
+      </packing>
+    </child>
+  </object>
+</interface>
+----
+
+
+[[builder.nim]]
+[source, nim]
+.builder.nim
+----
+ https://developer.gnome.org/gtk3/stable/ch01s03.html
+# builder.nim -- application style example using builder/glade xml file for user interface
+# nim c builder.nim
+import gintro/[gtk, glib, gobject, gio]
+
+proc hello(b: Button; msg: string) =
+  echo "Hello", msg
+
+proc quitApp(b: Button; app: Application) =
+  echo "Bye"
+  quit(app)
+
+proc appActivate(app: Application) =
+  let builder = newBuilder()
+  discard builder.addFromFile("builder.ui")
+  let window = builder.getApplicationWindow("window")
+  window.setApplication(app)
+  var button = builder.getButton("button1")
+  button.connect("clicked", hello, "")
+  button = builder.getButton("button2")
+  button.connect("clicked", hello, " again...")
+  button = builder.getButton("quit")
+  button.connect("clicked", quitApp, app)
+  #showAll(window)
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", appActivate)
+  discard run(app)
+
+main()
+----
+
+For each builder component gintro provides a typesafe access proc like
+getApplicationWindow() and getButton() in this example.
+
+Generally it is possible to use resource files merged with the executable program
+instead of an external XML files, we have to investigate how we can do that in Nim.
+And it may be possible to connect the signal handlers to handler procs from within
+the XML file -- this is also work in progress...
+
+== GAction
+
+GAction represents a single named action and is for GTK3 the prefered way to do
+user interactions. GAction works with button, menus and keyboard shortcuts.
+
+The following example is based on
+
+https://wiki.gnome.org/HowDoI/GAction
+
+[[gaction.nim]]
+[source, nim]
+.gaction.nim
+----
+# https://wiki.gnome.org/HowDoI/GAction
+# nim c gaction.nim
+import gintro/[gtk, glib, gobject, gio]
+
+proc saveCb(action: SimpleAction; v: Variant) =
+  echo "saveCb"
+
+proc appActivate(app: Application) =
+  let window = newApplicationWindow(app)
+  let action = newSimpleAction("save")
+  discard action.connect("activate", saveCB)
+  window.actionMap.addAction(action)
+  let button = newButton()
+  button.label = "Save"
+  window.add(button)
+  button.setActionName("win.save")
+  setAccelsForAction(app, "win.save", "<Control><Shift>S")
+  showAll(window)
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", appActivate)
+  discard run(app)
+
+main()
+----
+
+GtkApplicationWindow provides an interface to GActionMap. As
+the interface itself and the interface provider are defined in different modules,
+automatic conversion is not possible, so we have to convert the ApplicationWindow
+to ActionMap. (We could use a converter to do the conversion for us, but as
+these conversions are rare, and because gintro use no converters at all still, we use
+an explicit proc.) The use of cstringArray as third parameter for proc setAccelsForAction()
+is a bit ugly, we have to fix that later.
+
+
+
+== GMenu with GActions
+
+The following example shows how we can define GActions and bind them to Menus, Buttons
+and Keyboard shortcuts. Examples for stateless actions (quit), for toggle actions (spellcheck)
+and for statefull actions (text justify) are provided.
+
+Note that the following code is not a direct translation of an existing example, but
+a collections of informations from various sources, so
+it may contain bugs or not fully optimal code.
+
+[[menubar.nim]]
+[source, nim]
+.menubar.nim
+----
+# https://developer.gnome.org/glib/stable/glib-GVariant.html
+# https://developer.gnome.org/glib/stable/glib-GVariantType.html
+# https://wiki.gnome.org/HowDoI/GMenu
+# https://wiki.gnome.org/HowDoI/GAction
+# nim c menubar.nim
+import gintro/[gtk, glib, gobject, gio]
+from strutils import `%`, format
+
+# https://github.com/GNOME/glib/blob/master/gio/tests/gapplication-example-actions.c
+proc activateToggleAction(action: SimpleAction; parameter: Variant; app: Application) =  
+  app.hold # hold/release taken over from C example, there may be reasons...
+  block:
+    echo format("action $1 activated", action.name)
+    let state: Variant = action.state
+    let b = state.getBoolean
+    action.state = newVariantBoolean(not b)  
+    echo format("state change $1 -> $2", b, not b)
+  app.release
+
+proc activateStatefulAction(action: SimpleAction; parameter: Variant; app: Application) =  
+  app.hold
+  block:
+    echo format("action $1 activated", action.name)
+    let state: Variant = action.state
+    var l: uint64
+    let oldState = state.getString(l) # yes uint64 parameter is a bit ugly
+    let newState = parameter.getString(l)
+    action.state = newVariantString(newState)  
+    echo format("state change $1 -> $2", oldState, newState)
+  app.release
+
+proc quitProgram(action: SimpleAction; parameter: Variant; app: Application) =
+  quit(app)
+
+proc appStartup(app: Application) =
+  let quit = newSimpleAction("quit") # here we create the actions for whole app
+  connect(quit, "activate", quitProgram, app)
+  app.addAction(quit)
+
+  let menu = gio.newMenu() # root of all menus
+  block: # plain stateless menu
+    let subMenu = gio.newMenu()
+    menu.appendSubMenu("Application", submenu)
+    # let section = gio.newMenu() # no separating section needed here
+    # submenu.appendSection(nil, section)
+    # section.append("Quit", "app.quit")
+    submenu.append("Quit", "app.quit")
+
+  block: #stateful menu with radio items
+    let subMenu = gio.newMenu()
+    menu.appendSubMenu("Layout", submenu)
+    let subMenu2 = gio.newMenu()
+    submenu.appendSubMenu("justify", submenu2)
+    let section = gio.newMenu()
+    submenu2.appendSection(nil, section)
+    section.append("left", "win.justify::left")
+    section.append("center", "win.justify::center")
+    section.append("right", "win.justify::right")
+
+  block: # and finally a toggle menu
+    let subMenu = gio.newMenu()
+    menu.appendSubMenu("Spelling", submenu)
+    let section = gio.newMenu()
+    submenu.appendSection(nil, section)
+    section.append("Check", "win.toggleSpellCheck")
+   # finally add the menubar
+    setMenuBar(app, menu)
+
+proc appActivate(app: Application) =
+  let window = newApplicationWindow(app)
+  window.title = "GTK3 App with Menubar"
+  window.defaultSize = (500, 200)
+  window.position = WindowPosition.center
+  block: # creat the window related actions
+    let v = newVariantBoolean(true)
+    let spellCheck = newSimpleActionStateful("toggleSpellCheck", nil, v)
+    connect(spellCheck, "activate", activateToggleAction, app)
+    window.actionMap.addAction(spellCheck)
+  block:
+    let v = newVariantString("left") # default value and
+    let vt = newVariantType("s") # string (value type)
+    let justifyAction = newSimpleActionStateful("justify", vt, v)
+    connect(justifyAction, "activate", activateStatefulAction, app)
+    window.actionMap.addAction(justifyAction)
+  let button = newButton()
+  button.label = "Justify Center"
+  #window.add(button) # do not add it here already: (menubar:10010): Gtk-WARNING **:
+  # 22:00:33.230: actionhelper: action win.justify can't be activated due to
+  # parameter type mismatch (parameter type s, target type NULL)
+  button.setDetailedActionName("win.justify::center")
+  #button.setActionName("app.quit") # for a stateless action
+  setAccelsForAction(app, "win.justify::right", "<Control><Shift>R")
+  window.add(button)
+  showAll(window)
+
+proc main =
+  let app = newApplication("app.example")
+  connect(app, "startup", appStartup)
+  connect(app, "activate", appActivate)
+  echo "GTK Version $1.$2.$3" % [$majorVersion(), $minorVersion(), $microVersion()]
+  let status = run(app)
+  quit(status)
+
+main()
+
+----
+
+We can easily modify the above example to get the more modern look with
+a HeaderBar and the "Gears" MenuButtons:
+
+[[gearsmenu.nim]]
+[source, nim]
+.gearsmenu.nim
+----
+# https://developer.gnome.org/glib/stable/glib-GVariant.html
+# https://developer.gnome.org/glib/stable/glib-GVariantType.html
+# https://wiki.gnome.org/HowDoI/GMenu
+# https://wiki.gnome.org/HowDoI/GAction
+# https://developer.gnome.org/gnome-devel-demos/stable/menubutton.c.html.en
+# nim c gearsmenu.nim
+import gintro/[gtk, glib, gobject, gio]
+import strformat
+
+# https://github.com/GNOME/glib/blob/master/gio/tests/gapplication-example-actions.c
+proc activateToggleAction(action: SimpleAction; parameter: Variant; app: Application) =
+  app.hold # hold/release taken over from C example, there may be reasons...
+  block:
+    echo fmt"action {action.name} activated"
+    let state: Variant = action.state
+    let b = state.getBoolean
+    action.state = newVariantBoolean(not b)
+    echo fmt"state change {b} -> {not b}"
+  app.release
+
+proc activateStatefulAction(action: SimpleAction; parameter: Variant; app: Application) =
+  app.hold
+  block:
+    echo fmt"action {action.name} activated"
+    let state: Variant = action.state
+    var l: uint64
+    let oldState = state.getString(l) # yes uint64 parameter is a bit ugly
+    let newState = parameter.getString(l)
+    action.state = newVariantString(newState)
+    echo fmt"state change {oldState} -> {newState}"
+  app.release
+
+proc quitProgram(action: SimpleAction; parameter: Variant; app: Application) =
+  quit(app)
+
+proc appStartup(app: Application) =
+  echo "appStartup"
+  let quit = newSimpleAction("quit") # here we create the actions for whole app
+  connect(quit, "activate", quitProgram, app)
+  app.addAction(quit)
+
+proc appActivate(app: Application) =
+  echo "appActivate"
+  let window = newApplicationWindow(app)
+  # window.title = "GTK3 App with Headerbar and Gears Menu" # unused due to HeaderBar
+  window.defaultSize = (500, 200)
+  window.position = WindowPosition.center
+
+  let menu = gio.newMenu() # root of all menus
+  block: # plain stateless menu
+    let subMenu = gio.newMenu()
+    menu.appendSubMenu("Application", submenu)
+    # let section = gio.newMenu() # no separating section needed here
+    # submenu.appendSection(nil, section)
+    # section.append("Quit", "app.quit")
+    submenu.append("Quit", "app.quit")
+
+  block: #stateful menu with radio items
+    let subMenu = gio.newMenu()
+    menu.appendSubMenu("Layout", submenu)
+    let subMenu2 = gio.newMenu()
+    submenu.appendSubMenu("justify", submenu2)
+    let section = gio.newMenu()
+    submenu2.appendSection(nil, section)
+    section.append("left", "win.justify::left")
+    section.append("center", "win.justify::center")
+    section.append("right", "win.justify::right")
+
+  block: # and finally a toggle menu
+    let subMenu = gio.newMenu()
+    menu.appendSubMenu("Spelling", submenu)
+    let section = gio.newMenu()
+    submenu.appendSection(nil, section)
+    section.append("Check", "win.toggleSpellCheck")
+
+  let headerBar = newHeaderBar()
+  headerBar.setShowCloseButton
+  headerBar.setTitle("Title")
+  headerBar.setSubtitle("Subtitle")
+  window.setTitlebar (headerBar)
+
+  let menubar = newMenuButton()
+  # menubar.setDirection(ArrowType.none) # show the gears Icon
+  # let image = newImageFromIconName("open-menu-symbolic", IconSize.menu.ord)
+  let image = newImageFromIconName("document-save", IconSize.dialog.ord) # dialog is really big!
+  menubar.setImage(image) # this is only an example for a custom image
+  # menubar.setIconName("open-menu-symbolic") # only gtk4
+  headerBar.packEnd(menubar)
+  menubar.setMenuModel(menu)
+
+  block: # creat the window related actions
+    let v = newVariantBoolean(true)
+    let spellCheck = newSimpleActionStateful("toggleSpellCheck", nil, v)
+    connect(spellCheck, "activate", activateToggleAction, app)
+    window.actionMap.addAction(spellCheck)
+  block:
+    let v = newVariantString("left") # default value and
+    let vt = newVariantType("s") # string (value type)
+    let justifyAction = newSimpleActionStateful("justify", vt, v)
+    connect(justifyAction, "activate", activateStatefulAction, app)
+    window.actionMap.addAction(justifyAction)
+  let button = newButton()
+  button.label = "Justify Center"
+  button.setDetailedActionName("win.justify::center")
+  #button.setActionName("app.quit") # for a stateless action
+  setAccelsForAction(app, "win.justify::right", "<Control><Shift>R")
+  window.add(button)
+  showAll(window)
+
+proc main =
+  let app = newApplication("app.example")
+  connect(app, "startup", appStartup)
+  connect(app, "activate", appActivate)
+  echo fmt"GTK Version {majorVersion()}.{minorVersion()}.{microVersion()}"
+  let status = run(app)
+  quit(status)
+
+main()
+----
+
+While in the previous example we create only a single menu instance in proc appStartup()
+for all of our application windows, here we create a new menu for all of our instances
+in proc appActivate(). That seems to work fine, so I assume it is correct.
+
+== GMenu and GAction with GTK Builder
+
+And here is an example from https://github.com/GNOME/gtk/blob/mainline/tests/
+which uses a combination of gaction and gmenu with a GTK builder XML file for
+the menu description. 
+
+[[gaction2.nim]]
+[source, nim]
+.gaction2.nim
+----
+# nim c gaction2.nim
+# https://github.com/GNOME/gtk/blob/mainline/tests/testgaction.c
+# gcc -Wall gaction.c -o gaction `pkg-config --cflags --libs gtk4`
+import gintro/[gtk, glib, gobject, gio]
+
+const menuData = """
+<interface>
+  <menu id="menuModel">
+    <section>
+      <item>
+        <attribute name="label">Normal Menu Item</attribute>
+        <attribute name="action">win.normal-menu-item</attribute>
+      </item>
+      <submenu>
+        <attribute name="label">Submenu</attribute>
+        <item>
+          <attribute name="label">Submenu Item</attribute>
+          <attribute name="action">win.submenu-item</attribute>
+        </item>
+      </submenu>
+      <item>
+        <attribute name="label">Toggle Menu Item</attribute>
+        <attribute name="action">win.toggle-menu-item</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label">Radio 1</attribute>
+        <attribute name="action">win.radio</attribute>
+        <attribute name="target">1</attribute>
+      </item>
+      <item>
+        <attribute name="label">Radio 2</attribute>
+        <attribute name="action">win.radio</attribute>
+        <attribute name="target">2</attribute>
+      </item>
+      <item>
+        <attribute name="label">Radio 3</attribute>
+        <attribute name="action">win.radio</attribute>
+        <attribute name="target">3</attribute>
+      </item>
+    </section>
+  </menu>
+</interface>
+"""
+
+proc changeLabelButton(action: SimpleAction; v: Variant; label: Label) =
+  label.setLabel("Text set from button")
+
+proc normalMenuItem(action: SimpleAction; v: Variant; label: Label) =
+  label.setLabel("Text set from normal menu item")
+
+proc toggleMenuItem(action: SimpleAction; v: Variant; label: Label) =
+  label.setLabel("Text set from toggle menu item")
+
+proc submenuItem(action: SimpleAction; v: Variant; label: Label) =
+  label.setLabel("Text set from submenu item")
+
+proc radio(action: SimpleAction; parameter: Variant; label: Label) =
+  var l: uint64
+  let newState: Variant = newVariantString(getString(parameter, l))
+  let str: string = "From Radio menu item " & getString(newState, l)
+  label.setLabel(str)
+
+proc bye(w: Window) =
+  mainQuit()
+  echo "Bye..."
+
+proc main =
+  gtk.init()
+  let
+    window = newWindow()
+    box = newBox(Orientation.vertical, 12)
+    menubutton = newMenuButton()
+    button1 = newButton("Change Label Text")
+    label = newLabel("Initial Text")
+    actionGroup = newSimpleActionGroup()
+
+  window.connect("destroy", gtk.mainQuit)
+  #window.connect("destroy", bye)
+
+  var action = newSimpleAction("change-label-button")
+  discard action.connect("activate", changeLabelButton, label)
+  actionGroup.addAction(action)
+
+  action = newSimpleAction("normal-menu-item")
+  discard action.connect("activate", normalMenuItem, label)
+  actionGroup.addAction(action)
+
+  var v = newVariantBoolean(true)
+  action = newSimpleActionStateful("toggle-menu-item", nil, v)
+  discard action.connect("activate", toggleMenuItem, label)
+  actionGroup.addAction(action)
+
+  action = newSimpleAction("submenu-item")
+  discard action.connect("activate", subMenuItem, label)
+  actionGroup.addAction(action)
+
+  v = newVariantString("1")
+  let vt = newVariantType("s")
+  action = newSimpleActionStateful("radio", vt, v)
+  discard action.connect("activate", radio, label)
+  actionGroup.addAction(action)
+
+  insertActionGroup(window, "win", actionGroup)
+
+  label.setMarginTop(12)
+  label.setMarginBottom(12)
+  box.add(label)
+  menubutton.setHAlign(Align.center)
+  let builder: Builder = newBuilderFromString(menuData)
+  let menuModel = builder.getMenuModel("menuModel")
+  let menu = newMenuFromModel(menuModel)
+  menuButton.setPopup(menu)
+  box.add(menubutton)
+  button1.setHalign(Align.center)
+  button1.setActionName("win.change-label-button")
+  box.add(button1)
+  window.add(box)
+  window.showAll
+  gtk.main()
+
+main()
+----
+
+== GSettings
+
+GSettings provides a convenient way to permanently storing configuration data,
+and to bind them to properties of widgets.
+
+You can read an introduction at https://blog.gtk.org/2017/05/01/first-steps-with-gsettings/.
+
+For using GSettings in our own programs, we have first to create a XML file
+which defines names and type of each configuration entry, and additional
+provides default value and a description. The file name of such xml files
+must always end with ".gschema.xml".
+The following example has only one
+field called like-nim of type boolean (b). For a real application program
+we would install the configuration on our computer -- unfortunately we
+would need root access for this. We could do it this way:
+
+----
+# For making gsettings available system wide one method is, as root
+# https://developer.gnome.org/gio/stable/glib-compile-schemas.html
+# echo $XDG_DATA_DIRS
+# /usr/share/gnome:/usr/local/share:/usr/share:/usr/share/gdm
+# cd /usr/local/share/glib-2.0/schemas
+# cp test.gschema.xml .
+# glib-compile-schemas .
+#
+----
+
+For testing there is an easier method available:
+
+Create a directory and copy the xml file and the test program below into it.
+
+Then do, as ordinary user:
+
+----
+glib-compile-schemas .
+nim c gsettings.nim
+GSETTINGS_SCHEMA_DIR="." ./gsettings
+---- 
+
+This is the xml file and the test program: 
+
+[[test.gschema.xml]]
+[source, xml]
+.test.gschema.xml
+----
+<schemalist>
+  <schema path="/org/gnome/recipes/"       
+         id="org.gnome.Recipes">
+    <key type="b" name="like-nim">
+      <default>false</default>
+      <summary>I like Nim</summary>
+      <description>
+        I like or like not
+        the Nim programming language.
+      </description>
+    </key>
+  </schema>
+</schemalist>
+----
+
+[[gsettings.nim]]
+[source, nim]
+.gsettings.nim
+----
+# gsettings.nim -- basic use of gsettings
+# nim c gsettings.nim
+# https://blog.gtk.org/2017/05/01/first-steps-with-gsettings/
+# https://mail.gnome.org/archives/gtk-list/2016-December/msg00003.html
+import gintro/[gtk, glib, gobject, gio]
+
+# unused
+proc toggle(b: CheckButton) = 
+  echo b.active
+  let s = newSettings("org.gnome.Recipes")
+  discard s.setBoolean("like-nim", b.active)
+
+proc appActivate(app: Application) =
+  let window = newApplicationWindow(app)
+  window.title = "GTK3, Nim and GSettings"
+  window.defaultSize = (200, 200)
+  let b = newCheckButton()
+  b.halign = Align.center
+  b.label = "I like Nim"
+  #b.connect("toggled", toggle) # we don't need this for plain binding!
+  let s = newSettings("org.gnome.Recipes")
+  if s.getBoolean("like-nim"):
+    echo "I like Nim language"
+  `bind`(s, "like-nim", b, "active", {SettingsBindFlag.get, SettingsBindFlag.set})
+  window.add(b)
+  showAll(window)
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", appActivate)
+  discard run(app)
+
+main()
+----
+
+The command "glib-compile-schemas ." compiles all schemas in the current directory. And
+"GSETTINGS_SCHEMA_DIR="." ./gsettings" launches our test program with the environment
+variable GSETTINGS_SCHEMA_DIR pointing to the current directory, containing the compiled schema.
+
+Note that a system tool with same name as our test program exists -- that one can be used
+to get or set configuration data -- for example you may query the current state of field
+"like-nim" with
+
+----
+gsettings --schemadir "." get org.gnome.Recipes like-nim
+----
+
+Or test program first creates a window with a check button. Then our settings file is
+opened and we print the current value of the boolean variable. After that the
+bind procedure binds the active property (checkmark state) of our widget to the
+"like-nim" entry of our settings file. The result of this binding is, that
+our checkmark state is automatically made persistent, that is when we terminate
+and restart our test program, the checkmark will have the last state again.
+
+These bindings works for booleans, integers, floats, strings. The type of the property of the
+widget must be identical with the corresponding type of the entry in the settings xml file. 
+
+On Linux you may permanently set the gsetting directory by adding the statement
+
+----
+export GSETTINGS_SCHEMA_DIR="pathToMyProg"
+----
+
+to your .bashrc file -- of course after replacing pathToMyProg with the actual path.
+
+For more informations about gsettings see
+
+https://developer.gnome.org/gio/stable/GSettings.html.
+
+https://developer.gnome.org/gio/stable/running-gio-apps.html
+
+== Drawing with Cairo graphics library
+
+The next example shows how we can use the cairo graphics library for drawing on a DrawingArea widget,
+and at the same time uses glib timeoutAdd() function to create a timer which periodically calls the
+drawing function to create some animations. The code is based on a recent post to the cairo mailing list
+and shows a sine wave which is continuously moving to the left.
+
+NOTE: The gobject-introspection generated cairo module was only a minimal stub, because cairo
+library does not really support introspection. Now we are using a cairo module which is generated 
+directly from the cairo C header files with the tool c2nim and then modified to support a high level
+API.
+
+[[cairo_anim.nim]]
+[source,nim]
+.cairo_anim.nim
+----
+# https://lists.cairographics.org/archives/cairo/2016-October/027791.html
+# Nim version of that plain cairo animation example
+
+import gintro/[gtk, glib, gobject, gio, cairo]
+import math
+
+const
+  NumPoints = 1000
+  Period = 100.0
+
+proc invalidateCb(w: Widget): bool =
+  queueDraw(w)
+  return SOURCE_CONTINUE
+
+proc sineToPoint(x, width, height: int): float =
+  math.sin(x.float * math.TAU / Period) * height.float * 0.5 + height.float * 0.5
+
+proc drawingAreaDrawCb(widget: DrawingArea; context: Context): bool =
+  var redrawNumber {.global.} : int
+  let width = getAllocatedWidth(widget)
+  let height = getAllocatedHeight(widget)
+  for i in 1 ..< NumPoints:
+    context.lineTo(i.float , sineToPoint(i + redrawNumber, width, height))
+  context.stroke
+  inc(redrawNumber)
+  return true # TRUE to stop other handlers from being invoked for the event. FALSE to propagate the event further.
+
+proc appActivate(app: Application) =
+  let window = newApplicationWindow(app)
+  window.title = "Drawing example"
+  window.defaultSize = (400, 400)
+  let drawingArea = newDrawingArea()
+  window.add(drawingArea)
+  showAll(window)
+  discard timeoutAdd(1000 div 60, invalidateCb, drawingArea)
+  connect(drawingArea, "draw", drawingAreaDrawCb)
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", appActivate)
+  discard run(app)
+
+main()
+----
+
+== A simple ListView example
+
+image::NimGTK3ListView.png[]
+
+Recently someone reported about some problems porting a GTK2 application to Nim GTK3, so I will give a small example
+which may help using ListViews and TreeViews. These two widget types are the most complicated widget types in GTK --
+I can remember that I had some trouble myself when I used Ruby-GTK some years ago. As I can currently not remember
+details about use of ListView widgets, I decided to take an example code from http://zetcode.com/gui/gtk2/gtktreeview/[zetcode.com] as starting point. Of course
+porting is straight forward, but when I tried to compile the result I noticed some bugs and restrictions of current
+gintro package. Of course not really surprising, as the package is not really tested yet. I will try to fix these bugs later.
+First problem is, that we store a ListStore as model in our TreeView, and we need to extract that ListStore from the TreeView
+for some operations. But module gtk.nim offers currently only a function to extract the model itself, which is of type TreeModel.
+In the C code an upcast is used to get the ListStore from the retrieved TreeModel. To avoid casting in our Nim code, I have just copied
+the getModel() proc and modified  it to return a ListStore. Second problem was, that module gio export a ListStore datatype also.
+To avoid prefixing all ListStore types with gtk prefix, I excluded gio.ListStore from import list. And finally a real bug:
+Proc newListStore() expects currently a plain pointer as last parameter, while we know that it should be the address of a list of GTypes.
+So we have to use an ugly cast for now. For populating the ListStore currently GValues are used. That is not very convenient, and
+for that we need the correct GType of our string list. In C one would use the macro G_TYPE_STRING, which is not provided by
+gobject-introspection. So we use typeFromName() to get the correct GType, which works fine when we know that the string name is "gchararray".
+Later we will provide a higher level function for this process.
+
+I will try to give more and better explained ListView and TreeView examples later...
+
+[[listview.nim]]
+[source,nim]
+.listview.nim
+----
+# http://zetcode.com/gui/gtk2/gtktreeview/
+# dynamiclistview.c
+
+import gintro/[glib, gobject, gtk]
+import gintro/gio except ListStore
+
+const    
+  LIST_ITEM = 0
+  N_COLUMNS = 1
+
+var list: TreeView
+
+# this is copied from gtk.nim
+#proc getModel*(self: TreeView): TreeModel =
+#  new(result)
+#  result.impl = gtk_tree_view_get_model(cast[ptr TreeView00](self.impl))
+
+proc getListStore(self: TreeView): ListStore =
+  new(result)
+  result.impl = gtk_tree_view_get_model(cast[ptr TreeView00](self.impl))
+
+proc appendItem(widget: Button; entry: Entry) =
+  var
+    val: Value
+    iter: TreeIter
+  let store = getListStore(list)
+  let gtype = typeFromName("gchararray")
+  discard gValueInit(val, gtype)
+  gValueSetString(val, entry.text)
+  store.append(iter)
+  store.setValue(iter, LIST_ITEM, val)
+  entry.text = ""
+
+proc removeItem(widget: Button; selection: TreeSelection) =
+  var    
+    ls: ListStore
+    iter: TreeIter
+  let store = getListStore(list)
+  if not store.getIterFirst(iter):
+      return
+  if getSelected(selection, ls, iter):
+    discard store.remove(iter)
+
+proc onRemoveAll(widget: Button; selection: TreeSelection) =
+  var
+    iter: TreeIter
+  let store = getListStore(list)
+  if not store.getIterFirst(iter):
+    return
+  clear(store)
+
+proc initList(list: TreeView) =
+  let renderer = newCellRendererText()
+  let column = newTreeViewColumn()
+  column.title = "List Item"
+  column.packStart(renderer, true)
+  column.addAttribute(renderer, "text", LIST_ITEM)
+  discard list.appendColumn(column)
+  let gtype = typeFromName("gchararray")
+  let store = newListStore(N_COLUMNS, cast[pointer]( unsafeaddr gtype)) # cast due to bug in gtk.nim
+  list.setModel(store)
+
+proc appActivate(app: Application) =
+  let
+    window = newApplicationWindow(app)
+    sw = newScrolledWindow()
+    hbox = newBox(Orientation.horizontal, 5)
+    vbox = newBox(Orientation.vertical, 0)
+    add = newButton("Add")
+    remove = newButton("Remove")
+    removeAll = newButton("Remove All")
+    entry = newEntry()
+  window. title = "List view"
+  window.position = WindowPosition.center
+  window.borderWidth = 10
+  window.setSizeRequest(370, 270)
+  list = newTreeView()  
+  sw.add(list)
+  sw.setPolicy(PolicyType.automatic, PolicyType.automatic)
+  sw.setShadowType(ShadowType.etchedIn)
+  list.setHeadersVisible(false)
+  vbox.packStart(sw, true, true, 5)
+  entry.setSizeRequest(120, -1)
+  hbox.packStart(add, false, true, 3)
+  hbox.packStart(entry, false, true, 3)
+  hbox.packStart(remove, false, true, 3)
+  hbox.packStart(removeAll, false, true, 3)
+  vbox.packStart(hbox, false, true, 3)
+  window.add(vbox)
+  initList(list)
+  let selection = getSelection(list)
+  connect(add, "clicked", listview.appendItem, entry)
+  connect(remove, "clicked", listview.removeItem, selection)
+  connect(removeAll, "clicked", listview.onRemoveAll, selection)
+  showAll(window)
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", appActivate)
+  discard run(app)
+
+main()
+----
+
+
+== A ListView example with CSS styling
+
+Recently C. Eric Cashon provided this example at https://discourse.gnome.org/t/gtk-treeview-cell-color-change/1750/3
+
+I will show his original code here too, so we can compare it better with the Nim version.
+We see that Nim code has currently some disadvantages still, for example we have no
+varargs procs implemented, so setting of properties and attributes is done using GValues,
+which is typesafe, but not really compact. That is not too bad, but we may consider
+creating macros to support a more dense, but still typesafe way similar to C's varargs functions.
+
+[[cell_color1.c]]
+[source,c]
+.cell_color1.c
+----
+// gcc -Wall cell_color1.c -o cell_color1 `pkg-config --cflags --libs gtk+-3.0`
+// https://discourse.gnome.org/t/gtk-treeview-cell-color-change/1750/4
+// C. Eric Cashon
+
+#include<gtk/gtk.h>
+
+enum
+{
+   ID,
+   PROGRAM,
+   COLOR1,
+   COLOR2,
+   COLUMNS
+};
+
+int main(int argc, char *argv[])
+  {
+    gtk_init(&argc, &argv);
+
+    GtkWidget *window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title(GTK_WINDOW(window), "Select Cell");
+    gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
+    gtk_window_set_default_size(GTK_WINDOW(window), 500, 500);
+    gtk_container_set_border_width(GTK_CONTAINER(window), 20);
+    g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+
+    GtkTreeIter iter;
+    GtkListStore *store=gtk_list_store_new(COLUMNS, G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
+    gtk_list_store_append(store, &iter);
+    gtk_list_store_set(store, &iter, ID, 0, PROGRAM, "Gedit", COLOR1, "DarkCyan", COLOR2, "cyan", -1);
+    gtk_list_store_append(store, &iter);
+    gtk_list_store_set(store, &iter, ID, 1, PROGRAM, "Gimp", COLOR1,  "LightSlateGray", COLOR2, "cyan", -1);
+    gtk_list_store_append(store, &iter);
+    gtk_list_store_set(store, &iter, ID, 2, PROGRAM, "Inkscape", COLOR1, "DarkCyan", COLOR2, "cyan", -1);
+    gtk_list_store_append(store, &iter);
+    gtk_list_store_set(store, &iter, ID, 3, PROGRAM, "Firefox", COLOR1, "LightSlateGray", COLOR2, "cyan", -1);
+    gtk_list_store_append(store, &iter);
+    gtk_list_store_set(store, &iter, ID, 4, PROGRAM, "Calculator", COLOR1, "DarkCyan", COLOR2, "cyan", -1);
+    gtk_list_store_append(store, &iter);
+    gtk_list_store_set(store, &iter, ID, 5, PROGRAM, "Devhelp", COLOR1, "LightSlateGray", COLOR2, "cyan", -1);
+
+    GtkWidget *tree=gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
+    gtk_widget_set_hexpand(tree, TRUE);
+    gtk_widget_set_vexpand(tree, TRUE);
+    g_object_set(tree, "activate-on-single-click", TRUE, NULL);
+
+    GtkTreeSelection *selection=gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
+    gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
+
+    GtkCellRenderer *renderer1=gtk_cell_renderer_text_new();
+    g_object_set(renderer1, "editable", FALSE, NULL);
+
+    GtkCellRenderer *renderer2=gtk_cell_renderer_text_new();
+    g_object_set(renderer2, "editable", TRUE, NULL);
+   
+    //Bind the COLOR column to the "cell-background" property.
+    GtkTreeViewColumn *column1=gtk_tree_view_column_new_with_attributes("ID", renderer1, "text", ID, "cell-background", COLOR1, NULL);
+    gtk_tree_view_append_column(GTK_TREE_VIEW(tree), column1);    
+    GtkTreeViewColumn *column2 = gtk_tree_view_column_new_with_attributes("Program", renderer2, "text", PROGRAM, "cell-background", COLOR2, NULL);
+    gtk_tree_view_append_column(GTK_TREE_VIEW(tree), column2);
+   
+    GtkWidget *grid=gtk_grid_new();
+    gtk_grid_attach(GTK_GRID(grid), tree, 0, 0, 1, 1);
+
+    gtk_container_add(GTK_CONTAINER(window), grid);
+
+    gchar *css_string=g_strdup("treeview{background-color: rgba(0,255,255,1.0); font-size:30pt} treeview:selected{background-color: rgba(255,255,0,1.0); color: rgba(0,0,255,1.0);}");
+    GError *css_error=NULL;
+    GtkCssProvider *provider=gtk_css_provider_new();
+    gtk_css_provider_load_from_data(provider, css_string, -1, &css_error);
+    gtk_style_context_add_provider_for_screen(gdk_screen_get_default(), GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    if(css_error!=NULL)
+      {
+        g_print("CSS loader error %s\n", css_error->message);
+        g_error_free(css_error);
+      }
+    g_object_unref(provider);
+    g_free(css_string);
+   
+    gtk_widget_show_all(window);
+
+    gtk_main();
+    return 0;   
+  }
+----
+
+And this is the Nim version, created with c2nim and some manual tuning:
+
+[[css_colored_listview.nim]]
+[source,nim]
+.css_colored_listview.nim
+----
+# nim c css_colored_listview.nim
+import gintro/[gtk, glib, gobject]
+import gintro/gdk except Window # there is a problem with gdk.Window -- we have to investigate!
+const # maybe we should use Nim's enum here?
+  Id = 0
+  Program = 1
+  Color1 = 2
+  Color2 = 3
+  Columns = 4
+
+proc bye(w: Window) =
+  mainQuit()
+  echo "Bye..."
+
+proc toStringVal(s: string): Value =
+  let gtype = typeFromName("gchararray")
+  discard init(result, gtype)
+  setString(result, s)
+
+proc toUIntVal(i: int): Value =
+  let gtype = typeFromName("guint")
+  discard init(result, gtype)
+  setUint(result, i)
+
+proc toBoolVal(b: bool): Value =
+  let gtype = typeFromName("gboolean")
+  discard init(result, gtype)
+  setBoolean(result, b)
+
+# we need the following two procs for now -- later we will not use that ugly cast...
+proc typeTest(o: gobject.Object; s: string): bool =
+  let gt = g_type_from_name(s)
+  return g_type_check_instance_is_a(cast[ptr TypeInstance00](o.impl), gt).toBool
+
+proc listStore(o: gobject.Object): gtk.ListStore =
+  assert(typeTest(o, "GtkListStore"))
+  cast[gtk.ListStore](o)
+
+proc updateRow(renderer: CellRendererText; path: cstring; newText: cstring; tree: TreeView) =
+  var iter: TreeIter
+  var value: Value
+  let gtype = typeFromName("gchararray")
+  discard init(value, gtype)
+  let store = listStore(tree.getModel())   
+  value.setString(newText)
+  let treePath = newTreePathFromString(path)
+  discard store.getIter(iter, treePath)
+  store.setValue(iter, 1, value)
+
+# we use the old gtk style with init() as is used in the C original -- maybe better use modern app sytle 
+proc main() =
+  gtk.init()
+  let window = newWindow()
+  window.title = "Select Cell"
+  window.position = WindowPosition.center
+  window.defaultSize = (500, 500)
+  window.borderWidth = 20
+  connect(window, "destroy", bye)
+  var iter: TreeIter
+  var h = [typeFromName("guint"), typeFromName("gchararray"), typeFromName("gchararray"),
+    typeFromName("gchararray")]
+  var store = newListStore(Columns,  cast[pointer]( unsafeaddr h)) # cast is ugly, we should fix it in bindings.
+  let progNames = ["Gedit", "Gimp", "Inkscape", "Firefox", "Calculator", "Devhelp"]
+  for i, n in progNames:
+    store.append(iter) # currently we have to use setValue() as there is no varargs proc as in C original
+    store.setValue(iter, Id, toUIntVal(i))
+    store.setValue(iter, Program, toStringVal(n))
+    store.setValue(iter, Color1, toStringVal(if (i and 1) != 0: "LightSlateGray" else: "DarkCyan"))
+    store.setValue(iter, Color2, toStringVal("cyan"))
+  var tree  = newTreeViewWithModel(store)
+  tree.setHexpand
+  tree.setVexpand
+  setProperty(tree, "activate-on-single-click", toBoolVal(true))
+  var selection = tree.getSelection()
+  selection.setMode(SelectionMode.single)
+  var renderer1 = newCellRendererText()
+  setProperty(renderer1, "editable", toBoolVal(false))
+  var renderer2 = newCellRendererText()
+  setProperty(renderer2, "editable", toBoolVal(true))
+  connect(renderer2, "edited", updateRow, tree)
+  ## Bind the Color column to the "cell-background" property.
+  var column1 = newTreeViewColumn()
+  column1.setTitle("ID")
+  column1.packStart(renderer1, true)
+  column1.addAttribute(renderer1, "text", Id)
+  column1.addAttribute(renderer1, "cell-background", Color1)
+  discard tree.appendColumn(column1)
+  var column2  = newTreeViewColumn()
+  column1.setTitle("Program")
+  column1.packStart(renderer2, true)
+  column1.addAttribute(renderer2, "text", Program)
+  column1.addAttribute(renderer2, "cell-background", Color2)
+  discard tree.appendColumn(column2)
+  var grid = newGrid() # only one occupied cell makes no sense -- but so we can add more widgets later
+  grid.attach(tree, 0, 0, 1, 1)
+  window.add(grid)
+  const cssString = # note: big font selected intentionally
+    """treeview{background-color: rgba(0,255,255,1.0); font-size:30pt} treeview:selected{background-color:
+    rgba(255,255,0,1.0); color: rgba(0,0,255,1.0);}"""
+  var provider  = newCssProvider()
+  discard provider.loadFromData(cssString)
+  addProviderForScreen(getDefaultScreen(), provider, STYLE_PROVIDER_PRIORITY_APPLICATION)
+  window.showAll
+  gtk.main()
+
+main()
+----
+
+When you compile with `nim c -d:release -d:danger --passC:-flto css_colored_listview.nim`
+you will get an executable size of 80k, which is big compared with the 20k of the C version, but
+not too bad. You may note that I have added the updateRow() proc, which is necessary to
+make editing the program name entries permanent. That proc needs cstring parametes, which
+may be surprising, as we generally use Nim strings. Not a big problem, maybe intended, we may have to
+check the connect() macro in gimpl.nim.
+
+== And one more Listview example -- with custom cairo drawing
+
+This example is again a Nim version of a C example from C. Eric Cashon
+provided at https://discourse.gnome.org/t/gtk-how-to-draw-on-top-of-gtktreeview/1783/2.
+
+It draws an rectangular frame on a selected listview cell. For that to work
+connectAfter() is used to ensure that the custom cairo drawing occurs after
+the widget is drawn by GTK.
+
+[[overlay_tree1.nim]]
+[source,nim]
+.overlay_tree1.nim
+----
+# nim c overlayTree1.nim
+import gintro/[gtk, gdk, glib, gobject, cairo]
+import strformat
+from strutils import parseInt
+const
+  Id = 0
+  Program = 1
+  Color = 2
+  Color2 = 3
+  Columns = 4
+
+var
+  rowG = 0
+  columnG = 1
+
+proc bye(w: gtk.Window) =
+  mainQuit()
+  echo "Bye..."
+
+proc toStringVal(s: string): Value =
+  let gtype = typeFromName("gchararray")
+  discard init(result, gtype)
+  setString(result, s)
+
+proc toUIntVal(i: int): Value =
+  let gtype = typeFromName("guint")
+  discard init(result, gtype)
+  setUint(result, i)
+
+proc toBoolVal(b: bool): Value =
+  let gtype = typeFromName("gboolean")
+  discard init(result, gtype)
+  setBoolean(result, b)
+
+proc selectCell(treeView: TreeView; path: TreePath; column: TreeViewColumn) =
+  let str = toString(path)
+  echo fmt"{str} {getTitle(column)}"
+  rowG = parseInt(str)
+  queueDraw(treeView)
+
+proc drawRectangle(overlay: Overlay; cr: cairo.Context; treeView: TreeView): bool =
+  echo fmt"Draw Rectangle {rowG} {columnG}"
+  let path = newTreePathFromIndices(@[rowG.int32])
+  echo path.toString
+  let column = getColumn(treeView, columnG)
+  var rect: gdk.Rectangle
+  var x, y: int
+  treeView.convertBinWindowToWidgetCoords(0, 0, x, y)
+  cr.save
+  cr.translate(x.float, y.float)
+  cr.setLineWidth(2)
+  cr.setSource(0, 0, 0, 1)
+  treeView.getCellArea(path, column, rect)
+  cr.rectangle(rect.x.float + 1, rect.y.float + 1, rect.width.float - 1, rect.height.float - 1)
+  cr.stroke
+  cr.restore
+  return EVENT_PROPAGATE # false
+
+proc main =
+  gtk.init()
+  let window = newWindow()
+  window.setTitle("Overlay Tree")
+  window.setPosition(WindowPosition.center)
+  window.setDefaultSize(500, 500)
+  window.setBorderWidth(20)
+  window.connect("destroy", bye)
+  var iter: TreeIter
+  let h = [typeFromName("guint"), typeFromName("gchararray"), typeFromName("gchararray"),
+    typeFromName("gchararray")]
+  let store = newListStore(Columns, cast[pointer](unsafeaddr h)) # cast is ugly, we should fix it in bindings.
+  let progNames = ["Gedit", "Gimp", "Inkscape", "Firefox", "Calculator", "Devhelp"]
+  for i, n in progNames:
+    store.append(iter) # currently we have to use setValue() as there is no varargs proc as in C original
+    store.setValue(iter, Id, toUIntVal(i))
+    store.setValue(iter, Program, toStringVal(n))
+    store.setValue(iter, Color, toStringVal("SpringGreen"))
+    store.setValue(iter, Color2, toStringVal("cyan"))
+  let tree = newTreeViewWithModel(store)
+  tree.setHexpand
+  tree.setVexpand
+  tree.setProperty("activate-on-single-click", toBoolVal(true))
+  let selection = tree.getSelection
+  selection.setMode(SelectionMode.single)
+  let renderer1 = newCellRendererText()
+  renderer1.setProperty("editable", toBoolVal(false))
+  let renderer2 = newCellRendererText()
+  renderer2.setProperty("editable", toBoolVal(true))
+  tree.connect("row-activated", selectCell)
+  ## Bind the COLOR column to the "cell-background" property.
+  let column1 = newTreeViewColumn()
+  column1.setTitle("ID")
+  column1.packStart(renderer1, true)
+  column1.addAttribute(renderer1, "text", Id)
+  column1.addAttribute(renderer1, "cell-background", Color)
+  discard tree.appendColumn(column1)
+  let column2 = newTreeViewColumn()
+  column2.setTitle("Program")
+  column2.packStart(renderer2, true)
+  column2.addAttribute(renderer2, "text", Program)
+  column2.addAttribute(renderer2, "cell-background", Color2)
+  discard tree.appendColumn(column2)
+  ## For drawing the outline of the cell.
+  let overlay = newOverlay()
+  overlay.setHexpand
+  overlay.setVexpand
+  overlay.setAppPaintable
+  overlay.addOverlay(tree)
+  overlay.setOverlayPassThrough(tree, true)
+  overlay.connectAfter("draw", drawRectangle, tree)
+  let grid = newGrid()
+  grid.attach(overlay, 0, 0, 1, 1)
+  window.add(grid)
+  const cssString =
+    """treeview{background-color: rgba(0,255,255,1.0);
+      font-size:30pt} treeview:selected{background-color:rgba(0,255,255,1.0);
+      color: rgba(0,0,255,1.0);}"""
+  let provider = newCssProvider()
+  discard provider.loadFromData(cssString)
+  getDefaultScreen().addProviderForScreen(provider, STYLE_PROVIDER_PRIORITY_APPLICATION)
+  window.showAll
+  gtk.main()
+
+main() # 123 lines
+----
+
+== A Listview example using a CellDataFunction
+
+This example shows how a CellDataFunction can be used to
+customize cells of a Tree- or Listview.
+
+[[celldatafunction.nim]]
+[source,nim]
+.celldatafunction.nim
+----
+# This example shows how to apply a CellDataFunc to a GtkTreeView
+# C example code was provided by A.Krause in chapter 8 of his book
+import gintro/[gtk, gobject, glib]
+
+const
+  Color = 0
+  Columns = 1
+  clr = ["00", "33", "66", "99", "CC", "FF"]
+
+proc bye(w: Window) =
+  mainQuit()
+  echo "Bye..."
+
+proc toStringVal(s: string): Value =
+  let gtype = gStringGetType() # typeFromName("gchararray")
+  discard init(result, gtype)
+  setString(result, s)
+
+proc toBoolVal(b: bool): Value =
+  let gtype = gBooleanGetType() # typeFromName("gboolean")
+  discard init(result, gtype)
+  setBoolean(result, b)
+
+# our Nim function
+proc cellDataFuncN(column: TreeViewColumn; renderer: CellRenderer;
+                  model: TreeModel; iter: TreeIter, data: TreeViewColumn) =
+  ##  Get the color string stored by the column and make it the foreground color.
+  # for testing that optional args work, we pass a TreeViewColumn and echo its title
+  echo data.title
+  var val: Value
+  model.getValue(iter, Color, val) 
+  let text = val.getString
+  val.unset # is this necessary?
+  setProperty(renderer, "foreground", toStringVal("#FFFFFF"))
+  setProperty(renderer, "foreground-set", toBoolVal(true))
+  setProperty(renderer, "background", toStringVal(text))
+  setProperty(renderer, "background-set", toBoolVal(true))
+  setProperty(renderer, "text", toStringVal(text))
+
+##  Add three columns to the GtkTreeView. All three of the columns will be
+##  displayed as text, although one is a gboolean value and another is
+##  an integer.
+proc setupTreeView(treeview: TreeView) =
+  let renderer = gtk.newCellRendererText()
+  let column = newTreeViewColumn()
+  column.title = "Standard Colors"
+  column.packStart(renderer, expand = true)
+  column.addAttribute(renderer, "text", Color)
+  discard treeview.appendColumn(column)
+  column.setCellDataFunc(renderer, cellDataFuncN, column)
+  column.setCellDataFunc(renderer) # test unsetting!
+  column.setCellDataFunc(renderer, nil)
+  column.unsetCellDataFunc(renderer)
+  column.setCellDataFunc(renderer, cellDataFuncN, column)
+
+proc main =
+  var iter: TreeIter
+  gtk.init()
+  let window = newWindow()
+  window.setTitle("Color List")
+  window.setBorderWidth(10)
+  window.setSizeRequest(250, 175)
+  window.connect("destroy", bye)
+  let treeview = newTreeView()
+  setupTreeView(treeview)
+  let gtype = typeFromName("gchararray")
+  let store = newListStore(Columns, cast[pointer](unsafeaddr gtype)) # ugly cast
+  ##  Add all of the products to the GtkListStore.
+  for i in 0 ..< 6:
+    for j in 0 ..< 6:
+      for k in 0 ..< 6:
+        let color: string = "#" & clr[i] & clr[j] & clr[k]
+        store.append(iter)
+        store.setValue(iter, Color, toStringVal(color))
+  treeView.setModel(store)
+  let scrolledWin = newScrolledWindow(nil, nil)
+  scrolledWin.setPolicy(PolicyType.automatic, PolicyType.automatic)
+  scrolledWin.add(treeview)
+  window.add(scrolledWin)
+  window.showAll
+  gtk.main()
+
+main() 
+----
+
+== A more advanced example for cairo drawing with zooming, panning, scrolling
+
+The following code is a plain Nim version of a drawing demo which I wrote some years ago in Ruby (http://ssalewski.de/PetEd-Demo.html.en).
+Cairo surface is currently manually freed, because GC may have a too large delay.
+
+You can resize the window and zoom in with the mouse wheel. When zoomed in scroll bars appear. You
+can hold the middle mouse button pressed while moving the mouse for panning, and you can press left mouse button
+and move the mouse to first draw a selection rectangle and zoom into it when releasing the mouse button.
+
+In the examples directory there is also a simplified version called `simpledrawingarea.nim` which does all
+the drawings in the draw callback, without using a buffering surface. This is generally preferable for
+plain applications.
+
+[[drawingarea.nim]]
+[source,nim]
+.drawingarea.nim
+----
+# Plain demo for zooming, panning, scrolling with GTK DrawingArea
+# (c) S. Salewski, 21-DEC-2010 (initial Ruby version)
+# Nim version April 2019
+# License MIT
+
+# This version of the demo program uses a separate proc paint()
+# which allocates a custom surface for buffered drawing.
+# That may be not really necessary, for simple drawings doing all
+# the drawing in the "draw" call back is easier and faster. But for
+# more complicated drawing operations, for example when using a
+# background grid, which is a bit larger than the window size and
+# is reused when scrolling, a custom surface may be useful.
+# And finally that custom surface and custom cairo context is an
+# important test for the language bindings.
+
+# https://discourse.gnome.org/t/problem-with-gtkscrollbar-gtk-window-resize-and-gtk-adjustment-set-value/1081
+
+import gintro/[gtk, gdk, glib, gobject, gio, cairo]
+
+const
+  ZoomFactorMouseWheel = 1.1
+  ZoomFactorSelectMax = 10 # ignore zooming in tiny selection
+  ZoomNearMousepointer = true # mouse wheel zooming -- to mouse-pointer or center
+  SelectRectCol = [0.0, 0, 1, 0.5] # blue with transparency
+
+discard """
+Zooming, scrolling, panning...
+
+|-------------------------|
+|<-------- A ------------>|
+|                         |
+|  |---------------|      |
+|  | <---- a ----->|      |
+|  |    visible    |      |
+|  |---------------|      |
+|                         |
+|                         |
+|-------------------------|
+
+a is the visible, zoomed in area == darea.allocatedWidth
+A is the total data range
+A/a == userZoom >= 1
+For horizontal adjustment we use
+hadjustment.setUpper(darea.allocatedWidth * userZoom) == A
+hadjustment.setPageSize(darea.allocatedWidth) == a
+So hadjustment.value == left side of visible area
+
+Initially, we set userZoom = 1, scale our data to fit into darea.allocatedWidth
+and translate the origin of our data to (0, 0)
+
+Zooming: Mouse wheel or selecting a rectangle with left mouse button pressed
+Scrolling: Scrollbars
+Panning: Moving mouse while middle mouse button pressed
+"""
+
+# drawing area and scroll bars in 2x2 grid (PDA == Plain Drawing Area)
+
+type
+  PosAdj = ref object of Adjustment
+    handlerID: uint64
+
+proc newPosAdj: PosAdj =
+  initAdjustment(result, 0, 0, 1, 1, 10, 1)
+
+type
+  PDA_Data* = object
+    draw*: proc (cr: Context)
+    extents*: proc (): tuple[x, y, w, h: float]
+    windowSize*: tuple[w, h: int]
+
+type
+  PDA = ref object of Grid
+    zoomNearMousepointer: bool
+    selecting: bool
+    userZoom: float
+    surf: Surface
+    pattern: Pattern
+    cr: cairo.Context
+    darea: DrawingArea
+    hadjustment: PosAdj
+    vadjustment: PosAdj
+    hscrollbar: Scrollbar
+    vscrollbar: Scrollbar
+    fullScale: float
+    dataX: float
+    dataY: float
+    dataWidth: float
+    dataHeight: float
+    lastButtonDownPosX: float
+    lastButtonDownPosY: float
+    lastMousePosX: float
+    lastMousePosY: float
+    zoomRectX1: float
+    zoomRectY1: float
+    oldSizeX: int
+    oldSizeY: int
+    drawWorld: proc (cr: Context)
+    extents: proc (): tuple[x, y, w, h: float]
+
+proc drawingAreaDrawCb(darea: DrawingArea; cr: Context; this: PDA): bool =
+  if this.pattern.isNil: return
+  cr.setSource(this.pattern)
+  cr.paint
+  if this.selecting:
+    cr.rectangle(this.lastButtonDownPosX, this.lastButtonDownPosY,
+      this.zoomRectX1 - this.lastButtonDownPosX, this.zoomRectY1 - this.lastButtonDownPosY)
+    cr.setSource(0, 0, 1, 0.5) # SELECT_RECT_COL) # 0, 0, 1, 0.5
+    cr.fillPreserve
+    cr.setSource(0, 0, 0)
+    cr.setLineWidth(2)
+    cr.stroke
+  return gdk.EVENT_STOP # EVENT_PROPAGATE
+  #return true # TRUE to stop other handlers from being invoked for the event. FALSE to propagate the event further.
+
+# clamp to correct values, 0 <= value <= (adj.upper - adj.pageSize), block calling onAdjustmentEvent()
+proc updateVal(adj: PosAdj; d: float) =
+  adj.signalHandlerBlock(adj.handlerID)
+  adj.setValue(max(0.0, min(adj.value + d, adj.upper - adj.pageSize)))
+  adj.signalHandlerUnblock(adj.handlerID)
+
+proc updateAdjustments(this: PDA; dx, dy: float) =
+  this.hadjustment.setUpper(this.darea.allocatedWidth.float * this.userZoom)
+  this.vadjustment.setUpper(this.darea.allocatedHeight.float * this.userZoom)
+  this.hadjustment.setPageSize(this.darea.allocatedWidth.float)
+  this.vadjustment.setPageSize(this.darea.allocatedHeight.float)
+  updateVal(this.hadjustment, dx)
+  updateVal(this.vadjustment, dy)
+
+proc paint(this: PDA) =
+  # echo "paint"
+  this.cr.save
+  this.cr.translate(this.hadjustment.upper * 0.5 - this.hadjustment.value, # our origin is the center
+    this.vadjustment.upper * 0.5 - this.vadjustment.value)
+  this.cr.scale(this.fullScale * this.userZoom, this.fullScale * this.userZoom)
+  this.cr.translate(-this.dataX - this.dataWidth * 0.5, -this.dataY - this.dataHeight * 0.5)
+  this.drawWorld(this.cr) # call the user provided drawing function
+  this.cr.restore
+
+proc dareaConfigureCallback(darea: DrawingArea; event: EventConfigure; this: PDA): bool =
+  (this.dataX, this.dataY, this.dataWidth,
+    this.dataHeight) = this.extents() # query user defined size
+  this.fullScale = min(this.darea.allocatedWidth.float / this.dataWidth,
+      this.darea.allocatedHeight.float / this.dataHeight)
+  if this.surf != nil:
+    destroy(this.surf) # manually destroy surface -- GC would do it for us, but GC is slow...
+  this.surf = this.darea.window.createSimilarSurface(Content.color,
+      this.darea.allocatedWidth, this.darea.allocatedHeight)
+  if this.pattern != nil:
+    patternDestroy(this.pattern)
+  if this.cr != nil:
+    destroy(this.cr)
+  this.pattern = patternCreateForSurface(this.surf) # pattern now owns the surface!
+  this.cr = newContext(this.surf) # this function references target!
+  this.paint
+  return gdk.EVENT_STOP
+
+proc hscrollbarSizeAllocateCallback(s: Scrollbar; r: gdk.Rectangle; pda: PDA) =
+  pda.hadjustment.setUpper(r.width.float * pda.userZoom)
+  pda.hadjustment.setPageSize(r.width.float)
+  if pda.oldSizeX != 0: # this fix is not exact, as fullScale can ...
+    updateVal(pda.hadjustment, (r.width - pda.oldSizeX).float * 0.5)
+  pda.oldSizeX = r.width
+
+proc vscrollbarSizeAllocateCallback(s: Scrollbar; r: gdk.Rectangle; pda: PDA) =
+  pda.vadjustment.setUpper(r.height.float * pda.userZoom)
+  pda.vadjustment.setPageSize(r.height.float)
+  if pda.oldSizeY != 0: # ... change when window is rezized. But it's good enough!
+    updateVal(pda.vadjustment, (r.height - pda.oldSizeY).float * 0.5)
+  pda.oldSizeY = r.height
+
+proc updateAdjustmentsAndPaint(this: PDA; dx, dy: float) =
+  this.updateAdjustments(dx, dy)
+  this.paint
+  this.darea.queueDrawArea(0, 0, this.darea.allocatedWidth, this.darea.allocatedHeight)
+
+# event coordinates to user space
+proc getUserCoordinates(this: PDA; eventX, eventY: float): (float, float) =
+  ((eventX - this.hadjustment.upper * 0.5 + this.hadjustment.value) / (
+      this.fullScale * this.userZoom) + this.dataX + this.dataWidth * 0.5,
+   (eventY - this.vadjustment.upper * 0.5 + this.vadjustment.value) / (
+       this.fullScale * this.userZoom) + this.dataY + this.dataHeight * 0.5)
+
+proc onMotion(darea: DrawingArea; event: EventMotion; this: PDA): bool =
+  let state = getState(event)
+  let (x, y) = event.getCoords
+  if state.contains(button1): # selecting
+    this.selecting = true
+    this.zoomRectX1 = x
+    this.zoomRectY1 = y
+    this.darea.queueDrawArea(0, 0, this.darea.allocatedWidth, this.darea.allocatedHeight)
+  elif button2 in state: # panning
+    this.updateAdjustmentsAndPaint(this.lastMousePosX - x, this.lastMousePosY - y)
+  else:
+    return gdk.EVENT_PROPAGATE
+  this.lastMousePosX = x
+  this.lastMousePosY = y
+  return gdk.EVENT_STOP
+  #event.request # request more motion events ?
+
+# zooming with mouse wheel -- data near mouse pointer should not move if possible!
+# hadjustment.value + event.x is the position in our zoomed_in world, (userZoom / z0 - 1)
+# is the relative movement caused by zooming
+# In other words, this is the delta-move d of a point at position P from zooming:
+# d = newPos - P = P * scale - P = P * (z/z0) - P = P * (z/z0 - 1). We have to compensate for this d.
+proc scrollEvent(darea: DrawingArea; event: EventScroll; this: PDA): bool =
+  let z0 = this.userZoom
+  case getScrollDirection(event)
+  of ScrollDirection.up:
+    this.userZoom *= ZoomFactorMouseWheel
+  of ScrollDirection.down:
+    this.userZoom /= ZoomFactorMouseWheel
+    if this.userZoom < 1:
+      this.userZoom = 1
+  else:
+    return gdk.EVENT_PROPAGATE
+  if this.zoomNearMousepointer:
+    let (x, y) = event.getCoords
+    this.updateAdjustmentsAndPaint((this.hadjustment.value + x) * (this.userZoom / z0 - 1),
+      (this.vadjustment.value + y) * (this.userZoom / z0 - 1))
+  else: # zoom to center
+    this.updateAdjustmentsAndPaint((this.hadjustment.value +
+        this.darea.allocatedWidth.float * 0.5) * (this.userZoom / z0 - 1),
+        (this.vadjustment.value + this.darea.allocatedHeight.float * 0.5) * (this.userZoom / z0 - 1))
+  return gdk.EVENT_STOP
+
+proc buttonPressEvent(darea: DrawingArea; event: EventButton; this: PDA): bool =
+  var (x, y) = event.getCoords
+  this.lastMousePosX = x
+  this.lastMousePosY = y
+  this.lastButtonDownPosX = x
+  this.lastButtonDownPosY = y
+  echo "buttonPressEvent", x, " ", y
+  (x, y) = this.getUserCoordinates(x, y)
+  echo "User coordinates: ", x, ' ', y, "\n" # to verify getUserCoordinates()
+  return gdk.EVENT_STOP
+
+# zoom into selected rectangle and center it
+# math: we first center the selection rectangle, and then compensate for translation due to scale
+proc buttonReleaseEvent(darea: DrawingArea; event: EventButton; this: PDA): bool =
+  let (x, y) = event.getCoords
+  let b = getButton(event)
+  if b == 1:
+    this.selecting = false
+    let z1 = min(this.darea.allocatedWidth.float / (this.lastButtonDownPosX - x).abs,
+      this.darea.allocatedHeight.float / (this.lastButtonDownPosY - y).abs)
+    if z1 < ZoomFactorSelectMax: # else selection rectangle will persist, we may output a message...
+      this.userZoom *= z1
+      this.updateAdjustmentsAndPaint(
+        ((x + this.lastButtonDownPosX) * z1 - this.darea.allocatedWidth.float) * 0.5 + this.hadjustment.value * (z1 - 1),
+        ((y + this.lastButtonDownPosY) * z1 - this.darea.allocatedHeight.float) * 0.5 + this.vadjustment.value * (z1 - 1))
+    return gdk.EVENT_STOP
+  return gdk.EVENT_PROPAGATE
+ 
+proc onAdjustmentEvent(this: PosAdj; pda: PDA) =
+  pda.paint
+  pda.darea.queueDrawArea(0, 0, pda.darea.allocatedWidth, pda.darea.allocatedHeight)
+
+proc newPDA: PDA =
+  initGrid(result)
+  let da = newDrawingArea()
+  result.darea = da
+  da.setHExpand
+  da.setVExpand
+  da.connect("draw", drawingAreaDrawCb, result)
+  da.connect("configure-event", dareaConfigureCallback, result)
+  da.addEvents({EventFlag.buttonPress, EventFlag.buttonRelease,
+      EventFlag.scroll, button1Motion, button2Motion, pointerMotionHint})
+  da.connect("motion-notify-event", onMotion, result)
+  da.connect("scroll_event", scrollEvent, result)
+  da.connect("button_press_event", buttonPressEvent, result)
+  da.connect("button_release_event", buttonReleaseEvent, result)
+  result.zoomNearMousepointer = ZoomNearMousepointer # mouse wheel zooming
+  result.userZoom = 1.0
+  result.hadjustment = newPosAdj()
+  result.hadjustment.handlerID = result.hadjustment.connect("value-changed", onAdjustmentEvent, result)
+  result.vadjustment = newPosAdj()
+  result.vadjustment.handlerID = result.vadjustment.connect("value-changed", onAdjustmentEvent, result)
+  result.hscrollbar = newScrollbar(Orientation.horizontal, result.hadjustment)
+  result.vscrollbar = newScrollbar(Orientation.vertical, result.vadjustment)
+  result.hscrollbar.setHExpand
+  result.vscrollbar.setVExpand
+  result.hscrollbar.connect("size-allocate", hscrollbarSizeAllocateCallback, result)
+  result.vscrollbar.connect("size-allocate", vscrollbarSizeAllocateCallback, result)
+  result.attach(result.darea, 0, 0, 1, 1)
+  result.attach(result.vscrollbar, 1, 0, 1, 1)
+  result.attach(result.hscrollbar, 0, 1, 1, 1)
+
+proc appStartup(app: Application) =
+  echo "appStartup"
+
+proc appActivate(app: Application; initData: PDA_Data) =
+  let window = newApplicationWindow(app)
+  window.title = "Drawing example"
+  # window.defaultSize = initData.windowSize
+  window.defaultSize = (initData.windowSize[0], initData.windowSize[1])
+  let pda = newPDA()
+  pda.drawWorld = initData.draw
+  pda.extents = initData.extents
+  window.add(pda)
+  showAll(window)
+
+proc newDisplay*(initData: PDA_Data) =
+  let app = newApplication("org.gtk.example")
+  connect(app, "startup", appStartup)
+  connect(app, "activate", appActivate, initData)
+  discard run(app)
+
+when isMainModule:
+
+  const # arbitrary locations for our data
+    DataX = 150.0
+    DataY = 250.0
+    DataWidth = 200.0
+    DataHeight = 120.0
+
+  # we need two user defined functions -- one gives the extent of the graphics,
+  # and the other does the cairo drawing using a cairo context.
+
+  # bounding box of user data -- x, y, w, h -- top left corner, width, height
+  proc worldExtents(): (float, float, float, float) =
+    (DataX, DataY, DataWidth, DataHeight) # current extents of our user world
+
+  # draw to cairo context
+  proc drawWorld(cr: cairo.Context) =
+    cr.setSource(1, 1, 1)
+    cr.paint
+    cr.setSource(0, 0, 0)
+    cr.setLineWidth(2)
+    var i = 0.0
+    while min(DataWidth - 2 * i, DataHeight - 2 * i) > 0:
+      cr.rectangle(DataX + i, DataY + i, DataWidth - 2 * i, DataHeight - 2 * i)
+      i += 10
+    cr.stroke
+
+  proc test =
+    let data = PDA_Data(draw: drawWorld, extents: worldExtents, windowSize: (800, 600))
+    newDisplay(data)
+
+  test() # 337 lines
+----
+
+We can use this module as a library easily and get this simple drawing tool with full zoom and scroll support:
+
+[[darea_test.nim]]
+[source,nim]
+.darea_test.nim
+----
+import gintro/cairo
+import drawingarea
+from math import PI
+
+proc extents(): (float, float, float, float) =
+  (0.0, 0.0, 100.0, 100.0) # ugly float literals
+
+# draw to cairo context
+proc draw(cr: cairo.Context) =
+  cr.setSource(1, 1, 1) # set background color and paint
+  cr.paint
+  cr.setSource(0, 0, 0) # forground color
+  cr.arc(20, 30, 10, 0, 5) # nearly a circle
+  cr.newSubPath # do not join the two arcs
+  cr.arc(70, 60, 20, 0, math.PI)
+  cr.stroke # finally do it
+
+proc main =
+  var data: PDA_Data
+  data.draw = draw
+  data.extents = extents
+  data.windowSize = (800, 600)
+  newDisplay(data)
+
+main()
+----
+
+== One more cairo example
+
+Recently Mr. C. Eric Cashon provided an example code for working with a large bitmap image.
+His example writes the image to disk, loads it again and displays the image allowing
+zooming and translation. As examples are rare in these days, and that example is not to large,
+I used c2nim to convert it to Nim. Below is the code with a few manually fixes. Note, the
+current shipped cairo.nim module contains an assert statement, which prevents running this example.
+If you really intent running this code, you will have to fix that single line in cairo.nim. I
+have to do some more fixes in the cairo module and may ship a new version eventually. This
+example is really low level, as alloc() is used directly. 
+
+[[cairoImage.nim]]
+[source,nim]
+.cairoImage.nim
+----
+# https://discourse.gnome.org/t/proper-zoom-pan-image-approach-for-large-images/1497/6
+# Nim version of the C example of C. Eric Cashon
+import gintro/[gtk, gobject, glib, cairo]
+from math import TAU
+import strutils
+
+const
+  Width = 5000
+  Height = 5000
+  CFormat = cairo.Format.argb32
+
+var
+  Key: cairo.UserDataKey
+  translateX: float
+  translateY: float
+  scale = 1.0
+  ## Store data from file.
+  bigSurfaceData*: ptr cuchar = nil
+
+proc translateXSpinChanged(spinButton: SpinButton; data: DrawingArea) =
+  translateX = spinButton.value
+  data.queueDraw
+
+proc translateYSpinChanged(spinButton: SpinButton; data: DrawingArea) =
+  translateY = spinButton.getValue
+  data.queueDraw
+
+proc scaleSpinChanged(spinButton: SpinButton; data: DrawingArea) =
+  scale = spinButton.value
+  data.queueDraw
+
+proc saveBigSurface =
+  ## Use gdk_cairo_surface_create_from_pixbuf() to read in a pixbuf. Try a test surface here.
+  let bigSurface = imageSurfaceCreate(CFormat, Width, Height)
+  let cr = newContext(bigSurface)
+  ## Paint the background.
+  cr.setSource(1, 1, 1)
+  cr.paint
+  ## Draw a circle.
+  cr.setSource(0, 0, 1)
+  cr.arc(250, 250, 50, 0, math.TAU)
+  cr.fill
+  ## Draw some test grid lines.
+  cr.setSource(0, 1, 0)
+  for i in countup(0, 4900, 100):
+    cr.moveTo(0, i.float)
+    cr.lineTo(5000, i.float)
+    cr.stroke
+  for i in countup(0, 4900, 100):
+    cr.moveTo(i.float, 0)
+    cr.lineTo(i.float, 5000)
+    cr.stroke
+  cr.setSource(0, 0, 1)
+  cr.setLineWidth(10)
+  for i in 0 ..< 10:
+    cr.moveTo(0, i.float * 500.0)
+    cr.lineTo(5000, i.float * 500.0)
+    cr.stroke
+  for i in 0 ..< 10:
+    cr.moveTo(i.float * 500.0, 0)
+    cr.lineTo(i.float * 500.0, 5000)
+    cr.stroke
+  ## Outside box.
+  cr.setLineWidth(20)
+  cr.setSource(1, 0, 1)
+  cr.rectangle(0, 0, 5000, 5000)
+  cr.stroke
+  ## Save surface data to file.
+  let f: File = open("big_surface.s", fmWrite)
+  let p: ptr cuchar = cairo_image_surface_get_data(bigSurface.impl)
+  let len = writeBuffer(f, p, cairo_format_stride_for_width(CFormat, Width) * Height)
+  echo("write $1\n" % $len)
+  close(f)
+
+proc myDealloc(data: pointer) {.cdecl.} =
+  system.dealloc(data)
+
+proc getBigSurface(): Surface =
+  let f: File = open("big_surface.s", fmRead)
+  # setFilePos(f, 0)
+  # https://www.cairographics.org/manual/cairo-Image-Surfaces.html#cairo-format-stride-for-width
+  let stride = cairo_format_stride_for_width(CFormat, Width)
+  bigSurfaceData = cast[ptr cuchar](malloc((stride * Height).uint64))
+  var len = readBuffer(f, bigSurfaceData, stride * Height)
+  echo("read $1" % $len)
+  close(f)
+  let bigSurface: Surface = new Surface # this is a temporary fix, we will support this later in cairo modul
+  bigSurface.impl = cairo_image_surface_create_for_data(bigSurfaceData, CFormat, Width, Height, stride)
+  discard setUserData(bigSurface, addr(Key), bigSurfaceData, myDealloc) # automatic deallocation
+  # flush(bigSurface)
+  echo("open $1" % bigSurface.status.statusToString)
+  return bigSurface
+
+proc daDrawing*(da: DrawingArea; cr: Context; bigSurface: Surface): bool =
+  var
+    width = da.getAllocatedWidth.float
+    height = da.getAllocatedHeight.float
+    originX = translateX
+    originY = translateY
+  ## Some constraints.
+  if translateX > 5000.0 - width:
+    originX = 5000.0 - width / scale
+  if translateY > 5000.0 - height:
+    originY = 5000.0 - height / scale
+  cr.setSource(0, 0, 0)
+  cr.paint
+  ## Partition the big surface.
+  var littleSurface: Surface = cairo.surfaceCreateForRectangle(bigSurface,
+      originX, originY, width / scale, height / scale)
+  cr.scale(scale, scale)
+  cr.setSourceSurface(littleSurface, 0, 0)
+  setFilter(getSource(cr), cairo.Filter.bilinear)
+  cr.paint
+  return true
+
+proc bye(w: Window) =
+  mainQuit()
+  echo "Bye..."
+
+proc main =
+  gtk.init()
+  let window = newWindow()
+  window.setTitle("Big Surface2")
+  window.setDefaultSize(500, 500)
+  window.setPosition(gtk.WindowPosition.center)
+  window.connect("destroy", bye)
+  ## Get a test surface.
+  saveBigSurface()
+  let bigSurface = getBigSurface()
+  let da: DrawingArea = newDrawingArea()
+  da.setHexpand
+  da.setVexpand
+  da.connect("draw", daDrawing, bigSurface)
+  let
+    translateXAdj = newAdjustment(0, 0, 5000, 20, 0, 0)
+    translateYAdj = newAdjustment(0, 0, 5000, 20, 0, 0)
+    scaleAdj = newAdjustment(1, 1, 5, 0.1, 0, 0)
+    translateXLabel = newLabel("translate x")
+    translateXSpin= newSpinButton(translateXAdj, 50, 1)
+  connect(translateXSpin, "value-changed", translateXSpinChanged, da)
+  let translateYLabel = newLabel("translate y")
+  let translateYSpin = newSpinButton(translateYAdj, 50, 1)
+  connect(translateYSpin, "value-changed", translateYSpinChanged, da)
+  let scaleLabel = newLabel("Scale")
+  let scaleSpin = newSpinButton(scaleAdj, 0.2, 1)
+  connect(scaleSpin, "value-changed", scaleSpinChanged, da)
+  let grid = newGrid()
+  grid.attach(da, 0, 0, 3, 1)
+  grid.attach(translateXLabel, 0, 1, 1, 1)
+  grid.attach(translateYLabel, 1, 1, 1, 1)
+  grid.attach(scaleLabel, 2, 1, 1, 1)
+  grid.attach(translateXSpin, 0, 2, 1, 1)
+  grid.attach(translateYSpin, 1, 2, 1, 1)
+  grid.attach(scaleSpin, 2, 2, 1, 1)
+  add(window, grid)
+  showAll(window)
+  gtk.main()
+
+main()
+----
+
+== A VTE example
+
+The following code shows how we can use the vte library to create a plain shell window:
+
+[[vte.nim]]
+[source,nim]
+.vte.nim
+----
+# https://vincent.bernat.im/en/blog/2017-write-own-terminal
+import gintro/[gtk, glib, gobject, gio, vte]
+
+proc appActivate(app: Application) =
+  let window = newApplicationWindow(app)
+  window.title = "GTK3 & Nim"
+  window.defaultSize = (600, 200)
+  let terminal = newTerminal()
+  let environ = getEnviron()
+  let command = environ.environGetenv("SHELL")
+  var pid = 0
+  echo terminal.spawnSync({}, nil, [command], [], {SpawnFlag.leaveDescriptorsOpen}, nil, nil, pid, nil)
+  window.add(terminal)
+  showAll(window)
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", appActivate)
+  discard run(app)
+
+main()
+----
+
+== A GStreamer example
+
+Recently someone asked about gstreamer support for gintro, see https://github.com/StefanSalewski/gintro/issues/59 .
+So we added it. I don't know much about gstreamer, but I was told that it is used with
+Python and lately with Rusts bindings, so there may be some use case.
+
+[[gstBasicTutorial1.nim]]
+[source,nim]
+.gstBasicTutorial1.nim
+----
+# https://gstreamer.freedesktop.org/documentation/tutorials/basic/hello-world.html?gi-language=c
+# nim c gstBasicTutorial1.nim
+import gintro/gst
+
+proc main =
+  var pipeline: gst.Element
+  var bus: gst.Bus
+  var msg: gst.Message
+  ##  Initialize GStreamer
+  gst.init()
+  ##  Build the pipeline
+  pipeline = gst.parseLaunch("playbin uri=https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm")
+  ##  Start playing
+  discard gst.setState(pipeline, gst.State.playing)
+  ##  Wait until error or EOS
+  bus = gst.getBus(pipeline)
+  msg = gst.timedPopFiltered(bus, gst.Clock_Time_None, {gst.MessageFlag.error, gst.MessageFlag.eos})
+  echo msg.getType
+  discard gst.setState(pipeline, gst.State.null) # is this necessary?
+
+main()
+----
+
+== Threading Examples
+
+A common problem with GTK GUI's is the fact that functions that run for a longer time period in the
+GTK main thread can block the GUI for display updates or user input. We can solve this problem
+by creating a separate thread which runs these functions in the background. 
+
+The GTK GUI is not really thread safe, so we can not update the GUI from other threads directly. An
+easy way to solve this problem is to use the glib functions g-idle-add() or g-timeout-add().
+
+https://developer.gnome.org/glib/stable/glib-The-Main-Event-Loop.html#g-idle-add
+
+https://developer.gnome.org/glib/stable/glib-The-Main-Event-Loop.html#g-timeout-add
+
+The glib function g-timeout-add() adds a user defined function to the GTK main loop that is called
+periodically, and the function g-idle-add() adds a user defined function to the GTK main loop
+that is called when GTK is not busy with other stuff. Both functions are executed in the GTK main
+thread, so both can update GUI widgets or call other GTK related functions.
+
+In our first example we create a Nim worker thread that sends data over a Nim channel to the main
+thread. We use timeoutAdd() to call periodically a function that reads data from the channel and
+updates the GUI. In this example the worker thread only does a plain countdown -- in a real
+work example it would do the hard work in the background, i.e. running a chess engine to find the
+next best move or sorting a large data base. The function updateGUI() receives the current
+counter value and updates the label of a button.
+
+[[thread1.nim]]
+[source,nim]
+.thread1.nim
+----
+# https://nim-lang.org/docs/channels.html
+# nim c --threads:on --gc:arc -r thread1.nim
+
+import gintro/[gtk, glib, gobject, gio]
+from  os import sleep
+
+var channel: Channel[int]
+var workThread: system.Thread[void]
+
+proc workProc =
+  var countdown {.global.} = 25
+  while countdown > 0:
+    sleep(1000)
+    dec(countdown)
+    channel.send(countdown)
+
+proc updateGUI(b: Button): bool =
+  let msg = channel.tryRecv()
+  if msg.dataAvailable:
+    b.label = $msg.msg
+    if msg.msg == 0:
+      workThread.joinThread
+      channel.close
+      return SOURCE_REMOVE
+  return SOURCE_CONTINUE
+
+proc buttonClicked (b: Button) =
+  b.label = utf8Strreverse(b.label, -1)
+
+proc activate (app: Application) =
+  let window = newApplicationWindow(app)
+  window.title = "Countdown"
+  window.defaultSize = (250, 50)
+  let button = newButton("Click Me")
+  window.add(button)
+  button.connect("clicked",  buttonClicked)
+  window.showAll
+  channel.open
+  createThread(workThread, workProc)
+  discard timeoutAdd(1000 div 60, updateGUI, button)
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", activate)
+  discard app.run
+
+main()
+----
+
+The next example uses the function g-idle-add() from inside the worker thread to call a user defined function
+that then updates a GUI widget:
+
+[[thread2.nim]]
+[source,nim]
+.thread2.nim
+----
+# nim c --threads:on --gc:arc -r thread2.nim
+
+import gintro/[gtk, glib, gobject, gio]
+from  os import sleep
+
+var workThread: system.Thread[void]
+var button: Button
+
+proc idleFunc(i: int): bool =
+  button.label = $i
+  return SOURCE_REMOVE
+
+proc workProc =
+  var countdown {.global.} = 25
+  while countdown > 0:
+    sleep(1000)
+    dec(countdown)
+    idleAdd(idleFunc, countdown)
+
+proc buttonClicked(button: Button) =
+  button.label = utf8Strreverse(button.label, -1)
+
+proc activate(app: Application) =
+  let window = newApplicationWindow(app)
+  window.title = "Countdown"
+  window.defaultSize = (250, 50)
+  button = newButton("Click Me")
+  window.add(button)
+  button.connect("clicked",  buttonClicked)
+  window.showAll
+  createThread(workThread, workProc)
+
+proc main =
+  let app = newApplication("org.gtk.example")
+  connect(app, "activate", activate)
+  discard app.run
+
+main()
+----
+
+== A HeaderBar example for GTK4
+
+The following code is the Nim version of a GTK4 example in C. It will work in its unmodified form
+only if you have GTK4 already installed -- my GTK4 lives at /opt/gtk and I have to type these
+commands before I can use GTK4 programs like gtk4-demo:
+
+----
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/gtk/lib64/
+export GSETTINGS_SCHEMA_DIR=/opt/gtk/share/glib-2.0/schemas /opt/gtk/bin/gtk4-demo
+#export PKG_CONFIG_PATH="/opt/gtk/lib64/pkgconfig/" # only when compiling C code directly
+
+---- 
+
+The example is a bit complicated, as a custom (fake) headerbar is created, which involves a cast in C and Nim code.
+The example shows how to use a default headerbar, how to open a file dialog and how to use images and CSS styling.
+I guess most of the code would work in GTK3 also, but I have not tried to make a GTK3 version out of it, and I even
+do not understand all of the code yet. Note that for this example destroy() is not connected to the window close
+button, but called after gtk4.main(). A bit strange indeed, see forum note of Mr E.Bassi.
+
+[[headerbar.nim]]
+[source,nim]
+.headerbar.nim
+----
+# https://github.com/GNOME/gtk/blob/mainline/tests/testheaderbar.c
+# this is still based on the original testheaderbar.c, which was recently replaced by testheaderbar2.c
+# and testheaderbar.c is not a very good Nim GTK4 example unfortunately -- too comlicated and strange code.
+# nim c headerbar.nim
+import gintro/[gtk4, glib, gobject]
+
+const
+  Css = """
+ .main.background {
+ background-image: linear-gradient(to bottom, red, blue);
+ border-width: 0px;
+ }
+ .titlebar.backdrop {
+ background-image: none;
+ background-color: @bg_color;
+ border-radius: 10px 10px 0px 0px;
+ }
+ .titlebar {
+ background-image: linear-gradient(to bottom, white, @bg_color);
+ border-radius: 10px 10px 0px 0px;
+ }
+"""
+
+# we try to avoid use of global header variable as done in C code
+type
+  MyWindow = ref object of gtk4.Window
+    header: gtk4.Widget
+
+proc response(d: gtk4.FileChooserDialog; responseID: int) = gtk4.destroy(d)
+
+proc onBookmarkClicked(button: Button; data: MyWindow) =
+  let window = gtk4.Window(data)
+  let chooser = newFileChooserDialog("File Chooser Test", window,
+      FileChooserAction.open)
+  discard chooser.addButton("_Close", gtk4.ResponseType.close.ord)
+  chooser.connect("response", response)
+  chooser.show
+
+#proc changeSubtitle(button: Button; w: MyWindow) =
+#  if w.header.subtitle == "":
+#    w.header.setSubtitle("(subtle subtitle)")
+#  else:
+#    w.header.setSubtitle("") # can we pass nil?
+
+proc toggleFullscreen(button: Button; window: MyWindow) =
+  var fullscreen {.global.}: bool
+  if fullscreen:
+    window.unfullscreen
+    fullscreen = false
+  else:
+    window.fullscreen
+    fullscreen = true
+
+proc toIntVal(i: int): Value =
+  let gtype = typeFromName("gint")
+  discard init(result, gtype)
+  setInt(result, i)
+
+var done = false
+
+proc quit_cb(b: Button) = # we can not pass a var parameter
+ #gtk4.mainQuit()
+ done = true
+ wakeup(defaultMainContext()) # g_main_context_wakeup (NULL);
+
+proc changeHeader(button: ToggleButton; window: MyWindow) =
+  if button != nil and button.getActive:
+    window.header = (newBox(gtk4.Orientation.horizontal,
+        10))
+    addCssClass(window.header, "titlebar")
+    addCssClass(window.header, "header-bar")
+    #window.header.setProperty("margin_start", toIntVal(10))
+    #window.header.setProperty("margin_end", toIntVal(10))
+    #window.header.setProperty("margin_top", toIntVal(10))
+    #window.header.setProperty("margin_bottom", toIntVal(10))
+    window.header.setMarginStart(10)
+    window.header.setMarginEnd(10)
+    window.header.setMarginTop(10)
+    window.header.setMarginBottom(10)
+    let label = newLabel("Label")
+    gtk4.Box(window.header).append(label)
+    let levelBar = newLevelBar()
+    levelBar.setValue(0.4)
+    levelBar.setHexpand
+    gtk4.Box(window.header).append(levelBar)
+  else:
+    window.header = newHeaderBar()
+    #addClass(getStyleContext(window.header), "titlebar")
+    addCssClass(window.header, "titlebar")
+    #window.header.setTitle("Example header")
+    var button = newButton("_Close")
+    button.setUseUnderline
+    addCssClass(button, "suggested-action")
+    button.connect("clicked", quit_cb)
+    gtk4.HeaderBar(window.header).packEnd(button)
+    button = newButton()
+    let image = newImageFromIconName("bookmark-new-symbolic")
+    button.connect("clicked", onBookmarkClicked, window)
+    button.setChild(image)
+    gtk4.HeaderBar(window.header).packStart(button)
+  window.setTitlebar(window.header)
+
+proc main =
+  gtk4.init()
+  #var window: MyWindow
+  let window = newWindow(MyWindow)
+  addCssClass(window, "main") # gtk_widget_add_css_class (window, "main");
+  let provider = newCssProvider()
+  provider.loadFromData(Css)
+  addProviderForDisplay(getDisplay(window), provider, STYLE_PROVIDER_PRIORITY_USER)
+  changeHeader(nil, window)
+  let box = newBox(Orientation.vertical, 0)
+  window.setChild(box) # gtk_window_set_child (GTK_WINDOW (window), box);
+  #window.add(box)
+  let content = newImageFromIconName("start-here-symbolic")
+  content.setPixelSize(512)
+  content.setVexpand
+  box.append(content)
+  let footer = newActionBar()
+  footer.setCenterWidget(newCheckButtonWithLabel("Middle"))
+  let button = newToggleButtonWithLabel("Custom")
+  button.connect("clicked", changeHeader, window)
+  footer.packStart(button)
+  #var button1 = newButton("Subtitle")
+  #button1.connect("clicked", changeSubtitle, window)
+  #footer.packEnd(button1)
+  var button1 = newButton("Fullscreen")
+  footer.packEnd(button1)
+  button1.connect("clicked", toggleFullscreen, window)
+  box.append(footer)
+  window.show
+  #gtk4.main()
+  while not done:
+    discard iteration(defaultMainContext(), true) # g_main_context_iteration (NULL, TRUE);
+  destroy(window) # this is special for this example, see  https://discourse.gnome.org/t/tests-testgaction-c/2232/6
+
+main() # 137 lines
+----
+
+NOTE: Related work: https://github.com/jdmansour/nim-smartgi
+
