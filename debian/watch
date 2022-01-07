@@ -1,0 +1,3 @@
+version=4
+
+https://github.com/StefanSalewski/gintro/tags .*/v(\d.*)\.tar\.gz
