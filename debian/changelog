@@ -1,3 +1,9 @@
+gintro (0.8.4+parrot2) rolling; urgency=medium
+
+  * Add watch file
+
+ -- Nong Hoang Tu <dmknght@parrotsec.org>  Fri, 07 Jan 2022 22:00:16 +0700
+
 gintro (0.8.4+parrot1) lts-updates; urgency=medium
 
   * Rebuild package.
