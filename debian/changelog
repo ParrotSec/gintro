@@ -1,5 +1,11 @@
 gintro (0.9.6-0parrot0) rolling; urgency=medium
 
+  * UNRELEASED
+
+ -- Nong Hoang Tu <dmknght@parrotsec.org>  Fri, 07 Jan 2022 22:04:47 +0700
+
+gintro (0.9.6-0parrot0) rolling; urgency=medium
+
   * New upstream version 0.9.6
 
  -- Nong Hoang Tu <dmknght@parrotsec.org>  Fri, 07 Jan 2022 22:04:24 +0700
