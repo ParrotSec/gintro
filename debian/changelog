@@ -1,3 +1,9 @@
+gintro (0.9.6-0parrot2) parrot-updates; urgency=medium
+
+  * Change format from native to quilt
+
+ -- Nong Hoang Tu <dmknght@parrotsec.org>  Fri, 01 Apr 2022 03:00:48 +0700
+
 gintro (0.9.6-0parrot1) parrot-updates; urgency=medium
 
   * New upstream version 0.9.6
