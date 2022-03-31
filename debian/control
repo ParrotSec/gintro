@@ -3,29 +3,11 @@ Section: libdevel
 Priority: optional
 Maintainer: Parrot Team <team@parrotsec.org>
 Uploaders: Nong Hoang "dmknght" Tu <dmknght@parrotsec.org>
-Build-Depends: debhelper-compat (= 12),
- nim,
-# Generate binding for lib vte
- gir1.2-vte-2.91,
-# Generate binding for lib notify
- gir1.2-notify-0.7,
-# Other libs for "namspace not found"
- gir1.2-rsvg-2.0,
- gir1.2-nice-0.1,
- gir1.2-webkit2-4.0,
- gir1.2-javascriptcoregtk-4.0,
- gir1.2-gdkpixbuf-2.0,
- gir1.2-soup-2.4,
- gir1.2-gtk-3.0,
- libharfbuzz-gobject0,
- gir1.2-gstreamer-1.0,
- gir1.2-gst-plugins-base-1.0,
- gir1.2-gtksource-4,
- gir1.2-gtksource-3.0
+Build-Depends: debhelper-compat (= 12)
 Standards-Version: 4.5.0
 Homepage: https://github.com/StefanSalewski/gintro/
-#Vcs-Browser: https://salsa.debian.org/debian/gintro
-#Vcs-Git: https://salsa.debian.org/debian/gintro.git
+Vcs-Browser: https://nest.parrotsec.org/packages/debian/gintro/
+Vcs-Git: https://nest.parrotsec.org/packages/debian/gintro/.git
 
 Package: libnim-gintro-dev
 Architecture: any
