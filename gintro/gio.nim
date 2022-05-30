@@ -1430,6 +1430,8 @@ proc g_action_group_list_actions(self: ptr ActionGroup00): ptr cstring {.
 
 proc listActions*(self: ActionGroup | GApplication | DBusActionGroup | SimpleActionGroup): seq[string] =
   let resul0 = g_action_group_list_actions(cast[ptr ActionGroup00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -4039,6 +4041,8 @@ proc g_drive_enumerate_identifiers(self: ptr Drive00): ptr cstring {.
 
 proc enumerateIdentifiers*(self: Drive): seq[string] =
   let resul0 = g_drive_enumerate_identifiers(cast[ptr Drive00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -4269,6 +4273,8 @@ proc g_volume_enumerate_identifiers(self: ptr Volume00): ptr cstring {.
 
 proc enumerateIdentifiers*(self: Volume): seq[string] =
   let resul0 = g_volume_enumerate_identifiers(cast[ptr Volume00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -4741,6 +4747,133 @@ proc createFromCommandline*(commandline: cstring; applicationName: cstring = nil
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 type
+  AppLaunchContext* = ref object of gobject.Object
+  AppLaunchContext00* = object of gobject.Object00
+
+proc g_app_launch_context_get_type*(): GType {.importc, libprag.}
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(AppLaunchContext()[])) =
+    when defined(gintroDebug):
+      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
+    g_object_set_qdata(self.impl, Quark, nil)
+    if not self.ignoreFinalizer and self.impl != nil:
+      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
+      self.impl = nil
+
+proc scLaunchFailed*(self: AppLaunchContext;  p: proc (self: ptr AppLaunchContext00; startupNotifyId: cstring; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+  g_signal_connect_data(self.impl, "launch-failed", cast[GCallback](p), xdata, nil, cf)
+
+proc scLaunched*(self: AppLaunchContext;  p: proc (self: ptr AppLaunchContext00; info: ptr AppInfo00; platformData: ptr glib.Variant00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
+  g_signal_connect_data(self.impl, "launched", cast[GCallback](p), xdata, nil, cf)
+
+proc g_app_launch_context_new(): ptr AppLaunchContext00 {.
+    importc, libprag.}
+
+proc newAppLaunchContext*(): AppLaunchContext =
+  let gobj = g_app_launch_context_new()
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gio.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc newAppLaunchContext*(tdesc: typedesc): tdesc =
+  assert(result is AppLaunchContext)
+  let gobj = g_app_launch_context_new()
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gio.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc initAppLaunchContext*[T](result: var T) {.deprecated.} =
+  assert(result is AppLaunchContext)
+  let gobj = g_app_launch_context_new()
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, gio.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc g_app_launch_context_get_environment(self: ptr AppLaunchContext00): ptr cstring {.
+    importc, libprag.}
+
+proc getEnvironment*(self: AppLaunchContext): seq[string] =
+  let resul0 = g_app_launch_context_get_environment(cast[ptr AppLaunchContext00](self.impl))
+  if resul0.isNil:
+    return
+  result = cstringArrayToSeq(resul0)
+  g_strfreev(resul0)
+
+proc environment*(self: AppLaunchContext): seq[string] =
+  let resul0 = g_app_launch_context_get_environment(cast[ptr AppLaunchContext00](self.impl))
+  if resul0.isNil:
+    return
+  result = cstringArrayToSeq(resul0)
+  g_strfreev(resul0)
+
+proc g_app_launch_context_launch_failed(self: ptr AppLaunchContext00; startupNotifyId: cstring) {.
+    importc, libprag.}
+
+proc launchFailed*(self: AppLaunchContext; startupNotifyId: cstring) =
+  g_app_launch_context_launch_failed(cast[ptr AppLaunchContext00](self.impl), startupNotifyId)
+
+proc g_app_launch_context_setenv(self: ptr AppLaunchContext00; variable: cstring;
+    value: cstring) {.
+    importc, libprag.}
+
+proc setenv*(self: AppLaunchContext; variable: cstring;
+    value: cstring) =
+  g_app_launch_context_setenv(cast[ptr AppLaunchContext00](self.impl), variable, value)
+
+proc g_app_launch_context_unsetenv(self: ptr AppLaunchContext00; variable: cstring) {.
+    importc, libprag.}
+
+proc unsetenv*(self: AppLaunchContext; variable: cstring) =
+  g_app_launch_context_unsetenv(cast[ptr AppLaunchContext00](self.impl), variable)
+
+proc g_app_info_launch_default_for_uri(uri: cstring; context: ptr AppLaunchContext00;
+    error: ptr ptr glib.Error = nil): gboolean {.
+    importc, libprag.}
+
+proc launchDefaultForUri*(uri: cstring; context: AppLaunchContext = nil): bool =
+  var gerror: ptr glib.Error
+  let resul0 = g_app_info_launch_default_for_uri(uri, if context.isNil: nil else: cast[ptr AppLaunchContext00](context.impl), addr gerror)
+  if gerror != nil:
+    let msg = $gerror.message
+    g_error_free(gerror[])
+    raise newException(GException, msg)
+  result = toBool(resul0)
+
+type
   DesktopAppInfo* = ref object of gobject.Object
   DesktopAppInfo00* = object of gobject.Object00
 
@@ -5068,6 +5201,8 @@ proc g_desktop_app_info_get_string_list(self: ptr DesktopAppInfo00; key: cstring
 proc getStringList*(self: DesktopAppInfo; key: cstring;
     length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = g_desktop_app_info_get_string_list(cast[ptr DesktopAppInfo00](self.impl), key, length)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -5077,158 +5212,19 @@ proc g_desktop_app_info_has_key(self: ptr DesktopAppInfo00; key: cstring): gbool
 proc hasKey*(self: DesktopAppInfo; key: cstring): bool =
   toBool(g_desktop_app_info_has_key(cast[ptr DesktopAppInfo00](self.impl), key))
 
+proc g_desktop_app_info_launch_action(self: ptr DesktopAppInfo00; actionName: cstring;
+    launchContext: ptr AppLaunchContext00) {.
+    importc, libprag.}
+
+proc launchAction*(self: DesktopAppInfo; actionName: cstring;
+    launchContext: AppLaunchContext = nil) =
+  g_desktop_app_info_launch_action(cast[ptr DesktopAppInfo00](self.impl), actionName, if launchContext.isNil: nil else: cast[ptr AppLaunchContext00](launchContext.impl))
+
 proc g_desktop_app_info_list_actions(self: ptr DesktopAppInfo00): ptr cstring {.
     importc, libprag.}
 
 proc listActions*(self: DesktopAppInfo): seq[string] =
   cstringArrayToSeq(g_desktop_app_info_list_actions(cast[ptr DesktopAppInfo00](self.impl)))
-
-type
-  AppLaunchContext* = ref object of gobject.Object
-  AppLaunchContext00* = object of gobject.Object00
-
-proc g_app_launch_context_get_type*(): GType {.importc, libprag.}
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(AppLaunchContext()[])) =
-    when defined(gintroDebug):
-      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
-    g_object_set_qdata(self.impl, Quark, nil)
-    if not self.ignoreFinalizer and self.impl != nil:
-      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
-      self.impl = nil
-
-proc scLaunchFailed*(self: AppLaunchContext;  p: proc (self: ptr AppLaunchContext00; startupNotifyId: cstring; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
-  g_signal_connect_data(self.impl, "launch-failed", cast[GCallback](p), xdata, nil, cf)
-
-proc scLaunched*(self: AppLaunchContext;  p: proc (self: ptr AppLaunchContext00; info: ptr AppInfo00; platformData: ptr glib.Variant00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
-  g_signal_connect_data(self.impl, "launched", cast[GCallback](p), xdata, nil, cf)
-
-proc g_app_launch_context_new(): ptr AppLaunchContext00 {.
-    importc, libprag.}
-
-proc newAppLaunchContext*(): AppLaunchContext =
-  let gobj = g_app_launch_context_new()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc newAppLaunchContext*(tdesc: typedesc): tdesc =
-  assert(result is AppLaunchContext)
-  let gobj = g_app_launch_context_new()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc initAppLaunchContext*[T](result: var T) {.deprecated.} =
-  assert(result is AppLaunchContext)
-  let gobj = g_app_launch_context_new()
-  let qdata = g_object_get_qdata(gobj, Quark)
-  if qdata != nil:
-    result = cast[type(result)](qdata)
-    assert(result.impl == gobj)
-  else:
-    fnew(result, gio.finalizeGObject)
-    result.impl = gobj
-    GC_ref(result)
-    if g_object_is_floating(result.impl).int != 0:
-      discard g_object_ref_sink(result.impl)
-    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
-    g_object_unref(result.impl)
-    assert(g_object_get_qdata(result.impl, Quark) == nil)
-    g_object_set_qdata(result.impl, Quark, addr(result[]))
-
-proc g_app_launch_context_get_display(self: ptr AppLaunchContext00; info: ptr AppInfo00;
-    files: ptr glib.List): cstring {.
-    importc, libprag.}
-
-proc getDisplay*(self: AppLaunchContext; info: AppInfo | DesktopAppInfo;
-    files: seq[GFile]): string =
-  var tempResGL = seq2GList(files)
-  let resul0 = g_app_launch_context_get_display(cast[ptr AppLaunchContext00](self.impl), cast[ptr AppInfo00](info.impl), tempResGL)
-  g_list_free(tempResGL)
-  result = $resul0
-  cogfree(resul0)
-
-proc g_app_launch_context_get_environment(self: ptr AppLaunchContext00): ptr cstring {.
-    importc, libprag.}
-
-proc getEnvironment*(self: AppLaunchContext): seq[string] =
-  let resul0 = g_app_launch_context_get_environment(cast[ptr AppLaunchContext00](self.impl))
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc environment*(self: AppLaunchContext): seq[string] =
-  let resul0 = g_app_launch_context_get_environment(cast[ptr AppLaunchContext00](self.impl))
-  result = cstringArrayToSeq(resul0)
-  g_strfreev(resul0)
-
-proc g_app_launch_context_get_startup_notify_id(self: ptr AppLaunchContext00;
-    info: ptr AppInfo00; files: ptr glib.List): cstring {.
-    importc, libprag.}
-
-proc getStartupNotifyId*(self: AppLaunchContext; info: AppInfo | DesktopAppInfo;
-    files: seq[GFile]): string =
-  var tempResGL = seq2GList(files)
-  let resul0 = g_app_launch_context_get_startup_notify_id(cast[ptr AppLaunchContext00](self.impl), cast[ptr AppInfo00](info.impl), tempResGL)
-  g_list_free(tempResGL)
-  result = $resul0
-  cogfree(resul0)
-
-proc g_app_launch_context_launch_failed(self: ptr AppLaunchContext00; startupNotifyId: cstring) {.
-    importc, libprag.}
-
-proc launchFailed*(self: AppLaunchContext; startupNotifyId: cstring) =
-  g_app_launch_context_launch_failed(cast[ptr AppLaunchContext00](self.impl), startupNotifyId)
-
-proc g_app_launch_context_setenv(self: ptr AppLaunchContext00; variable: cstring;
-    value: cstring) {.
-    importc, libprag.}
-
-proc setenv*(self: AppLaunchContext; variable: cstring;
-    value: cstring) =
-  g_app_launch_context_setenv(cast[ptr AppLaunchContext00](self.impl), variable, value)
-
-proc g_app_launch_context_unsetenv(self: ptr AppLaunchContext00; variable: cstring) {.
-    importc, libprag.}
-
-proc unsetenv*(self: AppLaunchContext; variable: cstring) =
-  g_app_launch_context_unsetenv(cast[ptr AppLaunchContext00](self.impl), variable)
-
-proc g_app_info_launch_default_for_uri(uri: cstring; context: ptr AppLaunchContext00;
-    error: ptr ptr glib.Error = nil): gboolean {.
-    importc, libprag.}
-
-proc launchDefaultForUri*(uri: cstring; context: AppLaunchContext = nil): bool =
-  var gerror: ptr glib.Error
-  let resul0 = g_app_info_launch_default_for_uri(uri, if context.isNil: nil else: cast[ptr AppLaunchContext00](context.impl), addr gerror)
-  if gerror != nil:
-    let msg = $gerror.message
-    g_error_free(gerror[])
-    raise newException(GException, msg)
-  result = toBool(resul0)
 
 proc g_app_info_add_supports_type(self: ptr AppInfo00; contentType: cstring;
     error: ptr ptr glib.Error = nil): gboolean {.
@@ -5489,13 +5485,29 @@ proc g_app_info_supports_uris(self: ptr AppInfo00): gboolean {.
 proc supportsUris*(self: AppInfo | DesktopAppInfo): bool =
   toBool(g_app_info_supports_uris(cast[ptr AppInfo00](self.impl)))
 
-proc g_desktop_app_info_launch_action(self: ptr DesktopAppInfo00; actionName: cstring;
-    launchContext: ptr AppLaunchContext00) {.
+proc g_app_launch_context_get_display(self: ptr AppLaunchContext00; info: ptr AppInfo00;
+    files: ptr glib.List): cstring {.
     importc, libprag.}
 
-proc launchAction*(self: DesktopAppInfo; actionName: cstring;
-    launchContext: AppLaunchContext = nil) =
-  g_desktop_app_info_launch_action(cast[ptr DesktopAppInfo00](self.impl), actionName, if launchContext.isNil: nil else: cast[ptr AppLaunchContext00](launchContext.impl))
+proc getDisplay*(self: AppLaunchContext; info: AppInfo | DesktopAppInfo;
+    files: seq[GFile]): string =
+  var tempResGL = seq2GList(files)
+  let resul0 = g_app_launch_context_get_display(cast[ptr AppLaunchContext00](self.impl), cast[ptr AppInfo00](info.impl), tempResGL)
+  g_list_free(tempResGL)
+  result = $resul0
+  cogfree(resul0)
+
+proc g_app_launch_context_get_startup_notify_id(self: ptr AppLaunchContext00;
+    info: ptr AppInfo00; files: ptr glib.List): cstring {.
+    importc, libprag.}
+
+proc getStartupNotifyId*(self: AppLaunchContext; info: AppInfo | DesktopAppInfo;
+    files: seq[GFile]): string =
+  var tempResGL = seq2GList(files)
+  let resul0 = g_app_launch_context_get_startup_notify_id(cast[ptr AppLaunchContext00](self.impl), cast[ptr AppInfo00](info.impl), tempResGL)
+  g_list_free(tempResGL)
+  result = $resul0
+  cogfree(resul0)
 
 type
   FileOutputStream* = ref object of OutputStream
@@ -22053,6 +22065,8 @@ proc g_filename_completer_get_completions(self: ptr FilenameCompleter00;
 
 proc getCompletions*(self: FilenameCompleter; initialText: cstring): seq[string] =
   let resul0 = g_filename_completer_get_completions(cast[ptr FilenameCompleter00](self.impl), initialText)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -22299,6 +22313,8 @@ proc g_io_module_query(): ptr cstring {.
 
 proc query*(): seq[string] =
   let resul0 = g_io_module_query()
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -25937,6 +25953,8 @@ proc g_settings_get_strv(self: ptr Settings00; key: cstring): ptr cstring {.
 
 proc getStrv*(self: Settings; key: cstring): seq[string] =
   let resul0 = g_settings_get_strv(cast[ptr Settings00](self.impl), key)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -25980,6 +25998,8 @@ proc g_settings_list_children(self: ptr Settings00): ptr cstring {.
 
 proc listChildren*(self: Settings): seq[string] =
   let resul0 = g_settings_list_children(cast[ptr Settings00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -25988,6 +26008,8 @@ proc g_settings_list_keys(self: ptr Settings00): ptr cstring {.
 
 proc listKeys*(self: Settings): seq[string] =
   let resul0 = g_settings_list_keys(cast[ptr Settings00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -26133,6 +26155,8 @@ proc g_settings_schema_list_children(self: ptr SettingsSchema00): ptr cstring {.
 
 proc listChildren*(self: SettingsSchema): seq[string] =
   let resul0 = g_settings_schema_list_children(cast[ptr SettingsSchema00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -26141,6 +26165,8 @@ proc g_settings_schema_list_keys(self: ptr SettingsSchema00): ptr cstring {.
 
 proc listKeys*(self: SettingsSchema): seq[string] =
   let resul0 = g_settings_schema_list_keys(cast[ptr SettingsSchema00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -30039,6 +30065,8 @@ proc g_content_type_guess_for_tree(root: ptr GFile00): ptr cstring {.
 
 proc contentTypeGuessForTree*(root: GFile): seq[string] =
   let resul0 = g_content_type_guess_for_tree(cast[ptr GFile00](root.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 

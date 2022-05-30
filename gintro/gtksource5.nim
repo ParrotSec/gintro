@@ -177,6 +177,8 @@ proc gtk_source_buffer_get_context_classes_at_iter(self: ptr Buffer00; iter: gtk
 
 proc getContextClassesAtIter*(self: Buffer; iter: gtk4.TextIter): seq[string] =
   let resul0 = gtk_source_buffer_get_context_classes_at_iter(cast[ptr Buffer00](self.impl), iter)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 

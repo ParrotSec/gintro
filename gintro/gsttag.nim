@@ -280,6 +280,8 @@ proc gst_tag_get_language_codes(): ptr cstring {.
 
 proc tagGetLanguageCodes*(): seq[string] =
   let resul0 = gst_tag_get_language_codes()
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -327,6 +329,8 @@ proc gst_tag_get_licenses(): ptr cstring {.
 
 proc tagGetLicenses*(): seq[string] =
   let resul0 = gst_tag_get_licenses()
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
