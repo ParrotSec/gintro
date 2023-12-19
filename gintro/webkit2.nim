@@ -948,165 +948,6 @@ type
   PermissionRequest* = ref object of gobject.Object
 
 type
-  NotificationPermissionRequest* = ref object of gobject.Object
-  NotificationPermissionRequest00* = object of gobject.Object00
-
-proc webkit_notification_permission_request_get_type*(): GType {.importc, libprag.}
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(NotificationPermissionRequest()[])) =
-    when defined(gintroDebug):
-      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
-    g_object_set_qdata(self.impl, Quark, nil)
-    if not self.ignoreFinalizer and self.impl != nil:
-      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
-      self.impl = nil
-
-type
-  DeviceInfoPermissionRequest* = ref object of gobject.Object
-  DeviceInfoPermissionRequest00* = object of gobject.Object00
-
-proc webkit_device_info_permission_request_get_type*(): GType {.importc, libprag.}
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(DeviceInfoPermissionRequest()[])) =
-    when defined(gintroDebug):
-      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
-    g_object_set_qdata(self.impl, Quark, nil)
-    if not self.ignoreFinalizer and self.impl != nil:
-      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
-      self.impl = nil
-
-type
-  WebsiteDataAccessPermissionRequest* = ref object of gobject.Object
-  WebsiteDataAccessPermissionRequest00* = object of gobject.Object00
-
-proc webkit_website_data_access_permission_request_get_type*(): GType {.importc, libprag.}
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(WebsiteDataAccessPermissionRequest()[])) =
-    when defined(gintroDebug):
-      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
-    g_object_set_qdata(self.impl, Quark, nil)
-    if not self.ignoreFinalizer and self.impl != nil:
-      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
-      self.impl = nil
-
-proc webkit_website_data_access_permission_request_get_current_domain(self: ptr WebsiteDataAccessPermissionRequest00): cstring {.
-    importc, libprag.}
-
-proc getCurrentDomain*(self: WebsiteDataAccessPermissionRequest): string =
-  result = $webkit_website_data_access_permission_request_get_current_domain(cast[ptr WebsiteDataAccessPermissionRequest00](self.impl))
-
-proc currentDomain*(self: WebsiteDataAccessPermissionRequest): string =
-  result = $webkit_website_data_access_permission_request_get_current_domain(cast[ptr WebsiteDataAccessPermissionRequest00](self.impl))
-
-proc webkit_website_data_access_permission_request_get_requesting_domain(self: ptr WebsiteDataAccessPermissionRequest00): cstring {.
-    importc, libprag.}
-
-proc getRequestingDomain*(self: WebsiteDataAccessPermissionRequest): string =
-  result = $webkit_website_data_access_permission_request_get_requesting_domain(cast[ptr WebsiteDataAccessPermissionRequest00](self.impl))
-
-proc requestingDomain*(self: WebsiteDataAccessPermissionRequest): string =
-  result = $webkit_website_data_access_permission_request_get_requesting_domain(cast[ptr WebsiteDataAccessPermissionRequest00](self.impl))
-
-type
-  UserMediaPermissionRequest* = ref object of gobject.Object
-  UserMediaPermissionRequest00* = object of gobject.Object00
-
-proc webkit_user_media_permission_request_get_type*(): GType {.importc, libprag.}
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(UserMediaPermissionRequest()[])) =
-    when defined(gintroDebug):
-      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
-    g_object_set_qdata(self.impl, Quark, nil)
-    if not self.ignoreFinalizer and self.impl != nil:
-      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
-      self.impl = nil
-
-type
-  PointerLockPermissionRequest* = ref object of gobject.Object
-  PointerLockPermissionRequest00* = object of gobject.Object00
-
-proc webkit_pointer_lock_permission_request_get_type*(): GType {.importc, libprag.}
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(PointerLockPermissionRequest()[])) =
-    when defined(gintroDebug):
-      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
-    g_object_set_qdata(self.impl, Quark, nil)
-    if not self.ignoreFinalizer and self.impl != nil:
-      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
-      self.impl = nil
-
-type
-  MediaKeySystemPermissionRequest* = ref object of gobject.Object
-  MediaKeySystemPermissionRequest00* = object of gobject.Object00
-
-proc webkit_media_key_system_permission_request_get_type*(): GType {.importc, libprag.}
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(MediaKeySystemPermissionRequest()[])) =
-    when defined(gintroDebug):
-      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
-    g_object_set_qdata(self.impl, Quark, nil)
-    if not self.ignoreFinalizer and self.impl != nil:
-      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
-      self.impl = nil
-
-type
-  InstallMissingMediaPluginsPermissionRequest* = ref object of gobject.Object
-  InstallMissingMediaPluginsPermissionRequest00* = object of gobject.Object00
-
-proc webkit_install_missing_media_plugins_permission_request_get_type*(): GType {.importc, libprag.}
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(InstallMissingMediaPluginsPermissionRequest()[])) =
-    when defined(gintroDebug):
-      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
-    g_object_set_qdata(self.impl, Quark, nil)
-    if not self.ignoreFinalizer and self.impl != nil:
-      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
-      self.impl = nil
-
-proc webkit_install_missing_media_plugins_permission_request_get_description(self: ptr InstallMissingMediaPluginsPermissionRequest00): cstring {.
-    importc, libprag.}
-
-proc getDescription*(self: InstallMissingMediaPluginsPermissionRequest): string =
-  result = $webkit_install_missing_media_plugins_permission_request_get_description(cast[ptr InstallMissingMediaPluginsPermissionRequest00](self.impl))
-
-proc description*(self: InstallMissingMediaPluginsPermissionRequest): string =
-  result = $webkit_install_missing_media_plugins_permission_request_get_description(cast[ptr InstallMissingMediaPluginsPermissionRequest00](self.impl))
-
-type
-  GeolocationPermissionRequest* = ref object of gobject.Object
-  GeolocationPermissionRequest00* = object of gobject.Object00
-
-proc webkit_geolocation_permission_request_get_type*(): GType {.importc, libprag.}
-
-when defined(gcDestructors):
-  proc `=destroy`*(self: var typeof(GeolocationPermissionRequest()[])) =
-    when defined(gintroDebug):
-      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
-    g_object_set_qdata(self.impl, Quark, nil)
-    if not self.ignoreFinalizer and self.impl != nil:
-      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
-      self.impl = nil
-
-proc webkit_permission_request_allow(self: ptr PermissionRequest00) {.
-    importc, libprag.}
-
-proc allow*(self: PermissionRequest | NotificationPermissionRequest | DeviceInfoPermissionRequest | WebsiteDataAccessPermissionRequest | UserMediaPermissionRequest | PointerLockPermissionRequest | MediaKeySystemPermissionRequest | InstallMissingMediaPluginsPermissionRequest | GeolocationPermissionRequest) =
-  webkit_permission_request_allow(cast[ptr PermissionRequest00](self.impl))
-
-proc webkit_permission_request_deny(self: ptr PermissionRequest00) {.
-    importc, libprag.}
-
-proc deny*(self: PermissionRequest | NotificationPermissionRequest | DeviceInfoPermissionRequest | WebsiteDataAccessPermissionRequest | UserMediaPermissionRequest | PointerLockPermissionRequest | MediaKeySystemPermissionRequest | InstallMissingMediaPluginsPermissionRequest | GeolocationPermissionRequest) =
-  webkit_permission_request_deny(cast[ptr PermissionRequest00](self.impl))
-
-type
   PrintCustomWidget* = ref object of gobject.Object
   PrintCustomWidget00* = object of gobject.Object00
 
@@ -1356,6 +1197,165 @@ proc webkit_print_operation_run_dialog(self: ptr PrintOperation00; parent: ptr g
 
 proc runDialog*(self: PrintOperation; parent: gtk.Window = nil): PrintOperationResponse =
   webkit_print_operation_run_dialog(cast[ptr PrintOperation00](self.impl), if parent.isNil: nil else: cast[ptr gtk.Window00](parent.impl))
+
+type
+  NotificationPermissionRequest* = ref object of gobject.Object
+  NotificationPermissionRequest00* = object of gobject.Object00
+
+proc webkit_notification_permission_request_get_type*(): GType {.importc, libprag.}
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(NotificationPermissionRequest()[])) =
+    when defined(gintroDebug):
+      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
+    g_object_set_qdata(self.impl, Quark, nil)
+    if not self.ignoreFinalizer and self.impl != nil:
+      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
+      self.impl = nil
+
+type
+  DeviceInfoPermissionRequest* = ref object of gobject.Object
+  DeviceInfoPermissionRequest00* = object of gobject.Object00
+
+proc webkit_device_info_permission_request_get_type*(): GType {.importc, libprag.}
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(DeviceInfoPermissionRequest()[])) =
+    when defined(gintroDebug):
+      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
+    g_object_set_qdata(self.impl, Quark, nil)
+    if not self.ignoreFinalizer and self.impl != nil:
+      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
+      self.impl = nil
+
+type
+  WebsiteDataAccessPermissionRequest* = ref object of gobject.Object
+  WebsiteDataAccessPermissionRequest00* = object of gobject.Object00
+
+proc webkit_website_data_access_permission_request_get_type*(): GType {.importc, libprag.}
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(WebsiteDataAccessPermissionRequest()[])) =
+    when defined(gintroDebug):
+      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
+    g_object_set_qdata(self.impl, Quark, nil)
+    if not self.ignoreFinalizer and self.impl != nil:
+      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
+      self.impl = nil
+
+proc webkit_website_data_access_permission_request_get_current_domain(self: ptr WebsiteDataAccessPermissionRequest00): cstring {.
+    importc, libprag.}
+
+proc getCurrentDomain*(self: WebsiteDataAccessPermissionRequest): string =
+  result = $webkit_website_data_access_permission_request_get_current_domain(cast[ptr WebsiteDataAccessPermissionRequest00](self.impl))
+
+proc currentDomain*(self: WebsiteDataAccessPermissionRequest): string =
+  result = $webkit_website_data_access_permission_request_get_current_domain(cast[ptr WebsiteDataAccessPermissionRequest00](self.impl))
+
+proc webkit_website_data_access_permission_request_get_requesting_domain(self: ptr WebsiteDataAccessPermissionRequest00): cstring {.
+    importc, libprag.}
+
+proc getRequestingDomain*(self: WebsiteDataAccessPermissionRequest): string =
+  result = $webkit_website_data_access_permission_request_get_requesting_domain(cast[ptr WebsiteDataAccessPermissionRequest00](self.impl))
+
+proc requestingDomain*(self: WebsiteDataAccessPermissionRequest): string =
+  result = $webkit_website_data_access_permission_request_get_requesting_domain(cast[ptr WebsiteDataAccessPermissionRequest00](self.impl))
+
+type
+  UserMediaPermissionRequest* = ref object of gobject.Object
+  UserMediaPermissionRequest00* = object of gobject.Object00
+
+proc webkit_user_media_permission_request_get_type*(): GType {.importc, libprag.}
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(UserMediaPermissionRequest()[])) =
+    when defined(gintroDebug):
+      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
+    g_object_set_qdata(self.impl, Quark, nil)
+    if not self.ignoreFinalizer and self.impl != nil:
+      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
+      self.impl = nil
+
+type
+  PointerLockPermissionRequest* = ref object of gobject.Object
+  PointerLockPermissionRequest00* = object of gobject.Object00
+
+proc webkit_pointer_lock_permission_request_get_type*(): GType {.importc, libprag.}
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(PointerLockPermissionRequest()[])) =
+    when defined(gintroDebug):
+      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
+    g_object_set_qdata(self.impl, Quark, nil)
+    if not self.ignoreFinalizer and self.impl != nil:
+      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
+      self.impl = nil
+
+type
+  MediaKeySystemPermissionRequest* = ref object of gobject.Object
+  MediaKeySystemPermissionRequest00* = object of gobject.Object00
+
+proc webkit_media_key_system_permission_request_get_type*(): GType {.importc, libprag.}
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(MediaKeySystemPermissionRequest()[])) =
+    when defined(gintroDebug):
+      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
+    g_object_set_qdata(self.impl, Quark, nil)
+    if not self.ignoreFinalizer and self.impl != nil:
+      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
+      self.impl = nil
+
+type
+  InstallMissingMediaPluginsPermissionRequest* = ref object of gobject.Object
+  InstallMissingMediaPluginsPermissionRequest00* = object of gobject.Object00
+
+proc webkit_install_missing_media_plugins_permission_request_get_type*(): GType {.importc, libprag.}
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(InstallMissingMediaPluginsPermissionRequest()[])) =
+    when defined(gintroDebug):
+      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
+    g_object_set_qdata(self.impl, Quark, nil)
+    if not self.ignoreFinalizer and self.impl != nil:
+      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
+      self.impl = nil
+
+proc webkit_install_missing_media_plugins_permission_request_get_description(self: ptr InstallMissingMediaPluginsPermissionRequest00): cstring {.
+    importc, libprag.}
+
+proc getDescription*(self: InstallMissingMediaPluginsPermissionRequest): string =
+  result = $webkit_install_missing_media_plugins_permission_request_get_description(cast[ptr InstallMissingMediaPluginsPermissionRequest00](self.impl))
+
+proc description*(self: InstallMissingMediaPluginsPermissionRequest): string =
+  result = $webkit_install_missing_media_plugins_permission_request_get_description(cast[ptr InstallMissingMediaPluginsPermissionRequest00](self.impl))
+
+type
+  GeolocationPermissionRequest* = ref object of gobject.Object
+  GeolocationPermissionRequest00* = object of gobject.Object00
+
+proc webkit_geolocation_permission_request_get_type*(): GType {.importc, libprag.}
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(GeolocationPermissionRequest()[])) =
+    when defined(gintroDebug):
+      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
+    g_object_set_qdata(self.impl, Quark, nil)
+    if not self.ignoreFinalizer and self.impl != nil:
+      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
+      self.impl = nil
+
+proc webkit_permission_request_allow(self: ptr PermissionRequest00) {.
+    importc, libprag.}
+
+proc allow*(self: PermissionRequest | NotificationPermissionRequest | DeviceInfoPermissionRequest | WebsiteDataAccessPermissionRequest | UserMediaPermissionRequest | PointerLockPermissionRequest | MediaKeySystemPermissionRequest | InstallMissingMediaPluginsPermissionRequest | GeolocationPermissionRequest) =
+  webkit_permission_request_allow(cast[ptr PermissionRequest00](self.impl))
+
+proc webkit_permission_request_deny(self: ptr PermissionRequest00) {.
+    importc, libprag.}
+
+proc deny*(self: PermissionRequest | NotificationPermissionRequest | DeviceInfoPermissionRequest | WebsiteDataAccessPermissionRequest | UserMediaPermissionRequest | PointerLockPermissionRequest | MediaKeySystemPermissionRequest | InstallMissingMediaPluginsPermissionRequest | GeolocationPermissionRequest) =
+  webkit_permission_request_deny(cast[ptr PermissionRequest00](self.impl))
 
 type
   WebsitePolicies* = ref object of gobject.Object
@@ -9961,9 +9961,9 @@ type
 
 const MAJOR_VERSION* = 2'i32
 
-const MICRO_VERSION* = 3'i32
+const MICRO_VERSION* = 0'i32
 
-const MINOR_VERSION* = 34'i32
+const MINOR_VERSION* = 36'i32
 
 type
   NavigationPolicyDecision* = ref object of PolicyDecision
@@ -10220,6 +10220,26 @@ proc webkit_uri_scheme_request_finish_error(self: ptr URISchemeRequest00;
 proc finishError*(self: URISchemeRequest; error: ptr glib.Error) =
   webkit_uri_scheme_request_finish_error(cast[ptr URISchemeRequest00](self.impl), error)
 
+proc webkit_uri_scheme_request_get_http_headers(self: ptr URISchemeRequest00): ptr soup.MessageHeaders00 {.
+    importc, libprag.}
+
+proc getHttpHeaders*(self: URISchemeRequest): soup.MessageHeaders =
+  fnew(result, gBoxedFreeSoupMessageHeaders)
+  result.impl = webkit_uri_scheme_request_get_http_headers(cast[ptr URISchemeRequest00](self.impl))
+
+proc httpHeaders*(self: URISchemeRequest): soup.MessageHeaders =
+  fnew(result, gBoxedFreeSoupMessageHeaders)
+  result.impl = webkit_uri_scheme_request_get_http_headers(cast[ptr URISchemeRequest00](self.impl))
+
+proc webkit_uri_scheme_request_get_http_method(self: ptr URISchemeRequest00): cstring {.
+    importc, libprag.}
+
+proc getHttpMethod*(self: URISchemeRequest): string =
+  result = $webkit_uri_scheme_request_get_http_method(cast[ptr URISchemeRequest00](self.impl))
+
+proc httpMethod*(self: URISchemeRequest): string =
+  result = $webkit_uri_scheme_request_get_http_method(cast[ptr URISchemeRequest00](self.impl))
+
 proc webkit_uri_scheme_request_get_path(self: ptr URISchemeRequest00): cstring {.
     importc, libprag.}
 
@@ -10281,6 +10301,117 @@ proc webView*(self: URISchemeRequest): WebView =
     g_object_unref(result.impl)
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+type
+  URISchemeResponse* = ref object of gobject.Object
+  URISchemeResponse00* = object of gobject.Object00
+
+proc webkit_uri_scheme_response_get_type*(): GType {.importc, libprag.}
+
+when defined(gcDestructors):
+  proc `=destroy`*(self: var typeof(URISchemeResponse()[])) =
+    when defined(gintroDebug):
+      echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
+    g_object_set_qdata(self.impl, Quark, nil)
+    if not self.ignoreFinalizer and self.impl != nil:
+      g_object_remove_toggle_ref(self.impl, toggleNotify, addr(self))
+      self.impl = nil
+
+proc webkit_uri_scheme_response_new(inputStream: ptr gio.InputStream00; streamLength: int64): ptr URISchemeResponse00 {.
+    importc, libprag.}
+
+proc newURISchemeResponse*(inputStream: gio.InputStream; streamLength: int64): URISchemeResponse =
+  let gobj = webkit_uri_scheme_response_new(cast[ptr gio.InputStream00](inputStream.impl), streamLength)
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, webkit2.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc newURISchemeResponse*(tdesc: typedesc; inputStream: gio.InputStream; streamLength: int64): tdesc =
+  assert(result is URISchemeResponse)
+  let gobj = webkit_uri_scheme_response_new(cast[ptr gio.InputStream00](inputStream.impl), streamLength)
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, webkit2.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc initURISchemeResponse*[T](result: var T; inputStream: gio.InputStream; streamLength: int64) {.deprecated.} =
+  assert(result is URISchemeResponse)
+  let gobj = webkit_uri_scheme_response_new(cast[ptr gio.InputStream00](inputStream.impl), streamLength)
+  let qdata = g_object_get_qdata(gobj, Quark)
+  if qdata != nil:
+    result = cast[type(result)](qdata)
+    assert(result.impl == gobj)
+  else:
+    fnew(result, webkit2.finalizeGObject)
+    result.impl = gobj
+    GC_ref(result)
+    if g_object_is_floating(result.impl).int != 0:
+      discard g_object_ref_sink(result.impl)
+    g_object_add_toggle_ref(result.impl, toggleNotify, addr(result[]))
+    g_object_unref(result.impl)
+    assert(g_object_get_qdata(result.impl, Quark) == nil)
+    g_object_set_qdata(result.impl, Quark, addr(result[]))
+
+proc webkit_uri_scheme_response_set_content_type(self: ptr URISchemeResponse00;
+    contentType: cstring) {.
+    importc, libprag.}
+
+proc setContentType*(self: URISchemeResponse;
+    contentType: cstring) =
+  webkit_uri_scheme_response_set_content_type(cast[ptr URISchemeResponse00](self.impl), contentType)
+
+proc `contentType=`*(self: URISchemeResponse;
+    contentType: cstring) =
+  webkit_uri_scheme_response_set_content_type(cast[ptr URISchemeResponse00](self.impl), contentType)
+
+proc webkit_uri_scheme_response_set_http_headers(self: ptr URISchemeResponse00;
+    headers: ptr soup.MessageHeaders00) {.
+    importc, libprag.}
+
+proc setHttpHeaders*(self: URISchemeResponse;
+    headers: soup.MessageHeaders) =
+  webkit_uri_scheme_response_set_http_headers(cast[ptr URISchemeResponse00](self.impl), cast[ptr soup.MessageHeaders00](headers.impl))
+
+proc `httpHeaders=`*(self: URISchemeResponse;
+    headers: soup.MessageHeaders) =
+  webkit_uri_scheme_response_set_http_headers(cast[ptr URISchemeResponse00](self.impl), cast[ptr soup.MessageHeaders00](headers.impl))
+
+proc webkit_uri_scheme_response_set_status(self: ptr URISchemeResponse00;
+    statusCode: uint32; reasonPhrase: cstring) {.
+    importc, libprag.}
+
+proc setStatus*(self: URISchemeResponse; statusCode: int;
+    reasonPhrase: cstring = nil) =
+  webkit_uri_scheme_response_set_status(cast[ptr URISchemeResponse00](self.impl), uint32(statusCode), reasonPhrase)
+
+proc webkit_uri_scheme_request_finish_with_response(self: ptr URISchemeRequest00;
+    response: ptr URISchemeResponse00) {.
+    importc, libprag.}
+
+proc finishWithResponse*(self: URISchemeRequest;
+    response: URISchemeResponse) =
+  webkit_uri_scheme_request_finish_with_response(cast[ptr URISchemeRequest00](self.impl), cast[ptr URISchemeResponse00](response.impl))
 
 type
   URISchemeRequestCallback* = proc (request: ptr URISchemeRequest00; userData: pointer) {.cdecl.}
@@ -10384,6 +10515,8 @@ proc webkit_user_content_filter_store_fetch_identifiers_finish(self: ptr UserCon
 proc fetchIdentifiersFinish*(self: UserContentFilterStore;
     resu: gio.AsyncResult): seq[string] =
   let resul0 = webkit_user_content_filter_store_fetch_identifiers_finish(cast[ptr UserContentFilterStore00](self.impl), cast[ptr gio.AsyncResult00](resu.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 

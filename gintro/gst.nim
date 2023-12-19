@@ -11072,11 +11072,15 @@ proc gst_device_monitor_get_providers(self: ptr DeviceMonitor00): ptr cstring {.
 
 proc getProviders*(self: DeviceMonitor): seq[string] =
   let resul0 = gst_device_monitor_get_providers(cast[ptr DeviceMonitor00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
 proc providers*(self: DeviceMonitor): seq[string] =
   let resul0 = gst_device_monitor_get_providers(cast[ptr DeviceMonitor00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -11189,11 +11193,15 @@ proc gst_device_provider_get_hidden_providers(self: ptr DeviceProvider00): ptr c
 
 proc getHiddenProviders*(self: DeviceProvider): seq[string] =
   let resul0 = gst_device_provider_get_hidden_providers(cast[ptr DeviceProvider00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
 proc hiddenProviders*(self: DeviceProvider): seq[string] =
   let resul0 = gst_device_provider_get_hidden_providers(cast[ptr DeviceProvider00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -14847,12 +14855,18 @@ type
 
 proc gst_param_spec_array_get_type*(): GType {.importc, libprag.}
 
+proc g_param_spec_unref*(self: ptr ParamArray00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamArray) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamArray()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(cast[ptr ParamArray00](self.impl))
+      g_param_spec_unref(cast[ptr ParamArray00](self.impl))
       self.impl = nil
 
 type
@@ -14861,12 +14875,18 @@ type
 
 proc gst_param_spec_fraction_get_type*(): GType {.importc, libprag.}
 
+proc g_param_spec_unref*(self: ptr ParamFraction00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamFraction) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamFraction()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(cast[ptr ParamFraction00](self.impl))
+      g_param_spec_unref(cast[ptr ParamFraction00](self.impl))
       self.impl = nil
 
 type
@@ -15251,11 +15271,15 @@ proc gst_preset_get_preset_names(self: ptr Preset00): ptr cstring {.
 
 proc getPresetNames*(self: Preset): seq[string] =
   let resul0 = gst_preset_get_preset_names(cast[ptr Preset00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
 proc presetNames*(self: Preset): seq[string] =
   let resul0 = gst_preset_get_preset_names(cast[ptr Preset00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -15264,11 +15288,15 @@ proc gst_preset_get_property_names(self: ptr Preset00): ptr cstring {.
 
 proc getPropertyNames*(self: Preset): seq[string] =
   let resul0 = gst_preset_get_property_names(cast[ptr Preset00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
 proc propertyNames*(self: Preset): seq[string] =
   let resul0 = gst_preset_get_property_names(cast[ptr Preset00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -17407,6 +17435,8 @@ proc gst_debug_ring_buffer_logger_get_logs(): ptr cstring {.
 
 proc debugRingBufferLoggerGetLogs*(): seq[string] =
   let resul0 = gst_debug_ring_buffer_logger_get_logs()
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 

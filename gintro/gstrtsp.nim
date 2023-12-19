@@ -1176,6 +1176,8 @@ proc gst_rtsp_url_decode_path_components(self: ptr RTSPUrl00): ptr cstring {.
 
 proc decodePathComponents*(self: RTSPUrl): seq[string] =
   let resul0 = gst_rtsp_url_decode_path_components(cast[ptr RTSPUrl00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 

@@ -4915,6 +4915,8 @@ proc pango_split_file_list(str: cstring): ptr cstring {.
 
 proc splitFileList*(str: cstring): seq[string] =
   let resul0 = pango_split_file_list(str)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 

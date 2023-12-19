@@ -74,14 +74,18 @@ proc copy*(self: SelectionData): SelectionData =
   fnew(result, gBoxedFreeGtkSelectionData)
   result.impl = gtk_selection_data_copy(cast[ptr SelectionData00](self.impl))
 
-proc gtk_selection_data_get_data_type(self: ptr SelectionData00): ptr gdk.Atom {.
+proc gtk_selection_data_get_data_type(self: ptr SelectionData00): ptr gdk.Atom00 {.
     importc, libprag.}
 
-proc getDataType*(self: SelectionData): ptr gdk.Atom =
-  gtk_selection_data_get_data_type(cast[ptr SelectionData00](self.impl))
+proc getDataType*(self: SelectionData): gdk.Atom =
+  new(result)
+  result.impl = gtk_selection_data_get_data_type(cast[ptr SelectionData00](self.impl))
+  result.ignoreFinalizer = true
 
-proc dataType*(self: SelectionData): ptr gdk.Atom =
-  gtk_selection_data_get_data_type(cast[ptr SelectionData00](self.impl))
+proc dataType*(self: SelectionData): gdk.Atom =
+  new(result)
+  result.impl = gtk_selection_data_get_data_type(cast[ptr SelectionData00](self.impl))
+  result.ignoreFinalizer = true
 
 proc gtk_selection_data_get_data_with_length(self: ptr SelectionData00; length: var int32): ptr uint8 {.
     importc, libprag.}
@@ -186,23 +190,31 @@ proc pixbuf*(self: SelectionData): gdkpixbuf.Pixbuf =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_selection_data_get_selection(self: ptr SelectionData00): ptr gdk.Atom {.
+proc gtk_selection_data_get_selection(self: ptr SelectionData00): ptr gdk.Atom00 {.
     importc, libprag.}
 
-proc getSelection*(self: SelectionData): ptr gdk.Atom =
-  gtk_selection_data_get_selection(cast[ptr SelectionData00](self.impl))
+proc getSelection*(self: SelectionData): gdk.Atom =
+  new(result)
+  result.impl = gtk_selection_data_get_selection(cast[ptr SelectionData00](self.impl))
+  result.ignoreFinalizer = true
 
-proc selection*(self: SelectionData): ptr gdk.Atom =
-  gtk_selection_data_get_selection(cast[ptr SelectionData00](self.impl))
+proc selection*(self: SelectionData): gdk.Atom =
+  new(result)
+  result.impl = gtk_selection_data_get_selection(cast[ptr SelectionData00](self.impl))
+  result.ignoreFinalizer = true
 
-proc gtk_selection_data_get_target(self: ptr SelectionData00): ptr gdk.Atom {.
+proc gtk_selection_data_get_target(self: ptr SelectionData00): ptr gdk.Atom00 {.
     importc, libprag.}
 
-proc getTarget*(self: SelectionData): ptr gdk.Atom =
-  gtk_selection_data_get_target(cast[ptr SelectionData00](self.impl))
+proc getTarget*(self: SelectionData): gdk.Atom =
+  new(result)
+  result.impl = gtk_selection_data_get_target(cast[ptr SelectionData00](self.impl))
+  result.ignoreFinalizer = true
 
-proc target*(self: SelectionData): ptr gdk.Atom =
-  gtk_selection_data_get_target(cast[ptr SelectionData00](self.impl))
+proc target*(self: SelectionData): gdk.Atom =
+  new(result)
+  result.impl = gtk_selection_data_get_target(cast[ptr SelectionData00](self.impl))
+  result.ignoreFinalizer = true
 
 proc gtk_selection_data_get_text(self: ptr SelectionData00): cstring {.
     importc, libprag.}
@@ -226,22 +238,26 @@ proc gtk_selection_data_get_uris(self: ptr SelectionData00): ptr cstring {.
 
 proc getUris*(self: SelectionData): seq[string] =
   let resul0 = gtk_selection_data_get_uris(cast[ptr SelectionData00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
 proc uris*(self: SelectionData): seq[string] =
   let resul0 = gtk_selection_data_get_uris(cast[ptr SelectionData00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
-proc gtk_selection_data_set(self: ptr SelectionData00; `type`: gdk.Atom;
+proc gtk_selection_data_set(self: ptr SelectionData00; `type`: ptr gdk.Atom00;
     format: int32; data: ptr uint8; length: int32) {.
     importc, libprag.}
 
 proc set*(self: SelectionData; `type`: gdk.Atom; format: int;
     data: seq[uint8] | string) =
   let length = int(data.len)
-  gtk_selection_data_set(cast[ptr SelectionData00](self.impl), `type`, int32(format), cast[ptr uint8](unsafeaddr(data[0])), int32(length))
+  gtk_selection_data_set(cast[ptr SelectionData00](self.impl), cast[ptr gdk.Atom00](`type`.impl), int32(format), cast[ptr uint8](unsafeaddr(data[0])), int32(length))
 
 proc gtk_selection_data_set_pixbuf(self: ptr SelectionData00; pixbuf: ptr gdkpixbuf.Pixbuf00): gboolean {.
     importc, libprag.}
@@ -978,12 +994,12 @@ proc dragDestUnset*(self: Widget) =
   gtk_drag_dest_unset(cast[ptr Widget00](self.impl))
 
 proc gtk_drag_get_data(self: ptr Widget00; context: ptr gdk.DragContext00;
-    target: gdk.Atom; time: uint32) {.
+    target: ptr gdk.Atom00; time: uint32) {.
     importc, libprag.}
 
 proc dragGetData*(self: Widget; context: gdk.DragContext; target: gdk.Atom;
     time: int) =
-  gtk_drag_get_data(cast[ptr Widget00](self.impl), cast[ptr gdk.DragContext00](context.impl), target, uint32(time))
+  gtk_drag_get_data(cast[ptr Widget00](self.impl), cast[ptr gdk.DragContext00](context.impl), cast[ptr gdk.Atom00](target.impl), uint32(time))
 
 proc gtk_drag_highlight(self: ptr Widget00) {.
     importc, libprag.}
@@ -5651,6 +5667,8 @@ proc gtk_application_get_accels_for_action(self: ptr Application00; detailedActi
 
 proc getAccelsForAction*(self: Application; detailedActionName: cstring): seq[string] =
   let resul0 = gtk_application_get_accels_for_action(cast[ptr Application00](self.impl), detailedActionName)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -5659,6 +5677,8 @@ proc gtk_application_get_actions_for_accel(self: ptr Application00; accel: cstri
 
 proc getActionsForAccel*(self: Application; accel: cstring): seq[string] =
   let resul0 = gtk_application_get_actions_for_accel(cast[ptr Application00](self.impl), accel)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -5829,6 +5849,8 @@ proc gtk_application_list_action_descriptions(self: ptr Application00): ptr cstr
 
 proc listActionDescriptions*(self: Application): seq[string] =
   let resul0 = gtk_application_list_action_descriptions(cast[ptr Application00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -6982,11 +7004,12 @@ proc initBox*[T](result: var T; orientation: Orientation; spacing: int = 0) {.de
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 type
-  DestDefaults* {.size: sizeof(cint), pure.} = enum
-    motion = 1
-    highlight = 2
-    drop = 4
-    all = 7
+  DestFlag* {.size: sizeof(cint), pure.} = enum
+    motion = 0
+    highlight = 1
+    drop = 2
+
+  DestDefaults* {.size: sizeof(cint).} = set[DestFlag]
 
 type
   TargetEntry00* {.pure.} = object
@@ -7128,13 +7151,13 @@ proc finalizerunref*(self: TargetList) =
   if not self.ignoreFinalizer:
     gtk_target_list_unref(cast[ptr TargetList00](self.impl))
 
-proc gtk_target_list_add(self: ptr TargetList00; target: gdk.Atom; flags: uint32;
-    info: uint32) {.
+proc gtk_target_list_add(self: ptr TargetList00; target: ptr gdk.Atom00;
+    flags: uint32; info: uint32) {.
     importc, libprag.}
 
 proc add*(self: TargetList; target: gdk.Atom; flags: int;
     info: int) =
-  gtk_target_list_add(cast[ptr TargetList00](self.impl), target, uint32(flags), uint32(info))
+  gtk_target_list_add(cast[ptr TargetList00](self.impl), cast[ptr gdk.Atom00](target.impl), uint32(flags), uint32(info))
 
 proc gtk_target_list_add_image_targets(self: ptr TargetList00; info: uint32;
     writable: gboolean) {.
@@ -7165,12 +7188,13 @@ proc gtk_target_list_add_uri_targets(self: ptr TargetList00; info: uint32) {.
 proc addUriTargets*(self: TargetList; info: int) =
   gtk_target_list_add_uri_targets(cast[ptr TargetList00](self.impl), uint32(info))
 
-proc gtk_target_list_find(self: ptr TargetList00; target: gdk.Atom; info: var uint32): gboolean {.
+proc gtk_target_list_find(self: ptr TargetList00; target: ptr gdk.Atom00;
+    info: var uint32): gboolean {.
     importc, libprag.}
 
 proc findTargetList*(self: TargetList; target: gdk.Atom; info: var int = cast[var int](nil)): bool =
   var info_00: uint32
-  result = toBool(gtk_target_list_find(cast[ptr TargetList00](self.impl), target, info_00))
+  result = toBool(gtk_target_list_find(cast[ptr TargetList00](self.impl), cast[ptr gdk.Atom00](target.impl), info_00))
   if info.addr != nil:
     info = int(info_00)
 
@@ -7181,11 +7205,11 @@ proc `ref`*(self: TargetList): TargetList =
   fnew(result, gBoxedFreeGtkTargetList)
   result.impl = gtk_target_list_ref(cast[ptr TargetList00](self.impl))
 
-proc gtk_target_list_remove(self: ptr TargetList00; target: gdk.Atom) {.
+proc gtk_target_list_remove(self: ptr TargetList00; target: ptr gdk.Atom00) {.
     importc, libprag.}
 
 proc remove*(self: TargetList; target: gdk.Atom) =
-  gtk_target_list_remove(cast[ptr TargetList00](self.impl), target)
+  gtk_target_list_remove(cast[ptr TargetList00](self.impl), cast[ptr gdk.Atom00](target.impl))
 
 proc gtk_target_list_new(targets: ptr TargetEntry00; ntargets: uint32): ptr TargetList00 {.
     importc, libprag.}
@@ -7257,11 +7281,13 @@ proc dragBeginWithCoordinates*(self: Widget; targets: TargetList; actions: gdk.D
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc gtk_drag_dest_find_target(self: ptr Widget00; context: ptr gdk.DragContext00;
-    targetList: ptr TargetList00): ptr gdk.Atom {.
+    targetList: ptr TargetList00): ptr gdk.Atom00 {.
     importc, libprag.}
 
-proc dragDestFindTarget*(self: Widget; context: gdk.DragContext; targetList: TargetList = nil): ptr gdk.Atom =
-  gtk_drag_dest_find_target(cast[ptr Widget00](self.impl), cast[ptr gdk.DragContext00](context.impl), if targetList.isNil: nil else: cast[ptr TargetList00](targetList.impl))
+proc dragDestFindTarget*(self: Widget; context: gdk.DragContext; targetList: TargetList = nil): gdk.Atom =
+  new(result)
+  result.impl = gtk_drag_dest_find_target(cast[ptr Widget00](self.impl), cast[ptr gdk.DragContext00](context.impl), if targetList.isNil: nil else: cast[ptr TargetList00](targetList.impl))
+  result.ignoreFinalizer = true
 
 proc gtk_drag_dest_get_target_list(self: ptr Widget00): ptr TargetList00 {.
     importc, libprag.}
@@ -7313,11 +7339,11 @@ when defined(gcDestructors):
 proc scOwnerChange*(self: Clipboard;  p: proc (self: ptr Clipboard00; event: ptr gdk.EventOwnerChange00; xdata: pointer) {.cdecl.}, xdata: pointer, cf: gobject.ConnectFlags): culong =
   g_signal_connect_data(self.impl, "owner-change", cast[GCallback](p), xdata, nil, cf)
 
-proc gtk_clipboard_get(selection: gdk.Atom): ptr Clipboard00 {.
+proc gtk_clipboard_get(selection: ptr gdk.Atom00): ptr Clipboard00 {.
     importc, libprag.}
 
 proc getClipboard*(selection: gdk.Atom): Clipboard =
-  let gobj = gtk_clipboard_get(selection)
+  let gobj = gtk_clipboard_get(cast[ptr gdk.Atom00](selection.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -7333,7 +7359,7 @@ proc getClipboard*(selection: gdk.Atom): Clipboard =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 proc clipboard*(selection: gdk.Atom): Clipboard =
-  let gobj = gtk_clipboard_get(selection)
+  let gobj = gtk_clipboard_get(cast[ptr gdk.Atom00](selection.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -7383,11 +7409,11 @@ proc defaultClipboard*(display: gdk.Display): Clipboard =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_clipboard_get_for_display(display: ptr gdk.Display00; selection: gdk.Atom): ptr Clipboard00 {.
+proc gtk_clipboard_get_for_display(display: ptr gdk.Display00; selection: ptr gdk.Atom00): ptr Clipboard00 {.
     importc, libprag.}
 
 proc getForDisplay*(display: gdk.Display; selection: gdk.Atom): Clipboard =
-  let gobj = gtk_clipboard_get_for_display(cast[ptr gdk.Display00](display.impl), selection)
+  let gobj = gtk_clipboard_get_for_display(cast[ptr gdk.Display00](display.impl), cast[ptr gdk.Atom00](selection.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -7513,11 +7539,11 @@ proc gtk_clipboard_store(self: ptr Clipboard00) {.
 proc store*(self: Clipboard) =
   gtk_clipboard_store(cast[ptr Clipboard00](self.impl))
 
-proc gtk_clipboard_wait_for_contents(self: ptr Clipboard00; target: gdk.Atom): ptr SelectionData00 {.
+proc gtk_clipboard_wait_for_contents(self: ptr Clipboard00; target: ptr gdk.Atom00): ptr SelectionData00 {.
     importc, libprag.}
 
 proc waitForContents*(self: Clipboard; target: gdk.Atom): SelectionData =
-  let impl0 = gtk_clipboard_wait_for_contents(cast[ptr Clipboard00](self.impl), target)
+  let impl0 = gtk_clipboard_wait_for_contents(cast[ptr Clipboard00](self.impl), cast[ptr gdk.Atom00](target.impl))
   if impl0.isNil:
     return nil
   fnew(result, gBoxedFreeGtkSelectionData)
@@ -7545,11 +7571,11 @@ proc waitForImage*(self: Clipboard): gdkpixbuf.Pixbuf =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gtk_clipboard_wait_for_targets(self: ptr Clipboard00; targets: var ptr ptr gdk.Atom;
+proc gtk_clipboard_wait_for_targets(self: ptr Clipboard00; targets: var ptr ptr gdk.Atom00;
     nTargets: var int32): gboolean {.
     importc, libprag.}
 
-proc waitForTargets*(self: Clipboard; targets: var ptr ptr gdk.Atom;
+proc waitForTargets*(self: Clipboard; targets: var ptr ptr gdk.Atom00;
     nTargets: var int): bool =
   var nTargets_00: int32
   result = toBool(gtk_clipboard_wait_for_targets(cast[ptr Clipboard00](self.impl), targets, nTargets_00))
@@ -7582,11 +7608,11 @@ proc gtk_clipboard_wait_is_image_available(self: ptr Clipboard00): gboolean {.
 proc waitIsImageAvailable*(self: Clipboard): bool =
   toBool(gtk_clipboard_wait_is_image_available(cast[ptr Clipboard00](self.impl)))
 
-proc gtk_clipboard_wait_is_target_available(self: ptr Clipboard00; target: gdk.Atom): gboolean {.
+proc gtk_clipboard_wait_is_target_available(self: ptr Clipboard00; target: ptr gdk.Atom00): gboolean {.
     importc, libprag.}
 
 proc waitIsTargetAvailable*(self: Clipboard; target: gdk.Atom): bool =
-  toBool(gtk_clipboard_wait_is_target_available(cast[ptr Clipboard00](self.impl), target))
+  toBool(gtk_clipboard_wait_is_target_available(cast[ptr Clipboard00](self.impl), cast[ptr gdk.Atom00](target.impl)))
 
 proc gtk_clipboard_wait_is_text_available(self: ptr Clipboard00): gboolean {.
     importc, libprag.}
@@ -7600,11 +7626,11 @@ proc gtk_clipboard_wait_is_uris_available(self: ptr Clipboard00): gboolean {.
 proc waitIsUrisAvailable*(self: Clipboard): bool =
   toBool(gtk_clipboard_wait_is_uris_available(cast[ptr Clipboard00](self.impl)))
 
-proc gtk_widget_get_clipboard(self: ptr Widget00; selection: gdk.Atom): ptr Clipboard00 {.
+proc gtk_widget_get_clipboard(self: ptr Widget00; selection: ptr gdk.Atom00): ptr Clipboard00 {.
     importc, libprag.}
 
 proc getClipboard*(self: Widget; selection: gdk.Atom): Clipboard =
-  let gobj = gtk_widget_get_clipboard(cast[ptr Widget00](self.impl), selection)
+  let gobj = gtk_widget_get_clipboard(cast[ptr Widget00](self.impl), cast[ptr gdk.Atom00](selection.impl))
   let qdata = g_object_get_qdata(gobj, Quark)
   if qdata != nil:
     result = cast[type(result)](qdata)
@@ -11615,14 +11641,15 @@ proc deleteSelection*(self: TextBuffer; interactive: bool;
   toBool(gtk_text_buffer_delete_selection(cast[ptr TextBuffer00](self.impl), gboolean(interactive), gboolean(defaultEditable)))
 
 proc gtk_text_buffer_deserialize(self: ptr TextBuffer00; contentBuffer: ptr TextBuffer00;
-    format: gdk.Atom; iter: TextIter; data: ptr uint8; length: uint64; error: ptr ptr glib.Error = nil): gboolean {.
+    format: ptr gdk.Atom00; iter: TextIter; data: ptr uint8; length: uint64;
+    error: ptr ptr glib.Error = nil): gboolean {.
     importc, libprag.}
 
 proc deserialize*(self: TextBuffer; contentBuffer: TextBuffer;
     format: gdk.Atom; iter: TextIter; data: seq[uint8] | string): bool =
   let length = uint64(data.len)
   var gerror: ptr glib.Error
-  let resul0 = gtk_text_buffer_deserialize(cast[ptr TextBuffer00](self.impl), cast[ptr TextBuffer00](contentBuffer.impl), format, iter, cast[ptr uint8](unsafeaddr(data[0])), length, addr gerror)
+  let resul0 = gtk_text_buffer_deserialize(cast[ptr TextBuffer00](self.impl), cast[ptr TextBuffer00](contentBuffer.impl), cast[ptr gdk.Atom00](format.impl), iter, cast[ptr uint8](unsafeaddr(data[0])), length, addr gerror)
   if gerror != nil:
     let msg = $gerror.message
     g_error_free(gerror[])
@@ -11630,19 +11657,19 @@ proc deserialize*(self: TextBuffer; contentBuffer: TextBuffer;
   result = toBool(resul0)
 
 proc gtk_text_buffer_deserialize_get_can_create_tags(self: ptr TextBuffer00;
-    format: gdk.Atom): gboolean {.
+    format: ptr gdk.Atom00): gboolean {.
     importc, libprag.}
 
 proc deserializeGetCanCreateTags*(self: TextBuffer; format: gdk.Atom): bool =
-  toBool(gtk_text_buffer_deserialize_get_can_create_tags(cast[ptr TextBuffer00](self.impl), format))
+  toBool(gtk_text_buffer_deserialize_get_can_create_tags(cast[ptr TextBuffer00](self.impl), cast[ptr gdk.Atom00](format.impl)))
 
 proc gtk_text_buffer_deserialize_set_can_create_tags(self: ptr TextBuffer00;
-    format: gdk.Atom; canCreateTags: gboolean) {.
+    format: ptr gdk.Atom00; canCreateTags: gboolean) {.
     importc, libprag.}
 
 proc deserializeSetCanCreateTags*(self: TextBuffer; format: gdk.Atom;
     canCreateTags: bool) =
-  gtk_text_buffer_deserialize_set_can_create_tags(cast[ptr TextBuffer00](self.impl), format, gboolean(canCreateTags))
+  gtk_text_buffer_deserialize_set_can_create_tags(cast[ptr TextBuffer00](self.impl), cast[ptr gdk.Atom00](format.impl), gboolean(canCreateTags))
 
 proc gtk_text_buffer_end_user_action(self: ptr TextBuffer00) {.
     importc, libprag.}
@@ -11679,10 +11706,10 @@ proc copyTargetList*(self: TextBuffer): TargetList =
   result.impl = gtk_text_buffer_get_copy_target_list(cast[ptr TextBuffer00](self.impl))
   result.impl = cast[typeof(result.impl)](g_boxed_copy(gtk_target_list_get_type(), result.impl))
 
-proc gtk_text_buffer_get_deserialize_formats(self: ptr TextBuffer00; nFormats: var int32): ptr ptr gdk.Atom {.
+proc gtk_text_buffer_get_deserialize_formats(self: ptr TextBuffer00; nFormats: var int32): ptr ptr gdk.Atom00 {.
     importc, libprag.}
 
-proc getDeserializeFormats*(self: TextBuffer; nFormats: var int): ptr ptr gdk.Atom =
+proc getDeserializeFormats*(self: TextBuffer; nFormats: var int): ptr ptr gdk.Atom00 =
   var nFormats_00: int32
   result = gtk_text_buffer_get_deserialize_formats(cast[ptr TextBuffer00](self.impl), nFormats_00)
   if nFormats.addr != nil:
@@ -11884,10 +11911,10 @@ proc getSelectionBounds*(self: TextBuffer; start: var TextIter;
     `end`: var TextIter): bool =
   toBool(gtk_text_buffer_get_selection_bounds(cast[ptr TextBuffer00](self.impl), start, `end`))
 
-proc gtk_text_buffer_get_serialize_formats(self: ptr TextBuffer00; nFormats: var int32): ptr ptr gdk.Atom {.
+proc gtk_text_buffer_get_serialize_formats(self: ptr TextBuffer00; nFormats: var int32): ptr ptr gdk.Atom00 {.
     importc, libprag.}
 
-proc getSerializeFormats*(self: TextBuffer; nFormats: var int): ptr ptr gdk.Atom =
+proc getSerializeFormats*(self: TextBuffer; nFormats: var int): ptr ptr gdk.Atom00 =
   var nFormats_00: int32
   result = gtk_text_buffer_get_serialize_formats(cast[ptr TextBuffer00](self.impl), nFormats_00)
   if nFormats.addr != nil:
@@ -12021,17 +12048,21 @@ proc placeCursor*(self: TextBuffer; where: TextIter) =
   gtk_text_buffer_place_cursor(cast[ptr TextBuffer00](self.impl), where)
 
 proc gtk_text_buffer_register_deserialize_tagset(self: ptr TextBuffer00;
-    tagsetName: cstring): ptr gdk.Atom {.
+    tagsetName: cstring): ptr gdk.Atom00 {.
     importc, libprag.}
 
-proc registerDeserializeTagset*(self: TextBuffer; tagsetName: cstring = nil): ptr gdk.Atom =
-  gtk_text_buffer_register_deserialize_tagset(cast[ptr TextBuffer00](self.impl), tagsetName)
+proc registerDeserializeTagset*(self: TextBuffer; tagsetName: cstring = nil): gdk.Atom =
+  new(result)
+  result.impl = gtk_text_buffer_register_deserialize_tagset(cast[ptr TextBuffer00](self.impl), tagsetName)
+  result.ignoreFinalizer = true
 
-proc gtk_text_buffer_register_serialize_tagset(self: ptr TextBuffer00; tagsetName: cstring): ptr gdk.Atom {.
+proc gtk_text_buffer_register_serialize_tagset(self: ptr TextBuffer00; tagsetName: cstring): ptr gdk.Atom00 {.
     importc, libprag.}
 
-proc registerSerializeTagset*(self: TextBuffer; tagsetName: cstring = nil): ptr gdk.Atom =
-  gtk_text_buffer_register_serialize_tagset(cast[ptr TextBuffer00](self.impl), tagsetName)
+proc registerSerializeTagset*(self: TextBuffer; tagsetName: cstring = nil): gdk.Atom =
+  new(result)
+  result.impl = gtk_text_buffer_register_serialize_tagset(cast[ptr TextBuffer00](self.impl), tagsetName)
+  result.ignoreFinalizer = true
 
 proc gtk_text_buffer_remove_all_tags(self: ptr TextBuffer00; start: TextIter;
     `end`: TextIter) {.
@@ -12070,12 +12101,12 @@ proc selectRange*(self: TextBuffer; ins: TextIter; bound: TextIter) =
   gtk_text_buffer_select_range(cast[ptr TextBuffer00](self.impl), ins, bound)
 
 proc gtk_text_buffer_serialize(self: ptr TextBuffer00; contentBuffer: ptr TextBuffer00;
-    format: gdk.Atom; start: TextIter; `end`: TextIter; length: var uint64): ptr uint8 {.
+    format: ptr gdk.Atom00; start: TextIter; `end`: TextIter; length: var uint64): ptr uint8 {.
     importc, libprag.}
 
 proc serialize*(self: TextBuffer; contentBuffer: TextBuffer;
     format: gdk.Atom; start: TextIter; `end`: TextIter; length: var uint64): seq[uint8] =
-  let resul0 = gtk_text_buffer_serialize(cast[ptr TextBuffer00](self.impl), cast[ptr TextBuffer00](contentBuffer.impl), format, start, `end`, length)
+  let resul0 = gtk_text_buffer_serialize(cast[ptr TextBuffer00](self.impl), cast[ptr TextBuffer00](contentBuffer.impl), cast[ptr gdk.Atom00](format.impl), start, `end`, length)
   result = uint8ArrayToSeq(resul0, length.int)
   cogfree(resul0)
 
@@ -12095,18 +12126,18 @@ proc setText*(self: TextBuffer; text: cstring; len: int) =
   gtk_text_buffer_set_text(cast[ptr TextBuffer00](self.impl), text, int32(len))
 
 proc gtk_text_buffer_unregister_deserialize_format(self: ptr TextBuffer00;
-    format: gdk.Atom) {.
+    format: ptr gdk.Atom00) {.
     importc, libprag.}
 
 proc unregisterDeserializeFormat*(self: TextBuffer; format: gdk.Atom) =
-  gtk_text_buffer_unregister_deserialize_format(cast[ptr TextBuffer00](self.impl), format)
+  gtk_text_buffer_unregister_deserialize_format(cast[ptr TextBuffer00](self.impl), cast[ptr gdk.Atom00](format.impl))
 
 proc gtk_text_buffer_unregister_serialize_format(self: ptr TextBuffer00;
-    format: gdk.Atom) {.
+    format: ptr gdk.Atom00) {.
     importc, libprag.}
 
 proc unregisterSerializeFormat*(self: TextBuffer; format: gdk.Atom) =
-  gtk_text_buffer_unregister_serialize_format(cast[ptr TextBuffer00](self.impl), format)
+  gtk_text_buffer_unregister_serialize_format(cast[ptr TextBuffer00](self.impl), cast[ptr gdk.Atom00](format.impl))
 
 proc gtk_selection_data_targets_include_rich_text(self: ptr SelectionData00;
     buffer: ptr TextBuffer00): gboolean {.
@@ -12124,11 +12155,11 @@ proc addRichTextTargets*(self: TargetList; info: int; deserializable: bool;
   gtk_target_list_add_rich_text_targets(cast[ptr TargetList00](self.impl), uint32(info), gboolean(deserializable), cast[ptr TextBuffer00](buffer.impl))
 
 proc gtk_clipboard_wait_for_rich_text(self: ptr Clipboard00; buffer: ptr TextBuffer00;
-    format: var gdk.Atom; length: var uint64): ptr uint8 {.
+    format: var ptr gdk.Atom00; length: var uint64): ptr uint8 {.
     importc, libprag.}
 
 proc waitForRichText*(self: Clipboard; buffer: TextBuffer;
-    format: var gdk.Atom; length: var uint64): seq[uint8] =
+    format: var ptr gdk.Atom00; length: var uint64): seq[uint8] =
   let resul0 = gtk_clipboard_wait_for_rich_text(cast[ptr Clipboard00](self.impl), cast[ptr TextBuffer00](buffer.impl), format, length)
   if resul0.isNil:
     return
@@ -27541,6 +27572,8 @@ proc gtk_recent_info_get_applications(self: ptr RecentInfo00; length: var uint64
 
 proc getApplications*(self: RecentInfo; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = gtk_recent_info_get_applications(cast[ptr RecentInfo00](self.impl), length)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -27608,6 +27641,8 @@ proc gtk_recent_info_get_groups(self: ptr RecentInfo00; length: var uint64): ptr
 
 proc getGroups*(self: RecentInfo; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = gtk_recent_info_get_groups(cast[ptr RecentInfo00](self.impl), length)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -48784,17 +48819,17 @@ proc requestImage*(self: Clipboard; callback: ClipboardImageReceivedFunc;
 type
   ClipboardReceivedFunc* = proc (clipboard: ptr Clipboard00; selectionData: ptr SelectionData00; data: pointer) {.cdecl.}
 
-proc gtk_clipboard_request_contents(self: ptr Clipboard00; target: gdk.Atom;
+proc gtk_clipboard_request_contents(self: ptr Clipboard00; target: ptr gdk.Atom00;
     callback: ClipboardReceivedFunc; userData: pointer) {.
     importc, libprag.}
 
 proc requestContents*(self: Clipboard; target: gdk.Atom; callback: ClipboardReceivedFunc;
     userData: pointer) =
-  gtk_clipboard_request_contents(cast[ptr Clipboard00](self.impl), target, callback, userData)
+  gtk_clipboard_request_contents(cast[ptr Clipboard00](self.impl), cast[ptr gdk.Atom00](target.impl), callback, userData)
 
 type
-  ClipboardRichTextReceivedFunc* = proc (clipboard: ptr Clipboard00; format: gdk.Atom; text: cstring; length: uint64;
-    data: pointer) {.cdecl.}
+  ClipboardRichTextReceivedFunc* = proc (clipboard: ptr Clipboard00; format: ptr gdk.Atom00; text: cstring;
+    length: uint64; data: pointer) {.cdecl.}
 
 proc gtk_clipboard_request_rich_text(self: ptr Clipboard00; buffer: ptr TextBuffer00;
     callback: ClipboardRichTextReceivedFunc; userData: pointer) {.
@@ -48805,7 +48840,7 @@ proc requestRichText*(self: Clipboard; buffer: TextBuffer;
   gtk_clipboard_request_rich_text(cast[ptr Clipboard00](self.impl), cast[ptr TextBuffer00](buffer.impl), callback, userData)
 
 type
-  ClipboardTargetsReceivedFunc* = proc (clipboard: ptr Clipboard00; atoms: ptr ptr gdk.Atom; nAtoms: int32;
+  ClipboardTargetsReceivedFunc* = proc (clipboard: ptr Clipboard00; atoms: ptr ptr gdk.Atom00; nAtoms: int32;
     data: pointer) {.cdecl.}
 
 proc gtk_clipboard_request_targets(self: ptr Clipboard00; callback: ClipboardTargetsReceivedFunc;
@@ -57191,6 +57226,8 @@ proc gtk_recent_chooser_get_uris(self: ptr RecentChooser00; length: var uint64):
 proc getUris*(self: RecentChooser | RecentChooserWidget | RecentChooserDialog | RecentAction | RecentChooserMenu;
     length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = gtk_recent_chooser_get_uris(cast[ptr RecentChooser00](self.impl), length)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -58901,7 +58938,7 @@ type
 
 type
   TargetPair* {.pure, byRef.} = object
-    target*: ptr gdk.Atom
+    target*: ptr gdk.Atom00
     flags*: uint32
     info*: uint32
 
@@ -58924,24 +58961,28 @@ type
 
 proc gtk_text_buffer_register_deserialize_format(self: ptr TextBuffer00;
     mimeType: cstring; function: TextBufferDeserializeFunc; userData: pointer;
-    userDataDestroy: DestroyNotify): ptr gdk.Atom {.
+    userDataDestroy: DestroyNotify): ptr gdk.Atom00 {.
     importc, libprag.}
 
 proc registerDeserializeFormat*(self: TextBuffer; mimeType: cstring;
-    function: TextBufferDeserializeFunc; userData: pointer; userDataDestroy: DestroyNotify): ptr gdk.Atom =
-  gtk_text_buffer_register_deserialize_format(cast[ptr TextBuffer00](self.impl), mimeType, function, userData, userDataDestroy)
+    function: TextBufferDeserializeFunc; userData: pointer; userDataDestroy: DestroyNotify): gdk.Atom =
+  new(result)
+  result.impl = gtk_text_buffer_register_deserialize_format(cast[ptr TextBuffer00](self.impl), mimeType, function, userData, userDataDestroy)
+  result.ignoreFinalizer = true
 
 type
   TextBufferSerializeFunc* = proc (registerBuffer: ptr TextBuffer00; contentBuffer: ptr TextBuffer00;
     start: TextIter; `end`: TextIter; length: ptr uint64; userData: pointer): ptr uint8 {.cdecl.}
 
 proc gtk_text_buffer_register_serialize_format(self: ptr TextBuffer00; mimeType: cstring;
-    function: TextBufferSerializeFunc; userData: pointer; userDataDestroy: DestroyNotify): ptr gdk.Atom {.
+    function: TextBufferSerializeFunc; userData: pointer; userDataDestroy: DestroyNotify): ptr gdk.Atom00 {.
     importc, libprag.}
 
 proc registerSerializeFormat*(self: TextBuffer; mimeType: cstring;
-    function: TextBufferSerializeFunc; userData: pointer; userDataDestroy: DestroyNotify): ptr gdk.Atom =
-  gtk_text_buffer_register_serialize_format(cast[ptr TextBuffer00](self.impl), mimeType, function, userData, userDataDestroy)
+    function: TextBufferSerializeFunc; userData: pointer; userDataDestroy: DestroyNotify): gdk.Atom =
+  new(result)
+  result.impl = gtk_text_buffer_register_serialize_format(cast[ptr TextBuffer00](self.impl), mimeType, function, userData, userDataDestroy)
+  result.ignoreFinalizer = true
 
 type
   TextBufferTargetInfo* {.size: sizeof(cint), pure.} = enum
@@ -60871,15 +60912,15 @@ proc rgbToHsv*(r: cdouble; g: cdouble; b: cdouble; h: var cdouble; s: var cdoubl
     v: var cdouble) {.
     importc: "gtk_rgb_to_hsv", libprag.}
 
-proc gtk_selection_add_target(widget: ptr Widget00; selection: gdk.Atom;
-    target: gdk.Atom; info: uint32) {.
+proc gtk_selection_add_target(widget: ptr Widget00; selection: ptr gdk.Atom00;
+    target: ptr gdk.Atom00; info: uint32) {.
     importc, libprag.}
 
 proc selectionAddTarget*(widget: Widget; selection: gdk.Atom; target: gdk.Atom;
     info: int) =
-  gtk_selection_add_target(cast[ptr Widget00](widget.impl), selection, target, uint32(info))
+  gtk_selection_add_target(cast[ptr Widget00](widget.impl), cast[ptr gdk.Atom00](selection.impl), cast[ptr gdk.Atom00](target.impl), uint32(info))
 
-proc gtk_selection_add_targets(widget: ptr Widget00; selection: gdk.Atom;
+proc gtk_selection_add_targets(widget: ptr Widget00; selection: ptr gdk.Atom00;
     targets: ptr TargetEntry00; ntargets: uint32) {.
     importc, libprag.}
 
@@ -60887,35 +60928,36 @@ proc selectionAddTargets*(widget: Widget; selection: gdk.Atom; targets: seq[Targ
   let ntargets = int(targets.len)
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
-  gtk_selection_add_targets(cast[ptr Widget00](widget.impl), selection, seq2TargetEntryArray(targets, fs469n23), uint32(ntargets))
+  gtk_selection_add_targets(cast[ptr Widget00](widget.impl), cast[ptr gdk.Atom00](selection.impl), seq2TargetEntryArray(targets, fs469n23), uint32(ntargets))
 
-proc gtk_selection_clear_targets(widget: ptr Widget00; selection: gdk.Atom) {.
+proc gtk_selection_clear_targets(widget: ptr Widget00; selection: ptr gdk.Atom00) {.
     importc, libprag.}
 
 proc selectionClearTargets*(widget: Widget; selection: gdk.Atom) =
-  gtk_selection_clear_targets(cast[ptr Widget00](widget.impl), selection)
+  gtk_selection_clear_targets(cast[ptr Widget00](widget.impl), cast[ptr gdk.Atom00](selection.impl))
 
-proc gtk_selection_convert(widget: ptr Widget00; selection: gdk.Atom; target: gdk.Atom;
-    time: uint32): gboolean {.
+proc gtk_selection_convert(widget: ptr Widget00; selection: ptr gdk.Atom00;
+    target: ptr gdk.Atom00; time: uint32): gboolean {.
     importc, libprag.}
 
 proc selectionConvert*(widget: Widget; selection: gdk.Atom; target: gdk.Atom;
     time: int): bool =
-  toBool(gtk_selection_convert(cast[ptr Widget00](widget.impl), selection, target, uint32(time)))
+  toBool(gtk_selection_convert(cast[ptr Widget00](widget.impl), cast[ptr gdk.Atom00](selection.impl), cast[ptr gdk.Atom00](target.impl), uint32(time)))
 
-proc gtk_selection_owner_set(widget: ptr Widget00; selection: gdk.Atom; time: uint32): gboolean {.
+proc gtk_selection_owner_set(widget: ptr Widget00; selection: ptr gdk.Atom00;
+    time: uint32): gboolean {.
     importc, libprag.}
 
 proc selectionOwnerSet*(widget: Widget = nil; selection: gdk.Atom; time: int): bool =
-  toBool(gtk_selection_owner_set(if widget.isNil: nil else: cast[ptr Widget00](widget.impl), selection, uint32(time)))
+  toBool(gtk_selection_owner_set(if widget.isNil: nil else: cast[ptr Widget00](widget.impl), cast[ptr gdk.Atom00](selection.impl), uint32(time)))
 
 proc gtk_selection_owner_set_for_display(display: ptr gdk.Display00; widget: ptr Widget00;
-    selection: gdk.Atom; time: uint32): gboolean {.
+    selection: ptr gdk.Atom00; time: uint32): gboolean {.
     importc, libprag.}
 
 proc selectionOwnerSetForDisplay*(display: gdk.Display; widget: Widget = nil;
     selection: gdk.Atom; time: int): bool =
-  toBool(gtk_selection_owner_set_for_display(cast[ptr gdk.Display00](display.impl), if widget.isNil: nil else: cast[ptr Widget00](widget.impl), selection, uint32(time)))
+  toBool(gtk_selection_owner_set_for_display(cast[ptr gdk.Display00](display.impl), if widget.isNil: nil else: cast[ptr Widget00](widget.impl), cast[ptr gdk.Atom00](selection.impl), uint32(time)))
 
 proc gtk_selection_remove_all(widget: ptr Widget00) {.
     importc, libprag.}
@@ -61000,32 +61042,32 @@ proc targetTableNewFromList*(list: TargetList; nTargets: var int): seq[TargetEnt
   if nTargets.addr != nil:
     nTargets = int(nTargets_00)
 
-proc gtk_targets_include_image(targets: ptr ptr gdk.Atom; nTargets: int32;
+proc gtk_targets_include_image(targets: ptr ptr gdk.Atom00; nTargets: int32;
     writable: gboolean): gboolean {.
     importc, libprag.}
 
-proc targetsIncludeImage*(targets: ptr ptr gdk.Atom; nTargets: int;
+proc targetsIncludeImage*(targets: ptr ptr gdk.Atom00; nTargets: int;
     writable: bool): bool =
   toBool(gtk_targets_include_image(targets, int32(nTargets), gboolean(writable)))
 
-proc gtk_targets_include_rich_text(targets: ptr ptr gdk.Atom; nTargets: int32;
+proc gtk_targets_include_rich_text(targets: ptr ptr gdk.Atom00; nTargets: int32;
     buffer: ptr TextBuffer00): gboolean {.
     importc, libprag.}
 
-proc targetsIncludeRichText*(targets: ptr ptr gdk.Atom; nTargets: int;
+proc targetsIncludeRichText*(targets: ptr ptr gdk.Atom00; nTargets: int;
     buffer: TextBuffer): bool =
   toBool(gtk_targets_include_rich_text(targets, int32(nTargets), cast[ptr TextBuffer00](buffer.impl)))
 
-proc gtk_targets_include_text(targets: ptr ptr gdk.Atom; nTargets: int32): gboolean {.
+proc gtk_targets_include_text(targets: ptr ptr gdk.Atom00; nTargets: int32): gboolean {.
     importc, libprag.}
 
-proc targetsIncludeText*(targets: ptr ptr gdk.Atom; nTargets: int): bool =
+proc targetsIncludeText*(targets: ptr ptr gdk.Atom00; nTargets: int): bool =
   toBool(gtk_targets_include_text(targets, int32(nTargets)))
 
-proc gtk_targets_include_uri(targets: ptr ptr gdk.Atom; nTargets: int32): gboolean {.
+proc gtk_targets_include_uri(targets: ptr ptr gdk.Atom00; nTargets: int32): gboolean {.
     importc, libprag.}
 
-proc targetsIncludeUri*(targets: ptr ptr gdk.Atom; nTargets: int): bool =
+proc targetsIncludeUri*(targets: ptr ptr gdk.Atom00; nTargets: int): bool =
   toBool(gtk_targets_include_uri(targets, int32(nTargets)))
 
 proc gtk_test_create_simple_window(windowTitle: cstring; dialogText: cstring): ptr Widget00 {.

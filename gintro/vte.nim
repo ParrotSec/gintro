@@ -1821,11 +1821,15 @@ proc vte_get_encodings(includeAliases: gboolean): ptr cstring {.
 
 proc getEncodings*(includeAliases: bool): seq[string] =
   let resul0 = vte_get_encodings(gboolean(includeAliases))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
 proc encodings*(includeAliases: bool): seq[string] =
   let resul0 = vte_get_encodings(gboolean(includeAliases))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 

@@ -1440,24 +1440,37 @@ proc deviceManager*(self: Display): DeviceManager =
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
 type
-  Atom* {.pure, byRef.} = object
+  Atom00* {.pure.} = object
+  Atom* = ref object
+    impl*: ptr Atom00
+    ignoreFinalizer*: bool
 
-proc gdk_atom_name(self: Atom): cstring {.
+proc gdk_atom_name(self: ptr Atom00): cstring {.
     importc, libprag.}
 
 proc name*(self: Atom): string =
-  let resul0 = gdk_atom_name(self)
+  let resul0 = gdk_atom_name(cast[ptr Atom00](self.impl))
   result = $resul0
   cogfree(resul0)
 
-proc gdk_atom_intern(atomName: cstring; onlyIfExists: gboolean): ptr Atom {.
+proc newWithFinalizer*(x: var Atom) =
+    new(x)
+
+proc gdk_atom_intern(atomName: cstring; onlyIfExists: gboolean): ptr Atom00 {.
     importc, libprag.}
 
-proc intern*(atomName: cstring; onlyIfExists: bool): ptr Atom =
-  gdk_atom_intern(atomName, gboolean(onlyIfExists))
+proc intern*(atomName: cstring; onlyIfExists: bool): Atom =
+  new(result)
+  result.impl = gdk_atom_intern(atomName, gboolean(onlyIfExists))
+  result.ignoreFinalizer = true
 
-proc internStaticString*(atomName: cstring): ptr Atom {.
-    importc: "gdk_atom_intern_static_string", libprag.}
+proc gdk_atom_intern_static_string(atomName: cstring): ptr Atom00 {.
+    importc, libprag.}
+
+proc internStaticString*(atomName: cstring): Atom =
+  new(result)
+  result.impl = gdk_atom_intern_static_string(atomName)
+  result.ignoreFinalizer = true
 
 proc gdk_device_list_axes(self: ptr Device00): ptr glib.List {.
     importc, libprag.}
@@ -1466,11 +1479,11 @@ proc listAxes*(self: Device): seq[Atom] =
   let resul0 = gdk_device_list_axes(cast[ptr Device00](self.impl))
   g_list_free(resul0)
 
-proc gdk_display_request_selection_notification(self: ptr Display00; selection: Atom): gboolean {.
+proc gdk_display_request_selection_notification(self: ptr Display00; selection: ptr Atom00): gboolean {.
     importc, libprag.}
 
 proc requestSelectionNotification*(self: Display; selection: Atom): bool =
-  toBool(gdk_display_request_selection_notification(cast[ptr Display00](self.impl), selection))
+  toBool(gdk_display_request_selection_notification(cast[ptr Display00](self.impl), cast[ptr Atom00](selection.impl)))
 
 type
   Window* = ref object of gobject.Object
@@ -2890,11 +2903,11 @@ proc getWindowAtPointer*(self: Display; winX: var int = cast[var int](nil);
     winX = int(winX_00)
 
 proc gdk_display_store_clipboard(self: ptr Display00; clipboardWindow: ptr Window00;
-    time: uint32; targets: ptr ptr Atom; nTargets: int32) {.
+    time: uint32; targets: ptr ptr Atom00; nTargets: int32) {.
     importc, libprag.}
 
 proc storeClipboard*(self: Display; clipboardWindow: Window;
-    time: int; targets: ptr ptr Atom; nTargets: int) =
+    time: int; targets: ptr ptr Atom00; nTargets: int) =
   gdk_display_store_clipboard(cast[ptr Display00](self.impl), cast[ptr Window00](clipboardWindow.impl), uint32(time), targets, int32(nTargets))
 
 type
@@ -6002,13 +6015,15 @@ proc `defaultDisplay=`*(self: DisplayManager; display: Display) =
   gdk_display_manager_set_default_display(cast[ptr DisplayManager00](self.impl), cast[ptr Display00](display.impl))
 
 type
-  DragAction* {.size: sizeof(cint), pure.} = enum
-    default = 1
-    copy = 2
-    move = 4
-    link = 8
-    private = 16
-    ask = 32
+  DragFlag* {.size: sizeof(cint), pure.} = enum
+    default = 0
+    copy = 1
+    move = 2
+    link = 3
+    private = 4
+    ask = 5
+
+  DragAction* {.size: sizeof(cint).} = set[DragFlag]
 
 type
   DragCancelReason* {.size: sizeof(cint), pure.} = enum
@@ -6227,7 +6242,7 @@ proc gdk_drag_context_list_targets(self: ptr DragContext00): ptr glib.List {.
     importc, libprag.}
 
 proc listTargets*(self: DragContext): seq[Atom] =
-  discard
+  result = glistStructs2seq[Atom](gdk_drag_context_list_targets(cast[ptr DragContext00](self.impl)), true)
 
 proc gdk_drag_context_manage_dnd(self: ptr DragContext00; ipcWindow: ptr Window00;
     actions: DragAction): gboolean {.
@@ -12115,11 +12130,13 @@ proc dragFindWindowForScreen*(context: DragContext; dragWindow: Window;
     g_object_set_qdata(destWindow.impl, Quark, addr(destWindow[]))
 
 
-proc gdk_drag_get_selection(context: ptr DragContext00): ptr Atom {.
+proc gdk_drag_get_selection(context: ptr DragContext00): ptr Atom00 {.
     importc, libprag.}
 
-proc dragGetSelection*(context: DragContext): ptr Atom =
-  gdk_drag_get_selection(cast[ptr DragContext00](context.impl))
+proc dragGetSelection*(context: DragContext): Atom =
+  new(result)
+  result.impl = gdk_drag_get_selection(cast[ptr DragContext00](context.impl))
+  result.ignoreFinalizer = true
 
 proc gdk_drag_motion(context: ptr DragContext00; destWindow: ptr Window00;
     protocol: DragProtocol; xRoot: int32; yRoot: int32; suggestedAction: DragAction;
@@ -12505,11 +12522,11 @@ proc pointerUngrab*(time: int) =
 proc preParseLibgtkOnly*() {.
     importc: "gdk_pre_parse_libgtk_only", libprag.}
 
-proc gdk_property_delete(window: ptr Window00; property: Atom) {.
+proc gdk_property_delete(window: ptr Window00; property: ptr Atom00) {.
     importc, libprag.}
 
 proc propertyDelete*(window: Window; property: Atom) =
-  gdk_property_delete(cast[ptr Window00](window.impl), property)
+  gdk_property_delete(cast[ptr Window00](window.impl), cast[ptr Atom00](property.impl))
 
 proc gdk_query_visual_types(visualTypes: var ptr VisualType; count: var int32) {.
     importc, libprag.}
@@ -12526,19 +12543,19 @@ proc queryVisualTypes*(visualTypes: var ptr VisualType): int =
   if result.addr != nil:
     result = int(result_00)
 
-proc gdk_selection_convert(requestor: ptr Window00; selection: Atom; target: Atom;
-    time: uint32) {.
+proc gdk_selection_convert(requestor: ptr Window00; selection: ptr Atom00;
+    target: ptr Atom00; time: uint32) {.
     importc, libprag.}
 
 proc selectionConvert*(requestor: Window; selection: Atom; target: Atom;
     time: int) =
-  gdk_selection_convert(cast[ptr Window00](requestor.impl), selection, target, uint32(time))
+  gdk_selection_convert(cast[ptr Window00](requestor.impl), cast[ptr Atom00](selection.impl), cast[ptr Atom00](target.impl), uint32(time))
 
-proc gdk_selection_owner_get(selection: Atom): ptr Window00 {.
+proc gdk_selection_owner_get(selection: ptr Atom00): ptr Window00 {.
     importc, libprag.}
 
 proc selectionOwnerGet*(selection: Atom): Window =
-  let gobj = gdk_selection_owner_get(selection)
+  let gobj = gdk_selection_owner_get(cast[ptr Atom00](selection.impl))
   if gobj.isNil:
     return nil
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -12555,11 +12572,11 @@ proc selectionOwnerGet*(selection: Atom): Window =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gdk_selection_owner_get_for_display(display: ptr Display00; selection: Atom): ptr Window00 {.
+proc gdk_selection_owner_get_for_display(display: ptr Display00; selection: ptr Atom00): ptr Window00 {.
     importc, libprag.}
 
 proc selectionOwnerGetForDisplay*(display: Display; selection: Atom): Window =
-  let gobj = gdk_selection_owner_get_for_display(cast[ptr Display00](display.impl), selection)
+  let gobj = gdk_selection_owner_get_for_display(cast[ptr Display00](display.impl), cast[ptr Atom00](selection.impl))
   if gobj.isNil:
     return nil
   let qdata = g_object_get_qdata(gobj, Quark)
@@ -12576,37 +12593,37 @@ proc selectionOwnerGetForDisplay*(display: Display; selection: Atom): Window =
     assert(g_object_get_qdata(result.impl, Quark) == nil)
     g_object_set_qdata(result.impl, Quark, addr(result[]))
 
-proc gdk_selection_owner_set(owner: ptr Window00; selection: Atom; time: uint32;
-    sendEvent: gboolean): gboolean {.
+proc gdk_selection_owner_set(owner: ptr Window00; selection: ptr Atom00;
+    time: uint32; sendEvent: gboolean): gboolean {.
     importc, libprag.}
 
 proc selectionOwnerSet*(owner: Window = nil; selection: Atom; time: int;
     sendEvent: bool): bool =
-  toBool(gdk_selection_owner_set(if owner.isNil: nil else: cast[ptr Window00](owner.impl), selection, uint32(time), gboolean(sendEvent)))
+  toBool(gdk_selection_owner_set(if owner.isNil: nil else: cast[ptr Window00](owner.impl), cast[ptr Atom00](selection.impl), uint32(time), gboolean(sendEvent)))
 
 proc gdk_selection_owner_set_for_display(display: ptr Display00; owner: ptr Window00;
-    selection: Atom; time: uint32; sendEvent: gboolean): gboolean {.
+    selection: ptr Atom00; time: uint32; sendEvent: gboolean): gboolean {.
     importc, libprag.}
 
 proc selectionOwnerSetForDisplay*(display: Display; owner: Window = nil;
     selection: Atom; time: int; sendEvent: bool): bool =
-  toBool(gdk_selection_owner_set_for_display(cast[ptr Display00](display.impl), if owner.isNil: nil else: cast[ptr Window00](owner.impl), selection, uint32(time), gboolean(sendEvent)))
+  toBool(gdk_selection_owner_set_for_display(cast[ptr Display00](display.impl), if owner.isNil: nil else: cast[ptr Window00](owner.impl), cast[ptr Atom00](selection.impl), uint32(time), gboolean(sendEvent)))
 
-proc gdk_selection_send_notify(requestor: ptr Window00; selection: Atom;
-    target: Atom; property: Atom; time: uint32) {.
+proc gdk_selection_send_notify(requestor: ptr Window00; selection: ptr Atom00;
+    target: ptr Atom00; property: ptr Atom00; time: uint32) {.
     importc, libprag.}
 
 proc selectionSendNotify*(requestor: Window; selection: Atom; target: Atom;
     property: Atom; time: int) =
-  gdk_selection_send_notify(cast[ptr Window00](requestor.impl), selection, target, property, uint32(time))
+  gdk_selection_send_notify(cast[ptr Window00](requestor.impl), cast[ptr Atom00](selection.impl), cast[ptr Atom00](target.impl), cast[ptr Atom00](property.impl), uint32(time))
 
 proc gdk_selection_send_notify_for_display(display: ptr Display00; requestor: ptr Window00;
-    selection: Atom; target: Atom; property: Atom; time: uint32) {.
+    selection: ptr Atom00; target: ptr Atom00; property: ptr Atom00; time: uint32) {.
     importc, libprag.}
 
 proc selectionSendNotifyForDisplay*(display: Display; requestor: Window;
     selection: Atom; target: Atom; property: Atom; time: int) =
-  gdk_selection_send_notify_for_display(cast[ptr Display00](display.impl), cast[ptr Window00](requestor.impl), selection, target, property, uint32(time))
+  gdk_selection_send_notify_for_display(cast[ptr Display00](display.impl), cast[ptr Window00](requestor.impl), cast[ptr Atom00](selection.impl), cast[ptr Atom00](target.impl), cast[ptr Atom00](property.impl), uint32(time))
 
 proc setAllowedBackends*(backends: cstring) {.
     importc: "gdk_set_allowed_backends", libprag.}
@@ -12662,7 +12679,7 @@ proc testSimulateKey*(window: Window; x: int; y: int; keyval: int; modifiers: Mo
     keyPressrelease: EventType): bool =
   toBool(gdk_test_simulate_key(cast[ptr Window00](window.impl), int32(x), int32(y), uint32(keyval), modifiers, keyPressrelease))
 
-proc gdk_text_property_to_utf8_list_for_display(display: ptr Display00; encoding: Atom;
+proc gdk_text_property_to_utf8_list_for_display(display: ptr Display00; encoding: ptr Atom00;
     format: int32; text: ptr uint8; length: int32; list: var ptr cstring): int32 {.
     importc, libprag.}
 
@@ -12672,7 +12689,7 @@ proc textPropertyToUtf8ListForDisplay*(display: Display; encoding: Atom;
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   var list_00 = seq2CstringArray(list, fs469n23)
-  result = int(gdk_text_property_to_utf8_list_for_display(cast[ptr Display00](display.impl), encoding, int32(format), cast[ptr uint8](unsafeaddr(text[0])), int32(length), list_00))
+  result = int(gdk_text_property_to_utf8_list_for_display(cast[ptr Display00](display.impl), cast[ptr Atom00](encoding.impl), int32(format), cast[ptr uint8](unsafeaddr(text[0])), int32(length), list_00))
   if list.addr != nil:
     list = cstringArrayToSeq(list_00)
 

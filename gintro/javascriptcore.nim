@@ -1928,9 +1928,9 @@ proc pushExceptionHandler*(self: Context; handler: ExceptionHandler;
 
 const MAJOR_VERSION* = 2'i32
 
-const MICRO_VERSION* = 3'i32
+const MICRO_VERSION* = 0'i32
 
-const MINOR_VERSION* = 34'i32
+const MINOR_VERSION* = 36'i32
 
 const OPTIONS_USE_DFG* = "useDFGJIT"
 

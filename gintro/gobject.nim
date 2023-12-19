@@ -518,30 +518,21 @@ type
     ignoreFinalizer*: bool
   ParamSpec00*{.inheritable, pure.} = object
 
-proc g_param_spec_unref*(self: ptr ParamSpec00) {.
-    importc, libprag.}
-
-proc g_param_spec_uref*(self: ptr ParamSpec00) {.
-    importc: "g_param_spec_unref", libprag.}
-
-proc unref*(self: ParamSpec) =
-  g_param_spec_unref(cast[ptr ParamSpec00](self.impl))
-
-proc uref*(self: ParamSpec) =
-  g_param_spec_unref(cast[ptr ParamSpec00](self.impl))
-
-proc generic_g_param_spec_uref*(self: ParamSpec) =
-  g_param_spec_unref(cast[ptr ParamSpec00](self.impl))
-
 proc g_param_spec_ref_sink*(self: ptr ParamSpec00): ptr ParamSpec00 {.
     importc, libprag.}
+
+proc g_param_spec_unref*(self: ptr ParamSpec00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpec) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
 
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpec()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 proc g_object_notify_by_pspec(self: ptr Object00; pspec: ptr ParamSpec00) {.
@@ -855,7 +846,7 @@ proc g_object_class_find_property(self: ptr ObjectClass00; propertyName: cstring
     importc, libprag.}
 
 proc findProperty*(self: ObjectClass; propertyName: cstring): ParamSpec =
-  fnew(result, generic_g_param_spec_uref)
+  fnew(result, generic_g_param_spec_unref)
   result.impl = g_object_class_find_property(cast[ptr ObjectClass00](self.impl), propertyName)
   result.impl = cast[typeof(result.impl)](g_param_spec_ref_sink(result.impl))
 
@@ -921,180 +912,270 @@ type
   ParamSpecBoolean* = ref object of ParamSpec
   ParamSpecBoolean00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecBoolean00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecBoolean) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecBoolean()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecBoxed* = ref object of ParamSpec
   ParamSpecBoxed00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecBoxed00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecBoxed) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecBoxed()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecChar* = ref object of ParamSpec
   ParamSpecChar00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecChar00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecChar) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecChar()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecDouble* = ref object of ParamSpec
   ParamSpecDouble00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecDouble00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecDouble) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecDouble()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecEnum* = ref object of ParamSpec
   ParamSpecEnum00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecEnum00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecEnum) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecEnum()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecFlags* = ref object of ParamSpec
   ParamSpecFlags00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecFlags00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecFlags) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecFlags()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecFloat* = ref object of ParamSpec
   ParamSpecFloat00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecFloat00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecFloat) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecFloat()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecGType* = ref object of ParamSpec
   ParamSpecGType00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecGType00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecGType) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecGType()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecInt* = ref object of ParamSpec
   ParamSpecInt00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecInt00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecInt) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecInt()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecInt64* = ref object of ParamSpec
   ParamSpecInt6400* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecInt6400) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecInt64) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecInt64()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecLong* = ref object of ParamSpec
   ParamSpecLong00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecLong00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecLong) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecLong()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecObject* = ref object of ParamSpec
   ParamSpecObject00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecObject00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecObject) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecObject()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecOverride* = ref object of ParamSpec
   ParamSpecOverride00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecOverride00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecOverride) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecOverride()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecParam* = ref object of ParamSpec
   ParamSpecParam00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecParam00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecParam) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecParam()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecPointer* = ref object of ParamSpec
   ParamSpecPointer00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecPointer00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecPointer) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecPointer()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
@@ -1107,12 +1188,18 @@ type
   ParamSpecString* = ref object of ParamSpec
   ParamSpecString00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecString00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecString) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecString()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
@@ -1125,84 +1212,126 @@ type
   ParamSpecUChar* = ref object of ParamSpec
   ParamSpecUChar00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecUChar00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecUChar) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecUChar()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecUInt* = ref object of ParamSpec
   ParamSpecUInt00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecUInt00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecUInt) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecUInt()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecUInt64* = ref object of ParamSpec
   ParamSpecUInt6400* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecUInt6400) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecUInt64) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecUInt64()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecULong* = ref object of ParamSpec
   ParamSpecULong00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecULong00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecULong) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecULong()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecUnichar* = ref object of ParamSpec
   ParamSpecUnichar00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecUnichar00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecUnichar) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecUnichar()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecValueArray* = ref object of ParamSpec
   ParamSpecValueArray00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecValueArray00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecValueArray) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecValueArray()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 type
   ParamSpecVariant* = ref object of ParamSpec
   ParamSpecVariant00* = object of ParamSpec00
 
+proc g_param_spec_unref*(self: ptr ParamSpecVariant00) {.importc, libprag.}
+
+proc generic_g_param_spec_unref*(self: ParamSpecVariant) =
+  if not self.ignoreFinalizer:
+    g_param_spec_unref(self.impl)
+
 when defined(gcDestructors):
   proc `=destroy`*(self: var typeof(ParamSpecVariant()[])) =
     when defined(gintroDebug):
       echo "destroy ", $typeof(self), ' ', cast[int](unsafeaddr self)
     if not self.ignoreFinalizer and self.impl != nil:
-      g_param_spec_uref(self.impl)
+      g_param_spec_unref(self.impl)
       self.impl = nil
 
 const SIGNAL_FLAGS_MASK* = 511'i32
@@ -1576,12 +1705,12 @@ proc g_value_get_param(self: Value): ptr ParamSpec00 {.
     importc, libprag.}
 
 proc getParam*(self: Value): ParamSpec =
-  fnew(result, generic_g_param_spec_uref)
+  fnew(result, generic_g_param_spec_unref)
   result.impl = g_value_get_param(self)
   result.impl = cast[typeof(result.impl)](g_param_spec_ref_sink(result.impl))
 
 proc param*(self: Value): ParamSpec =
-  fnew(result, generic_g_param_spec_uref)
+  fnew(result, generic_g_param_spec_unref)
   result.impl = g_value_get_param(self)
   result.impl = cast[typeof(result.impl)](g_param_spec_ref_sink(result.impl))
 

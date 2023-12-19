@@ -564,6 +564,8 @@ proc g_bookmark_file_get_uris(self: ptr BookmarkFile00; length: var uint64): ptr
 
 proc getUris*(self: BookmarkFile; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = g_bookmark_file_get_uris(cast[ptr BookmarkFile00](self.impl), length)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -3872,6 +3874,8 @@ proc g_key_file_get_groups(self: ptr KeyFile00; length: var uint64): ptr cstring
 
 proc getGroups*(self: KeyFile; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = g_key_file_get_groups(cast[ptr KeyFile00](self.impl), length)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -5420,6 +5424,8 @@ proc g_match_info_fetch_all(self: ptr MatchInfo00): ptr cstring {.
 
 proc fetchAll*(self: MatchInfo): seq[string] =
   let resul0 = g_match_info_fetch_all(cast[ptr MatchInfo00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -5800,6 +5806,8 @@ proc g_regex_split(self: ptr Regex00; string: cstring; matchOptions: RegexMatchF
 
 proc split*(self: Regex; string: cstring; matchOptions: RegexMatchFlags): seq[string] =
   let resul0 = g_regex_split(cast[ptr Regex00](self.impl), string, matchOptions)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -5907,6 +5915,8 @@ proc g_regex_split_simple(pattern: cstring; string: cstring; compileOptions: Reg
 proc splitSimple*(pattern: cstring; string: cstring; compileOptions: RegexCompileFlags;
     matchOptions: RegexMatchFlags): seq[string] =
   let resul0 = g_regex_split_simple(pattern, string, compileOptions, matchOptions)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -8490,6 +8500,8 @@ proc g_uri_list_extract_uris(uriList: cstring): ptr cstring {.
 
 proc listExtractUris*(uriList: cstring): seq[string] =
   let resul0 = g_uri_list_extract_uris(uriList)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -9358,6 +9370,8 @@ proc g_variant_dup_bytestring_array(self: ptr Variant00; length: var uint64): pt
 
 proc dupBytestringArray*(self: Variant; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = g_variant_dup_bytestring_array(cast[ptr Variant00](self.impl), length)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -9366,6 +9380,8 @@ proc g_variant_dup_objv(self: ptr Variant00; length: var uint64): ptr cstring {.
 
 proc dupObjv*(self: Variant; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = g_variant_dup_objv(cast[ptr Variant00](self.impl), length)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -9382,6 +9398,8 @@ proc g_variant_dup_strv(self: ptr Variant00; length: var uint64): ptr cstring {.
 
 proc dupStrv*(self: Variant; length: var uint64 = cast[var uint64](nil)): seq[string] =
   let resul0 = g_variant_dup_strv(cast[ptr Variant00](self.impl), length)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -10943,6 +10961,8 @@ proc environSetenv*(envp: openArray[string]; variable: cstring; value: cstring;
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   let resul0 = g_environ_setenv(seq2CstringArray(envp, fs469n23), variable, value, gboolean(overwrite))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -10953,6 +10973,8 @@ proc environUnsetenv*(envp: openArray[string]; variable: cstring): seq[string] =
   var fs469n23x: array[256, pointer]
   var fs469n23: cstringArray = cast[cstringArray](addr fs469n23x)
   let resul0 = g_environ_unsetenv(seq2CstringArray(envp, fs469n23), variable)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -11209,6 +11231,8 @@ proc g_get_environ(): ptr cstring {.
 
 proc getEnviron*(): seq[string] =
   let resul0 = g_get_environ()
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -11263,11 +11287,15 @@ proc g_get_locale_variants(locale: cstring): ptr cstring {.
 
 proc getLocaleVariants*(locale: cstring): seq[string] =
   let resul0 = g_get_locale_variants(locale)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
 proc localeVariants*(locale: cstring): seq[string] =
   let resul0 = g_get_locale_variants(locale)
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -11492,6 +11520,8 @@ proc g_listenv(): ptr cstring {.
 
 proc listenv*(): seq[string] =
   let resul0 = g_listenv()
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 

@@ -1411,11 +1411,15 @@ proc gdk_pixbuf_format_get_extensions(self: ptr PixbufFormat00): ptr cstring {.
 
 proc getExtensions*(self: PixbufFormat): seq[string] =
   let resul0 = gdk_pixbuf_format_get_extensions(cast[ptr PixbufFormat00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
 proc extensions*(self: PixbufFormat): seq[string] =
   let resul0 = gdk_pixbuf_format_get_extensions(cast[ptr PixbufFormat00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
@@ -1437,11 +1441,15 @@ proc gdk_pixbuf_format_get_mime_types(self: ptr PixbufFormat00): ptr cstring {.
 
 proc getMimeTypes*(self: PixbufFormat): seq[string] =
   let resul0 = gdk_pixbuf_format_get_mime_types(cast[ptr PixbufFormat00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
 proc mimeTypes*(self: PixbufFormat): seq[string] =
   let resul0 = gdk_pixbuf_format_get_mime_types(cast[ptr PixbufFormat00](self.impl))
+  if resul0.isNil:
+    return
   result = cstringArrayToSeq(resul0)
   g_strfreev(resul0)
 
